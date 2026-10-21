@@ -59,11 +59,12 @@ Neural closes the synonym/misleading gap the hashed embedder could not.
 | n | M | build | recall@10 | ANN p50 | exact p50 | speedup | peak RSS |
 |---|---|---|---|---|---|---|---|
 | 100,000 | 64 | 505.9 s | **0.9953** | 1.20 ms | 59.2 ms | 49× | 1059 MB |
-| 1,000,000 | 16 | ~560 s (est) | (finishing) | — | — | — | — |
+| 1,000,000 | 16 | 819.5 s | 0.4660 | 0.41 ms | 410.6 ms | 1000× | 3963 MB |
 
-Build cost per vector: **M=64 ≈ 5 ms/node**, **M=16 ≈ 0.56 ms/node** (measured
-from 100K-of-1M progress: 56.2 s). Therefore 1M **M=64 ≈ 85 min** — the build is
-the scaling ceiling, not query latency (which stays ~1 ms).
+Build cost per vector: **M=64 ≈ 5 ms/node**, **M=16 ≈ 0.82 ms/node** (measured;
+the per-node cost grows with n). 1M **M=64 ≈ 83 min**. At 1M, M=16 recall@10 falls
+to 0.466, so **M=64 is required for the ≥0.95 target — but its build is the
+scaling ceiling**, not query latency (which stays sub-millisecond).
 
 ## 5. Compute expenditure
 

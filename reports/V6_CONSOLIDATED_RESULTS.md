@@ -29,9 +29,12 @@ marked otherwise. Baseline `99c70908`.
   labeled set, on GPU, offline, ~1,700 embeddings/s, 0.5 GB VRAM.
 - **ANN recall is fixed and validated at 100K**: 0.9953 (M=64), 49× faster than
   exact. The V5 fix (canonical layer search) is confirmed at scale.
-- **The ANN scaling ceiling is build time, not query time.** Build cost is
-  ~5 ms/node (M=64) and ~0.56 ms/node (M=16), single-threaded. 1M M=64 ≈ 85 min.
-  Query latency stays ~1 ms. A parallel/ faster build is the real blocker.
+- **The ANN scaling ceiling is build time and M, not query time.** Measured:
+  100K M=64 → recall@10 0.9953, build 506 s; 1M M=16 → recall@10 **0.4660**,
+  build 820 s, search 0.41 ms vs exact 411 ms (1000×), 3.96 GB RSS. Build cost is
+  ~5 ms/node at M=64 and ~0.82 ms/node at M=16 (single-threaded), so 1M M=64 is
+  ~83 min. At 1M, M=16 recall collapses below target; **M=64 is required but its
+  build is the blocker.** Query latency stays sub-millisecond.
 - **Lexical engine unchanged and still fast at 1M** on the pod.
 
 ## Production acceptance matrix
