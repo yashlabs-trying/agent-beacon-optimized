@@ -97,6 +97,7 @@ func (s *Store) buildANN(db *sql.DB, query Query, params annParams) (*annIndex, 
 	}
 	defer rows.Close()
 	idx := newANNIndex(params)
+	added := 0
 	for rows.Next() {
 		var id string
 		var blob []byte
@@ -109,12 +110,25 @@ func (s *Store) buildANN(db *sql.DB, query Query, params annParams) (*annIndex, 
 			continue
 		}
 		idx.add(id, vec)
+		added++
+		if annBuildHook != nil && added%annBuildHookEvery == 0 {
+			annBuildHook(added)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	if annBuildHook != nil {
+		annBuildHook(added)
+	}
 	return idx, nil
 }
+
+// annBuildHook, when set, is called with the number of nodes added so far during
+// a graph build. It is a test-only progress hook and is nil in production.
+var annBuildHook func(added int)
+
+const annBuildHookEvery = 100000
 
 // semanticSearchANN returns the top-k memory IDs by approximate nearest
 // neighbour search, rebuilding the graph when the durable generation changes.

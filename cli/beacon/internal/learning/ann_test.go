@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 // This file evaluates the HNSW ANN component (github.com/coder/hnsw) two ways:
@@ -183,6 +184,23 @@ func TestHybridANNPath(t *testing.T) {
 	}
 }
 
+func peakRSSKB() int {
+	data, err := os.ReadFile("/proc/self/status")
+	if err != nil {
+		return 0
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "VmHWM:") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				v, _ := strconv.Atoi(fields[1])
+				return v
+			}
+		}
+	}
+	return 0
+}
+
 func BenchmarkANNvsExact(b *testing.B) {
 	sizes := []int{1000, 10000, 100000, 1000000}
 	if raw := os.Getenv("BEACON_ANN_SIZES"); raw != "" {
@@ -194,11 +212,21 @@ func BenchmarkANNvsExact(b *testing.B) {
 		}
 	}
 	for _, n := range sizes {
+		t0 := time.Now()
 		ids, vecs, queries := syntheticVectors(n, 128, 256, 7)
+		fmt.Printf("ANN stage n=%d gen_ms=%d peak_rss_mb=%d\n", n, time.Since(t0).Milliseconds(), peakRSSKB()/1024)
+
+		buildStart := time.Now()
 		idx := newANNIndex(defaultANNParams())
 		for i := range vecs {
 			idx.add(ids[i], vecs[i])
+			if (i+1)%100000 == 0 {
+				fmt.Printf("ANN build n=%d added=%d elapsed_ms=%d peak_rss_mb=%d\n",
+					n, i+1, time.Since(buildStart).Milliseconds(), peakRSSKB()/1024)
+			}
 		}
+		fmt.Printf("ANN stage n=%d built_ms=%d peak_rss_mb=%d\n", n, time.Since(buildStart).Milliseconds(), peakRSSKB()/1024)
+
 		b.Run(fmt.Sprintf("n=%d/ann", n), func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
