@@ -168,6 +168,9 @@ func ensureSearchSchema(db *sql.DB) error {
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS memory_trigram_df (term TEXT PRIMARY KEY, doc INTEGER NOT NULL)`); err != nil {
 		return err
 	}
+	if err := ensureSemanticSchema(db); err != nil {
+		return err
+	}
 	return nil
 }
 

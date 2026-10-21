@@ -24,7 +24,8 @@ const (
 )
 
 type Store struct {
-	dbPath string
+	dbPath   string
+	embedder Embedder
 }
 
 // Query selects stored learning records.
@@ -616,6 +617,12 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 	}
 	if _, err := tx.Exec(`UPDATE memory_index_meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'generation'`); err != nil {
 		return fmt.Errorf("bump generation: %w", err)
+	}
+	if s.embedder != nil {
+		// Embeddings are derived state, updated incrementally in the same
+		// transaction. A failure here must never fail the authoritative write;
+		// RebuildEmbeddings can repair it later.
+		_ = s.upsertEmbeddingTx(tx, m)
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit memory: %w", err)
