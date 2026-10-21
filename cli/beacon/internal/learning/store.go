@@ -71,15 +71,22 @@ func (s *Store) db() (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(s.dbPath), 0700); err != nil && filepath.Dir(s.dbPath) != "." {
 		return nil, err
 	}
-	db, err := sql.Open("sqlite", sqliteuri.File(s.dbPath, url.Values{"_pragma": {"busy_timeout(5000)"}}))
+	// _txlock=immediate makes Begin take the write lock up front and wait on
+	// busy_timeout. A deferred transaction that reads before it writes cannot
+	// wait for a competing writer without risking deadlock, so it fails with
+	// SQLITE_BUSY instead; PutMemory's transaction must be immediate.
+	db, err := sql.Open("sqlite", sqliteuri.File(s.dbPath, url.Values{
+		"_pragma":       {"busy_timeout(5000)"},
+		"_busy_timeout": {"5000"},
+		"_txlock":       {"immediate"},
+	}))
 	if err != nil {
 		return nil, err
 	}
-	if _, err := db.Exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;`); err != nil {
-		_ = db.Close()
-		return nil, err
-	}
-	if err := ensureSchema(db); err != nil {
+	// busy_timeout is applied per connection by the DSN. journal_mode=WAL is
+	// persistent in the database file and is set once, in ensureSchemaOnce, so a
+	// read does not take a write lock just to open the store.
+	if err := s.ensureSchemaOnce(db); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -581,13 +588,38 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 		return err
 	}
 	defer db.Close()
-	_, err = db.Exec(`INSERT INTO memories (id, candidate_id, project_id, kind, title, created_at, updated_at, superseded_by, memory_json)
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin memory write: %w", err)
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec(`INSERT INTO memories (id, candidate_id, project_id, kind, title, created_at, updated_at, superseded_by, memory_json)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET title = excluded.title, updated_at = excluded.updated_at, superseded_by = excluded.superseded_by, memory_json = excluded.memory_json`,
-		m.ID, m.CandidateID, m.Project.ID, m.Kind, m.Title, m.CreatedAt, m.UpdatedAt, m.SupersededBy, string(data))
-	return err
+		m.ID, m.CandidateID, m.Project.ID, m.Kind, m.Title, m.CreatedAt, m.UpdatedAt, m.SupersededBy, string(data)); err != nil {
+		return fmt.Errorf("insert memory: %w", err)
+	}
+	// Refresh the derived index row in the same transaction when the index is
+	// known-good, and advance the durable generation either way so every process
+	// sees that cached results for this store are now stale.
+	if indexReadyTx(tx) {
+		if err := upsertMemoryIndex(tx, m); err != nil {
+			return fmt.Errorf("index memory: %w", err)
+		}
+	}
+	if _, err := tx.Exec(`UPDATE memory_index_meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'generation'`); err != nil {
+		return fmt.Errorf("bump generation: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit memory: %w", err)
+	}
+	return nil
 }
 
+// ListMemories returns approved (non-superseded) memories for a project. A query
+// with no text uses the ordered, paged SQL path. A query with text dispatches to
+// the adaptive search path (searchMemories), whose result is identical to the
+// original scan this function used to run.
 func (s *Store) ListMemories(query Query) ([]asymptoteobserve.LearningMemoryV1, error) {
 	query, err := s.scopeQuery(query)
 	if err != nil {
@@ -598,19 +630,53 @@ func (s *Store) ListMemories(query Query) ([]asymptoteobserve.LearningMemoryV1, 
 		return nil, err
 	}
 	defer db.Close()
+	if strings.TrimSpace(query.Q) == "" {
+		return s.listMemoriesOrdered(db, query)
+	}
+	return s.searchMemories(db, query)
+}
+
+// listMemoriesOrdered is the original no-text path: project/kind scoped rows,
+// newest first, limited and paged in SQL.
+func (s *Store) listMemoriesOrdered(db *sql.DB, query Query) ([]asymptoteobserve.LearningMemoryV1, error) {
 	where, args := queryWhere(query, "project_id", "", "kind")
 	if where == "" {
 		where = ` WHERE (superseded_by IS NULL OR superseded_by = '')`
 	} else {
 		where += ` AND (superseded_by IS NULL OR superseded_by = '')`
 	}
-	hasTextFilter := strings.TrimSpace(query.Q) != ""
-	sqlQuery := `SELECT memory_json FROM memories` + where + ` ORDER BY updated_at DESC`
-	if !hasTextFilter {
-		args = append(args, normalizeLimit(query.Limit), offset(query))
-		sqlQuery += ` LIMIT ? OFFSET ?`
+	args = append(args, normalizeLimit(query.Limit), offset(query))
+	rows, err := db.Query(`SELECT memory_json FROM memories`+where+` ORDER BY updated_at DESC LIMIT ? OFFSET ?`, args...)
+	if err != nil {
+		return nil, err
 	}
-	rows, err := db.Query(sqlQuery, args...)
+	defer rows.Close()
+	var out []asymptoteobserve.LearningMemoryV1
+	for rows.Next() {
+		var raw string
+		if err := rows.Scan(&raw); err != nil {
+			return nil, err
+		}
+		var value asymptoteobserve.LearningMemoryV1
+		if err := json.Unmarshal([]byte(raw), &value); err != nil {
+			return nil, err
+		}
+		out = append(out, value)
+	}
+	return out, rows.Err()
+}
+
+// listMemoriesScan is the original text path and the correctness reference: it
+// scans the scoped rows newest first, applies the in-Go matcher, and pages in
+// Go. The indexed path reproduces exactly this result and falls back here.
+func (s *Store) listMemoriesScan(db *sql.DB, query Query) ([]asymptoteobserve.LearningMemoryV1, error) {
+	where, args := queryWhere(query, "project_id", "", "kind")
+	if where == "" {
+		where = ` WHERE (superseded_by IS NULL OR superseded_by = '')`
+	} else {
+		where += ` AND (superseded_by IS NULL OR superseded_by = '')`
+	}
+	rows, err := db.Query(`SELECT memory_json FROM memories`+where+` ORDER BY updated_at DESC`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -628,26 +694,19 @@ func (s *Store) ListMemories(query Query) ([]asymptoteobserve.LearningMemoryV1, 
 		if err := json.Unmarshal([]byte(raw), &value); err != nil {
 			return nil, err
 		}
-		if hasTextFilter {
-			if !matchesText(query.Q, value.ID, value.Title, value.Body, value.Kind) {
-				continue
-			}
-			matches++
-			if matches <= skip {
-				continue
-			}
-			out = append(out, value)
-			if len(out) >= limit {
-				break
-			}
-		} else {
-			out = append(out, value)
+		if !matchesText(query.Q, value.ID, value.Title, value.Body, value.Kind) {
+			continue
+		}
+		matches++
+		if matches <= skip {
+			continue
+		}
+		out = append(out, value)
+		if len(out) >= limit {
+			break
 		}
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return out, rows.Err()
 }
 
 func (s *Store) GetMemory(id string) (asymptoteobserve.LearningMemoryV1, bool, error) {
