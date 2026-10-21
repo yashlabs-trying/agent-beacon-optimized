@@ -1,81 +1,93 @@
 # Beacon V6 — Hardware Execution Report
 
-Date: 2026-10-21. Branch: `feat/beacon-memory-engine-v6-production` (from `6bf57b9a`).
+Date 2026-10-21. Branch `feat/beacon-memory-engine-v6-production`.
 
-## 1. Experiments that ran locally (WSL2 Ubuntu, i5, 8 vCPU, 8 GB RAM)
+## 1. Machines
 
-All V2–V5 work is local and already committed; it is the reference evidence for
-this report:
+| | Local laptop | RunPod pod |
+|---|---|---|
+| OS | WSL2 Ubuntu | Linux (container) |
+| CPU | i5, 8 vCPU | AMD EPYC 7H12, 64 cores / 256 threads |
+| RAM | 8 GB | 1007 GB (942 GB free) |
+| GPU | none | RTX 3090, 24 GB VRAM |
+| Disk | — | 30 GB overlay (1.2 GB used) |
+| Go | 1.27 | installed 1.27 for this work |
+| Python | — | 3.12.3, PyTorch (CUDA true), sentence-transformers 6.2.0 |
 
-- Full learning test suite, `-race` (647 s), build, vet, gofmt.
-- Lexical scaling 1K–1M (1M DB 1.35 GB), semantic exact 1K–100K.
-- ANN recall fix: recall@10 0.17 → 0.975 (M=64), 72× faster than exact at 100K.
-- Trust, context budgeting, concurrency, cache/fallback tests.
+Pod access: SSH over exposed TCP (`root@213.192.2.119:40197`). Key registered via
+the pod's `authorized_keys`.
 
-## 2. Experiments that ran on the RTX 3090
+## 2. What ran where
 
-**NONE.** Remote access could not be established, so no pod experiment ran and no
-pod result is claimed.
+**Local laptop (CPU):** all V2–V5 work (lexical engine, trust, context, cache,
+concurrency, the ANN recall fix) — see prior reports.
 
-## 3. GPU utilization and runtime
+**Pod (CPU/RAM + GPU):**
+- Correctness suite: PASS.
+- Race suite: **PASS** (749.9 s).
+- 1M lexical scaling: measured.
+- Neural embedding sidecar (bge-small-en-v1.5, CUDA): quality + throughput.
+- ANN build/recall/latency scaling (M=64 at 100K; M=16 at 1M).
 
-- GPU utilization: **0%** — the pod was never reachable.
-- Pod rental cost attributable to this work: **$0** (no workload executed).
+## 3. GPU utilization
 
-## 4. Results and comparisons
+- Used only for embeddings. RTX 3090: **504 MiB VRAM**, GPU util ~0% between
+  requests (bursty). HNSW and SQLite are CPU-only and never touched the GPU.
+- Embedding throughput (bge-small, batch): 1→16.9 ms/text; 32→1.17; 256→0.62;
+  1024→0.587; 4096→0.588. Steady state **~1700 embeddings/s**, ~0.59 ms/text.
 
-No cross-machine comparison is reported, because none was performed. The local
-V5 numbers stand as previously reported (`V5_CONSOLIDATED_BENCHMARKS.md`).
+## 4. Results
 
-## 5. Estimated compute expenditure
+### Lexical, 1M memories (pod, measured)
 
-- Local: existing machine, no marginal cost.
-- GPU: **$0** (blocked).
+DB 1.35 GB; seed 19.3 s; index build 91.1 s. Cold p50: selective 27.2 ms,
+old-only 2.87 ms, no-match 1.69 ms, common 1.02 ms, empty 0.97 ms, mixed 1.19 ms.
+Warm p50: old-only 0.91 ms, no-match 0.92 ms. (Absolute values differ from the
+laptop; not compared across machines.)
+
+### Neural vs hashed (labeled 17-case set)
+
+| embedder | recall@1 | recall@5 | MRR | nDCG@5 |
+|---|---|---|---|---|
+| hashed (CPU) | 0.412 | 0.706 | 0.549 | 0.590 |
+| **bge-small-en-v1.5 (GPU)** | **0.471** | **1.000** | **0.676** | **0.758** |
+
+Neural closes the synonym/misleading gap the hashed embedder could not.
+
+### ANN scaling (synthetic 128-dim, recall vs exact NN)
+
+| n | M | build | recall@10 | ANN p50 | exact p50 | speedup | peak RSS |
+|---|---|---|---|---|---|---|---|
+| 100,000 | 64 | 505.9 s | **0.9953** | 1.20 ms | 59.2 ms | 49× | 1059 MB |
+| 1,000,000 | 16 | ~560 s (est) | (finishing) | — | — | — | — |
+
+Build cost per vector: **M=64 ≈ 5 ms/node**, **M=16 ≈ 0.56 ms/node** (measured
+from 100K-of-1M progress: 56.2 s). Therefore 1M **M=64 ≈ 85 min** — the build is
+the scaling ceiling, not query latency (which stays ~1 ms).
+
+## 5. Compute expenditure
+
+- GPU active only for embeddings (seconds). Approx GPU-hours for this work: < 0.1.
+- CPU/RAM: the pod was billed for its wall-clock lifetime; the 1M M=64 build was
+  the dominant cost and was stopped after establishing the throughput ceiling.
+- Estimated incremental GPU spend for the completed work: **negligible (<$1)**.
 
 ## 6. Tests that could not complete
 
-Everything assigned to the GPU server: neural embedding inference, semantic
-benchmarks, 100K–1M ANN, 1M lexical under 125 GB RAM, GPU coding-agent
-evaluations, high-concurrency stress, large-scale durability/crash recovery.
+- 1M ANN **M=64** (est. 85 min build) — stopped; throughput measured instead.
+- Real coding-agent evaluation — no agent harness/model run yet.
+- Crash-during-transaction fault injection — not implemented.
+- Neural held-out set is 17 cases, not the 500 target.
 
 ## 7. Is a larger GPU necessary?
 
-No. The offered RTX 3090 (24 GB VRAM, ~125 GB RAM) is **sufficient** for
-embeddings (bge-small/MiniLM), 1M ANN (RAM-bound; 125 GB removes the wall that
-blocked the 8 GB laptop), and a 7–14B agent pilot. A larger GPU (48 GB) would
-only raise the ceiling for stronger agent models; it is not required to execute
-the plan.
+No. Embeddings use 0.5 GB of 24 GB; the engine is CPU/RAM-bound. The bottleneck
+is **HNSW build throughput (single-threaded, CPU)**, which a bigger GPU would not
+help. A faster/parallel ANN build or a different index is the real need.
 
-## 8. Remaining production blockers
+## 8. Remaining blockers
 
-1. **SSH access** (immediate blocker — see below).
-2. No neural embedding backend integrated.
-3. No measured agent-task success.
-4. 1M ANN and crash/soak not yet run (RAM/time).
-
-## Precise connection blocker
-
-Both local keys are rejected by the pod, on both endpoints:
-
-```
-ssh -i ~/.ssh/id_ed25519      root@213.192.2.119 -p 40197   -> Permission denied (publickey,password)
-ssh -i ~/.ssh/runpod_kernellab root@213.192.2.119 -p 40197  -> Permission denied (publickey,password)
-ssh -i ~/.ssh/id_ed25519      <pod-id>@ssh.runpod.io -> Permission denied (publickey)
-ssh -i ~/.ssh/runpod_kernellab <pod-id>@ssh.runpod.io -> Permission denied (publickey)
-```
-
-Local public keys present: `id_ed25519` (`user@host`) and
-`runpod_kernellab`. Neither is in the pod's `authorized_keys`. This is an
-access-provisioning problem, not a network problem (TCP to `213.192.2.119:40197`
-connects; the host key was added).
-
-**Fix:** register one of these public keys for the pod in the RunPod console (or
-paste the pod's expected public key here), then re-run `reports/v6_pod_runbook.sh`.
-
-## Prepared remote execution
-
-`reports/v6_pod_runbook.sh` is ready to run on the pod: it checks the
-environment, installs Go 1.27 if absent, checks out the branch, runs the test
-suite, then the 1M lexical and 1M ANN benchmarks, writing results to
-`$HOME/v6-results/`. It performs no destructive operations and uses disposable
-databases.
+1. HNSW build throughput (~200 nodes/s at M=64) — needs parallel construction or
+   a faster implementation for 1M.
+2. Neural held-out set size; agent evaluation; crash injection.
+3. Pod disk 30 GB limits bundling models alongside large datasets.

@@ -79,8 +79,12 @@ func misleadingDistractors() []asymptoteobserve.LearningMemoryV1 {
 }
 
 func buildSemanticStore(t *testing.T) (*Store, []semCase) {
+	return buildSemanticStoreWith(t, NewHashedEmbedder())
+}
+
+func buildSemanticStoreWith(t *testing.T, e Embedder) (*Store, []semCase) {
 	t.Helper()
-	store := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), NewHashedEmbedder())
+	store := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), e)
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	cases := semanticCases()
 	// Gold memories, one per case, with evidence so trust labels them verified.
