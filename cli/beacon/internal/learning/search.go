@@ -280,16 +280,26 @@ func refreshCommonTrigramsTx(tx *sql.Tx) error {
 // launch several concurrent rebuilds that would contend for the write lock.
 var indexRebuildMu sync.Mutex
 
+// indexReadyCache remembers, per store path, that the index is known-good, so a
+// search does not read the readiness flag on every call. It is cleared whenever
+// the index is marked unhealthy.
+var indexReadyCache sync.Map
+
 // ensureIndexReady reports whether the derived index reflects the authoritative
 // table, rebuilding it once if needed. A rebuild failure leaves index_ready at 0
 // so the caller falls back to the scan path.
 func (s *Store) ensureIndexReady(db *sql.DB) bool {
+	if v, ok := indexReadyCache.Load(s.dbPath); ok && v.(bool) {
+		return true
+	}
 	if ready, ok := metaValue(db, "index_ready"); ok && ready == "1" {
+		indexReadyCache.Store(s.dbPath, true)
 		return true
 	}
 	indexRebuildMu.Lock()
 	defer indexRebuildMu.Unlock()
 	if ready, ok := metaValue(db, "index_ready"); ok && ready == "1" {
+		indexReadyCache.Store(s.dbPath, true)
 		return true
 	}
 	tx, err := db.Begin()
@@ -306,6 +316,7 @@ func (s *Store) ensureIndexReady(db *sql.DB) bool {
 	if err := tx.Commit(); err != nil {
 		return false
 	}
+	indexReadyCache.Store(s.dbPath, true)
 	return true
 }
 
@@ -316,6 +327,7 @@ func (s *Store) markIndexUnhealthy(db *sql.DB) {
 	_, _ = db.Exec(`UPDATE memory_index_meta SET value = '0' WHERE key = 'index_ready'`)
 	// Re-check the schema on the next open, in case a table is missing.
 	schemaInitialized.Delete(s.dbPath)
+	indexReadyCache.Delete(s.dbPath)
 }
 
 // termTrigrams returns the distinct 3-rune substrings of a term. A trigram
@@ -352,37 +364,31 @@ func queryIsSelective(db *sql.DB, terms []string) (bool, bool) {
 		if len(trigrams) == 0 {
 			return false, false
 		}
-		for _, tri := range trigrams {
-			var one int
-			err := db.QueryRow(`SELECT 1 FROM memory_trigram_df WHERE term = ?`, tri).Scan(&one)
-			if err == sql.ErrNoRows {
-				return true, true
-			}
-			if err != nil {
-				return false, false
-			}
+		// One statement per term, not per trigram: a long common term like
+		// "workflow" has six trigrams, and six round trips were measurably
+		// slower than the scan they were meant to avoid.
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(trigrams)), ",")
+		args := make([]any, len(trigrams))
+		for i, tri := range trigrams {
+			args[i] = tri
+		}
+		var present int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM memory_trigram_df WHERE term IN (`+placeholders+`)`, args...).Scan(&present); err != nil {
+			return false, false
+		}
+		if present < len(trigrams) {
+			// At least one trigram is rare, so the term is selective.
+			return true, true
 		}
 	}
 	return false, true
 }
 
-// fetchIndexedCandidates runs the indexed lookup for a text query. It returns
-// (candidates, nil) when the posting list fits within searchCandidateCap, and
-// (nil, nil) when the query is not selective enough to beat the scan, signalling
-// the caller to use the scan path.
+// fetchIndexedCandidates runs the scoped indexed lookup for a text query that
+// the planner has already judged selective. It returns (nil, nil) if the scoped
+// posting list overflows the cap, which should not happen after a selective
+// verdict but is handled by the caller as a fall back to the scan.
 func (s *Store) fetchIndexedCandidates(db *sql.DB, query Query, terms []string) ([]asymptoteobserve.LearningMemoryV1, error) {
-	selective, ok := queryIsSelective(db, terms)
-	if !ok {
-		overflow, err := s.probePostingListOverflow(db, terms)
-		if err != nil {
-			return nil, err
-		}
-		selective = !overflow
-	}
-	if !selective {
-		return nil, nil
-	}
-
 	var clauses []string
 	var args []any
 	args = append(args, ftsMatch(terms))
@@ -451,33 +457,56 @@ func (s *Store) probePostingListOverflow(db *sql.DB, terms []string) (bool, erro
 // result is therefore identical to the scan path whenever the indexed path is
 // used, and falls back to it otherwise.
 func (s *Store) searchMemories(db *sql.DB, query Query) ([]asymptoteobserve.LearningMemoryV1, error) {
-	if cached, ok := searchCacheGet(db, s.dbPath, query); ok {
-		return cached, nil
-	}
-
 	terms, indexable := memorySearchTerms(query.Q)
-	if indexable && s.ensureIndexReady(db) {
-		candidates, err := s.fetchIndexedCandidates(db, query, terms)
+	if !indexable || !s.ensureIndexReady(db) {
+		// Short terms and an unavailable index go straight to the scan, so a
+		// common query pays no extra reads beyond the original path.
+		return s.listMemoriesScan(db, query)
+	}
+	selective, ok := queryIsSelective(db, terms)
+	if !ok {
+		overflow, err := s.probePostingListOverflow(db, terms)
 		if err != nil {
-			// The derived index answered with an error: stop trusting it, fall
-			// back to the authoritative scan, and let the next call rebuild.
 			s.markIndexUnhealthy(db)
 			return s.listMemoriesScan(db, query)
 		}
-		if candidates != nil {
-			out := make([]asymptoteobserve.LearningMemoryV1, 0, len(candidates))
-			for _, m := range candidates {
-				if matchesText(query.Q, m.ID, m.Title, m.Body, m.Kind) {
-					out = append(out, m)
-				}
-			}
-			sortMemories(out)
-			out = paginateMemories(out, query)
-			searchCachePut(db, s.dbPath, query, out)
-			return out, nil
+		selective = !overflow
+	}
+	if !selective {
+		return s.listMemoriesScan(db, query)
+	}
+
+	// Read the generation only on the indexed path. If a write commits while the
+	// result is computed, it is stored under this older generation and the next
+	// lookup misses, so a stale result is never served.
+	generation, generationOK := currentGeneration(db)
+	if generationOK {
+		if cached, ok := searchCacheGet(s.dbPath, query, generation); ok {
+			return cached, nil
 		}
 	}
-	return s.listMemoriesScan(db, query)
+	candidates, err := s.fetchIndexedCandidates(db, query, terms)
+	if err != nil {
+		// The derived index answered with an error: stop trusting it, fall back
+		// to the authoritative scan, and let the next call rebuild.
+		s.markIndexUnhealthy(db)
+		return s.listMemoriesScan(db, query)
+	}
+	if candidates == nil {
+		return s.listMemoriesScan(db, query)
+	}
+	out := make([]asymptoteobserve.LearningMemoryV1, 0, len(candidates))
+	for _, m := range candidates {
+		if matchesText(query.Q, m.ID, m.Title, m.Body, m.Kind) {
+			out = append(out, m)
+		}
+	}
+	sortMemories(out)
+	out = paginateMemories(out, query)
+	if generationOK {
+		searchCachePut(s.dbPath, query, generation, out)
+	}
+	return out, nil
 }
 
 // sortMemories orders results newest-first, matching ORDER BY updated_at DESC.

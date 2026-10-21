@@ -602,9 +602,16 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 	// Refresh the derived index row in the same transaction when the index is
 	// known-good, and advance the durable generation either way so every process
 	// sees that cached results for this store are now stale.
-	if indexReadyTx(tx) {
+	indexHealthy := indexReadyTx(tx)
+	if indexHealthy {
 		if err := upsertMemoryIndex(tx, m); err != nil {
-			return fmt.Errorf("index memory: %w", err)
+			// A derived-index problem must never fail the authoritative write.
+			// Mark the index not-ready so the next search rebuilds it, and let
+			// the authoritative row and the generation advance commit normally.
+			indexHealthy = false
+			if _, markErr := tx.Exec(`UPDATE memory_index_meta SET value = '0' WHERE key = 'index_ready'`); markErr != nil {
+				return fmt.Errorf("index memory: %w", err)
+			}
 		}
 	}
 	if _, err := tx.Exec(`UPDATE memory_index_meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'generation'`); err != nil {
@@ -612,6 +619,10 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit memory: %w", err)
+	}
+	if !indexHealthy {
+		schemaInitialized.Delete(s.dbPath)
+		indexReadyCache.Delete(s.dbPath)
 	}
 	return nil
 }

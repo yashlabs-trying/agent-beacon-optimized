@@ -1,7 +1,6 @@
 package learning
 
 import (
-	"database/sql"
 	"sync"
 	"time"
 
@@ -73,14 +72,11 @@ func searchCacheEntrySize(value []asymptoteobserve.LearningMemoryV1) int {
 	return size
 }
 
-// searchCacheGet returns a cached result only when the durable generation still
-// matches the entry's. A missing generation (for example an index table that has
-// not been created) is treated as a miss.
-func searchCacheGet(db *sql.DB, dbPath string, query Query) ([]asymptoteobserve.LearningMemoryV1, bool) {
-	generation, ok := currentGeneration(db)
-	if !ok {
-		return nil, false
-	}
+// searchCacheGet returns a cached result only when the generation passed in
+// still matches the entry's. The caller reads the generation before it starts
+// computing, so a write that commits during the computation makes the entry
+// stale and it is never served.
+func searchCacheGet(dbPath string, query Query, generation string) ([]asymptoteobserve.LearningMemoryV1, bool) {
 	key := searchCacheKeyFor(dbPath, query)
 	searchResultCache.Lock()
 	defer searchResultCache.Unlock()
@@ -92,11 +88,7 @@ func searchCacheGet(db *sql.DB, dbPath string, query Query) ([]asymptoteobserve.
 	return entry.value, true
 }
 
-func searchCachePut(db *sql.DB, dbPath string, query Query, value []asymptoteobserve.LearningMemoryV1) {
-	generation, ok := currentGeneration(db)
-	if !ok {
-		return
-	}
+func searchCachePut(dbPath string, query Query, generation string, value []asymptoteobserve.LearningMemoryV1) {
 	key := searchCacheKeyFor(dbPath, query)
 	entry := &searchCacheEntry{
 		generation: generation,
