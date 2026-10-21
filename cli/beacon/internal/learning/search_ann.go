@@ -2,22 +2,21 @@ package learning
 
 import (
 	"database/sql"
-	"os"
 	"strings"
 	"sync"
 
-	"github.com/coder/hnsw"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw"
 )
 
-// This file is the v4 experiment for approximate nearest-neighbour (ANN)
-// retrieval, using the pure-Go HNSW implementation github.com/coder/hnsw
-// (v0.6.1, MIT). It is additive and experimental: nothing calls it unless an
-// embedder is configured and the caller asks for the ANN path.
+// This file is the ANN retrieval layer. It uses a vendored, corrected copy of
+// github.com/coder/hnsw v0.6.1 (MIT) in internal/hnsw: the upstream layer search
+// stopped after the entry node's neighbours (recall@10 measured at 0.17), which
+// the vendored copy fixes. It is additive and experimental: nothing calls it
+// unless an embedder is configured and the caller asks for the ANN path.
 //
 // The graph is keyed by memory ID and scoped per project, so a search can never
 // return a memory from another project even though the index holds vectors.
-// Indexes are rebuilt when the durable generation changes; persistence is
-// available through Export/Import but is not automatically loaded here.
+// Indexes are rebuilt when the durable generation changes.
 
 // annParams are the HNSW build/search parameters. M and Ml follow the library's
 // guidance; EfSearch trades recall for latency.
@@ -28,7 +27,10 @@ type annParams struct {
 }
 
 func defaultANNParams() annParams {
-	return annParams{M: 16, Ml: 0.25, EfSearch: 40}
+	// M=64 was chosen from a measured sweep (n=20000, 128 dims, 32 clusters):
+	// M=16 recall@10=0.74, M=32 0.92-0.94, M=64 0.994-0.997. M=64 meets the
+	// >=0.95 target; EfSearch has little effect once M is large enough.
+	return annParams{M: 64, Ml: 0.25, EfSearch: 100}
 }
 
 // annIndex wraps an HNSW graph keyed by memory ID.
@@ -59,24 +61,6 @@ func (a *annIndex) search(qvec []float32, k int) []string {
 }
 
 func (a *annIndex) len() int { return a.graph.Len() }
-
-func (a *annIndex) export(path string) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	return a.graph.Export(f)
-}
-
-func (a *annIndex) load(path string) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	return a.graph.Import(f)
-}
 
 type annCacheEntry struct {
 	index      *annIndex

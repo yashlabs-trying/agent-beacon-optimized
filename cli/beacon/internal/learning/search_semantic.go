@@ -183,6 +183,47 @@ func (s *Store) semanticSearchExact(db *sql.DB, query Query, qvec []float32, k i
 	return best, nil
 }
 
+// memoriesByIDs hydrates memory IDs returned by the ANN index into memories,
+// applying the same supersession filter as the other paths and preserving the
+// ANN rank order. Missing or superseded IDs are dropped.
+func (s *Store) memoriesByIDs(db *sql.DB, ids []string) ([]semanticHit, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := db.Query(`SELECT id, memory_json FROM memories WHERE id IN (`+placeholders+`) AND (superseded_by IS NULL OR superseded_by = '')`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	byID := map[string]asymptoteobserve.LearningMemoryV1{}
+	for rows.Next() {
+		var id, raw string
+		if err := rows.Scan(&id, &raw); err != nil {
+			return nil, err
+		}
+		var m asymptoteobserve.LearningMemoryV1
+		if err := json.Unmarshal([]byte(raw), &m); err != nil {
+			return nil, err
+		}
+		byID[id] = m
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	out := make([]semanticHit, 0, len(ids))
+	for rank, id := range ids {
+		if m, ok := byID[id]; ok {
+			out = append(out, semanticHit{memory: m, score: float32(-rank)})
+		}
+	}
+	return out, nil
+}
+
 // HybridOptions configures SearchHybrid.
 type HybridOptions struct {
 	// Limit is the number of fused results returned.
@@ -191,6 +232,9 @@ type HybridOptions struct {
 	CandidateK int
 	// RRFK is the reciprocal-rank-fusion constant (60 is standard).
 	RRFK float64
+	// UseANN selects the HNSW approximate semantic source instead of exact
+	// cosine search. It requires an embedder; ignored otherwise.
+	UseANN bool
 }
 
 func (o HybridOptions) withDefaults() HybridOptions {
@@ -238,9 +282,20 @@ func (s *Store) SearchHybrid(query Query, opts HybridOptions) ([]HybridResult, e
 	var semantic []semanticHit
 	if s.embedder != nil {
 		qvec := s.embedder.Embed(query.Q)
-		semantic, err = s.semanticSearchExact(db, query, qvec, opts.CandidateK)
-		if err != nil {
-			return nil, err
+		if opts.UseANN {
+			ids, err := s.semanticSearchANN(db, query, qvec, opts.CandidateK, defaultANNParams())
+			if err != nil {
+				return nil, err
+			}
+			semantic, err = s.memoriesByIDs(db, ids)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			semantic, err = s.semanticSearchExact(db, query, qvec, opts.CandidateK)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
