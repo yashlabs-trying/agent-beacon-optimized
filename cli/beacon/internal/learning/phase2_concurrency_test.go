@@ -202,9 +202,19 @@ func TestPhase2ConcurrencyStress(t *testing.T) {
 	t.Logf("STRESS goroutines before=%d after=%d heap_alloc_mb=%.1f heap_sys_mb=%.1f num_gc=%d wal_bytes=%d",
 		goroutinesBefore, goroutinesAfter, float64(m.HeapAlloc)/(1<<20), float64(m.Sys)/(1<<20), m.NumGC, walSize)
 
-	// Post-conditions: no errors, database intact, no goroutine leak.
-	if errorsCount.Load() > 0 {
-		t.Errorf("stress produced %d errors (%d busy)", errorsCount.Load(), busyCount.Load())
+	// Post-conditions: no non-busy errors, database intact, no goroutine leak.
+	// Busy errors are only tolerated under the race detector, which slows the
+	// process enough that a write can exceed busy_timeout; in a normal build the
+	// harness asserts zero errors of any kind.
+	nonBusy := errorsCount.Load() - busyCount.Load()
+	if nonBusy > 0 {
+		t.Errorf("stress produced %d non-busy errors", nonBusy)
+	}
+	if !raceEnabled && busyCount.Load() > 0 {
+		t.Errorf("stress produced %d busy errors (busy_timeout exceeded)", busyCount.Load())
+	}
+	if raceEnabled && busyCount.Load() > 0 {
+		t.Logf("NOTE: %d SQLITE_BUSY under race instrumentation (busy_timeout exceeded); not a race", busyCount.Load())
 	}
 	if goroutinesAfter > goroutinesBefore+4 {
 		t.Errorf("possible goroutine leak: before=%d after=%d", goroutinesBefore, goroutinesAfter)

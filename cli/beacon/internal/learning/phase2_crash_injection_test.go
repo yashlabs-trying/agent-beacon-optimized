@@ -32,6 +32,21 @@ const (
 	crashProjectID = "proj-crash"
 )
 
+// childWasKilled reports whether the child terminated abruptly at a fault
+// point. The child sends itself SIGKILL and falls back to os.Exit(137); on
+// macOS the fallback can win the delivery race, so both a signaled status and
+// exit code 137 count as a deliberate kill (neither runs deferred rollbacks).
+func childWasKilled(err error) bool {
+	exitErr, ok := err.(*exec.ExitError)
+	if !ok {
+		return false
+	}
+	if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.Signaled() {
+		return true
+	}
+	return exitErr.ExitCode() == 137
+}
+
 func crashKillAt(stage string) func(string) {
 	return func(s string) {
 		if s != stage {
@@ -130,13 +145,10 @@ func runCrashChild(t *testing.T, dbPath, stage string, preseed bool) {
 	if err == nil {
 		t.Fatalf("child exited 0; expected it to be killed at %q. output:\n%s", stage, out)
 	}
-	if exitErr, ok := err.(*exec.ExitError); ok {
-		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.Signaled() {
-			return // killed by a signal, as intended
-		}
-		t.Fatalf("child failed without a signal at %q: %v\n%s", stage, err, out)
+	if childWasKilled(err) {
+		return
 	}
-	t.Fatalf("child run error at %q: %v", stage, err)
+	t.Fatalf("child failed without a signal at %q: %v\n%s", stage, err, out)
 }
 
 func runCrashChildMode(t *testing.T, dbPath, mode string) {
@@ -148,13 +160,10 @@ func runCrashChildMode(t *testing.T, dbPath, mode string) {
 	if err == nil {
 		t.Fatalf("child mode %q exited 0; expected a kill. output:\n%s", mode, out)
 	}
-	if exitErr, ok := err.(*exec.ExitError); ok {
-		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.Signaled() {
-			return
-		}
-		t.Fatalf("child mode %q failed without a signal: %v\n%s", mode, err, out)
+	if childWasKilled(err) {
+		return
 	}
-	t.Fatalf("child mode %q run error: %v", mode, err)
+	t.Fatalf("child mode %q failed without a signal: %v\n%s", mode, err, out)
 }
 
 // TestPhase2CrashDuringIndexRebuild kills the process while the derived FTS
