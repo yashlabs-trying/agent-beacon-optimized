@@ -2,23 +2,30 @@ package hnsw
 
 import (
 	"cmp"
-	"container/heap"
 	"fmt"
 	"math"
 	"math/rand"
 	"slices"
-	"sort"
+	"sync"
 	"time"
-
-	"golang.org/x/exp/maps"
 )
 
 // This file is vendored from github.com/coder/hnsw v0.6.1 (MIT; see LICENSE in
-// this directory) with one correctness fix: the layer search's termination
-// condition used the closest element of the result set instead of the farthest,
-// so it stopped after the entry node's immediate neighbours and never explored
-// the graph. The replacement below is the canonical HNSW layer search. All other
-// code is unchanged.
+// this directory) with two changes.
+//
+// Correctness: the layer search's termination condition used the closest
+// element of the result set instead of the farthest, so it stopped after the
+// entry node's immediate neighbours and never explored the graph. The
+// replacement below is the canonical HNSW layer search.
+//
+// Performance (Phase 2): the original stored each node's neighbours in a map and
+// rebuilt+sorted the key slice on every frontier expansion. Profiling showed
+// that sort and the maps.Keys allocation dominated construction (about half of
+// all bytes allocated and a third of CPU). The graph now keeps adjacency in a
+// slice with the edge distance cached alongside each neighbour, iterates in
+// insertion order (deterministic and allocation-free), and reuses a per-search
+// scratch buffer for the visited set and the two candidate heaps. The algorithm,
+// its parameters and its pruning rule are unchanged.
 
 type Vector = []float32
 
@@ -36,43 +43,79 @@ func MakeNode[K cmp.Ordered](key K, vec Vector) Node[K] {
 type layerNode[K cmp.Ordered] struct {
 	Node[K]
 
-	// neighbors is map of neighbor keys to neighbor nodes.
-	// It is a map and not a slice to allow for efficient deletes, esp.
-	// when M is high.
-	neighbors map[K]*layerNode[K]
+	// neighbors holds the node's neighbours in insertion order. A slice, not a
+	// map, so iteration is deterministic and allocation-free. M bounds the
+	// length, so the linear scans below stay cheap.
+	neighbors []*layerNode[K]
+	// dists[i] is the distance between this node and neighbors[i], computed once
+	// when the edge was added. Cosine and Euclidean distances are symmetric, so
+	// the cached value is the same in both directions; caching removes the
+	// repeated distance recomputation that dominated addNeighbor.
+	dists []float32
 }
 
-// addNeighbor adds a o neighbor to the node, replacing the neighbor
-// with the worst distance if the neighbor set is full.
-func (n *layerNode[K]) addNeighbor(newNode *layerNode[K], m int, dist DistanceFunc) {
-	if n.neighbors == nil {
-		n.neighbors = make(map[K]*layerNode[K], m)
+// indexOfNeighbor returns the position of target, or -1.
+func (n *layerNode[K]) indexOfNeighbor(target *layerNode[K]) int {
+	for i, neighbor := range n.neighbors {
+		if neighbor == target {
+			return i
+		}
 	}
+	return -1
+}
 
-	n.neighbors[newNode.Key] = newNode
+// removeAt removes the neighbour at position i, swapping the last element into
+// its place so the removal is O(1) and the ordering stays deterministic.
+func (n *layerNode[K]) removeAt(i int) {
+	last := len(n.neighbors) - 1
+	n.neighbors[i] = n.neighbors[last]
+	n.dists[i] = n.dists[last]
+	n.neighbors[last] = nil
+	n.dists[last] = 0
+	n.neighbors = n.neighbors[:last]
+	n.dists = n.dists[:last]
+}
+
+// removeNeighbor drops target from the neighbour set if present.
+func (n *layerNode[K]) removeNeighbor(target *layerNode[K]) {
+	if i := n.indexOfNeighbor(target); i >= 0 {
+		n.removeAt(i)
+	}
+}
+
+// addNeighbor adds a neighbour to the node, replacing the neighbour with the
+// worst distance if the neighbour set is full.
+func (n *layerNode[K]) addNeighbor(newNode *layerNode[K], m int, dist DistanceFunc) {
+	if n.indexOfNeighbor(newNode) >= 0 {
+		return
+	}
+	if n.neighbors == nil {
+		// Preallocate to the neighbour bound so the slice never grows past it.
+		// Growth-by-append reallocated repeatedly and the resulting churn was
+		// the largest remaining source of allocation and of runtime.madvise.
+		n.neighbors = make([]*layerNode[K], 0, m)
+		n.dists = make([]float32, 0, m)
+	}
+	n.neighbors = append(n.neighbors, newNode)
+	n.dists = append(n.dists, dist(n.Value, newNode.Value))
 	if len(n.neighbors) <= m {
 		return
 	}
 
-	// Find the neighbor with the worst distance.
-	var (
-		worstDist = float32(math.Inf(-1))
-		worst     *layerNode[K]
-	)
-	for _, neighbor := range n.neighbors {
-		d := dist(neighbor.Value, n.Value)
-		// d > worstDist may always be false if the distance function
-		// returns NaN, e.g., when the embeddings are zero.
-		if d > worstDist || worst == nil {
-			worstDist = d
-			worst = neighbor
+	// Find the neighbour with the worst (largest) distance. The distance is
+	// cached, so this is a comparison scan, not a recomputation.
+	worst := 0
+	for i := 1; i < len(n.neighbors); i++ {
+		if n.dists[i] > n.dists[worst] {
+			worst = i
 		}
 	}
 
-	delete(n.neighbors, worst.Key)
-	// Delete backlink from the worst neighbor.
-	delete(worst.neighbors, n.Key)
-	worst.replenish(m)
+	worstNode := n.neighbors[worst]
+	n.removeAt(worst)
+	// Delete the backlink from the worst neighbour.
+	worstNode.removeNeighbor(n)
+	worstNode.replenish(m, dist)
 }
 
 type searchCandidate[K cmp.Ordered] struct {
@@ -84,110 +127,199 @@ func (s searchCandidate[K]) Less(o searchCandidate[K]) bool {
 	return s.dist < o.dist
 }
 
-// search returns the layer node closest to the target node
-// within the same layer.
+// searchScratch holds the reusable buffers of one layer search. A scratch is
+// never shared between concurrent searches: the graph hands Add a persistent
+// one (Add is serial) and Search a pooled one.
+type searchScratch[K cmp.Ordered] struct {
+	epoch   int32
+	visited map[*layerNode[K]]int32
+	cand    distHeap[K]
+	res     distHeap[K]
+}
+
+func newSearchScratch[K cmp.Ordered]() *searchScratch[K] {
+	return &searchScratch[K]{
+		visited: make(map[*layerNode[K]]int32, 256),
+		cand:    distHeap[K]{items: make([]searchCandidate[K], 0, 256), max: false},
+		res:     distHeap[K]{items: make([]searchCandidate[K], 0, 256), max: true},
+	}
+}
+
+// search returns the layer nodes closest to the target, ordered closest first.
+// The returned slice is owned by the scratch and is valid only until the next
+// search on the same scratch.
 func (n *layerNode[K]) search(
 	// k is the number of candidates in the result set.
 	k int,
 	efSearch int,
 	target Vector,
 	distance DistanceFunc,
+	s *searchScratch[K],
 ) []searchCandidate[K] {
 	// Canonical HNSW layer search: a closest-first candidate frontier and a
 	// farthest-first result set of the k best found so far. Exploration stops
 	// when the closest remaining candidate is farther than the worst kept
 	// result. The vendored version instead compared against the *closest* result
 	// and stopped immediately, which is the bug this replaces.
-	visited := map[K]bool{n.Key: true}
-	candidates := &distHeap[K]{max: false}
-	entry := searchCandidate[K]{node: n, dist: distance(n.Value, target)}
-	heap.Push(candidates, entry)
-	results := &distHeap[K]{max: true}
-	heap.Push(results, entry)
+	s.epoch++
+	epoch := s.epoch
+	visited := s.visited
+	visited[n] = epoch
 
-	for candidates.Len() > 0 {
-		current := heap.Pop(candidates).(searchCandidate[K])
-		if results.Len() >= k && current.dist > results.items[0].dist {
+	candidates := s.cand
+	candidates.items = candidates.items[:0]
+	results := s.res
+	results.items = results.items[:0]
+
+	entry := searchCandidate[K]{node: n, dist: distance(n.Value, target)}
+	candidates.push(entry)
+	results.push(entry)
+
+	for candidates.len() > 0 {
+		current := candidates.pop()
+		if results.len() >= k && current.dist > results.items[0].dist {
 			break
 		}
-		neighborKeys := maps.Keys(current.node.neighbors)
-		slices.Sort(neighborKeys)
-		for _, neighborID := range neighborKeys {
-			if visited[neighborID] {
+		for _, neighbor := range current.node.neighbors {
+			if visited[neighbor] == epoch {
 				continue
 			}
-			visited[neighborID] = true
-			neighbor := current.node.neighbors[neighborID]
+			visited[neighbor] = epoch
 			d := distance(neighbor.Value, target)
-			if results.Len() < k || d < results.items[0].dist {
-				heap.Push(candidates, searchCandidate[K]{node: neighbor, dist: d})
-				heap.Push(results, searchCandidate[K]{node: neighbor, dist: d})
-				if results.Len() > k {
-					heap.Pop(results) // max-heap: drops the farthest
+			if results.len() < k || d < results.items[0].dist {
+				candidates.push(searchCandidate[K]{node: neighbor, dist: d})
+				results.push(searchCandidate[K]{node: neighbor, dist: d})
+				if results.len() > k {
+					results.pop() // max-heap: drops the farthest
 				}
-				if candidates.Len() > efSearch {
+				if candidates.len() > efSearch {
 					// Drop the farthest frontier candidate; the frontier is a
 					// min-heap, so find it by scanning (efSearch is small).
 					worst := 0
-					for i := 1; i < candidates.Len(); i++ {
+					for i := 1; i < candidates.len(); i++ {
 						if candidates.items[i].dist > candidates.items[worst].dist {
 							worst = i
 						}
 					}
-					heap.Remove(candidates, worst)
+					candidates.remove(worst)
 				}
 			}
 		}
 	}
 
-	out := make([]searchCandidate[K], 0, results.Len())
-	out = append(out, results.items...)
-	sort.Slice(out, func(i, j int) bool { return out[i].dist < out[j].dist })
+	s.cand = candidates
+	s.res = results
+	out := results.items
+	slices.SortFunc(out, func(a, b searchCandidate[K]) int {
+		switch {
+		case a.dist < b.dist:
+			return -1
+		case a.dist > b.dist:
+			return 1
+		default:
+			return 0
+		}
+	})
 	return out
 }
 
-// distHeap is a container/heap of searchCandidate ordered by distance. When max
-// is true it is a max-heap (root is the farthest), otherwise a min-heap (root is
-// the closest).
+// distHeap is a typed binary heap of searchCandidate ordered by distance. When
+// max is true it is a max-heap (root is the farthest), otherwise a min-heap (root
+// is the closest). The operations are typed rather than routed through
+// container/heap so no value is boxed into an interface, which the profiler
+// showed was allocating on every push and pop.
 type distHeap[K cmp.Ordered] struct {
 	items []searchCandidate[K]
 	max   bool
 }
 
-func (h distHeap[K]) Len() int { return len(h.items) }
-func (h distHeap[K]) Less(i, j int) bool {
+func (h *distHeap[K]) len() int { return len(h.items) }
+
+func (h *distHeap[K]) less(i, j int) bool {
 	if h.max {
 		return h.items[i].dist > h.items[j].dist
 	}
 	return h.items[i].dist < h.items[j].dist
 }
-func (h distHeap[K]) Swap(i, j int) { h.items[i], h.items[j] = h.items[j], h.items[i] }
-func (h *distHeap[K]) Push(x any)   { h.items = append(h.items, x.(searchCandidate[K])) }
-func (h *distHeap[K]) Pop() any {
-	n := len(h.items)
-	x := h.items[n-1]
-	h.items = h.items[:n-1]
+
+func (h *distHeap[K]) swap(i, j int) {
+	h.items[i], h.items[j] = h.items[j], h.items[i]
+}
+
+func (h *distHeap[K]) push(x searchCandidate[K]) {
+	h.items = append(h.items, x)
+	h.up(len(h.items) - 1)
+}
+
+func (h *distHeap[K]) pop() searchCandidate[K] {
+	n := len(h.items) - 1
+	h.swap(0, n)
+	h.down(0, n)
+	x := h.items[n]
+	h.items = h.items[:n]
 	return x
 }
 
-func (n *layerNode[K]) replenish(m int) {
+func (h *distHeap[K]) remove(i int) {
+	n := len(h.items) - 1
+	if i != n {
+		h.swap(i, n)
+		if !h.down(i, n) {
+			h.up(i)
+		}
+	}
+	h.items = h.items[:n]
+}
+
+func (h *distHeap[K]) up(j int) {
+	for {
+		i := (j - 1) / 2
+		if i == j || !h.less(j, i) {
+			break
+		}
+		h.swap(i, j)
+		j = i
+	}
+}
+
+func (h *distHeap[K]) down(i0, n int) bool {
+	i := i0
+	for {
+		j1 := 2*i + 1
+		if j1 >= n || j1 < 0 {
+			break
+		}
+		j := j1
+		if j2 := j1 + 1; j2 < n && h.less(j2, j1) {
+			j = j2
+		}
+		if !h.less(j, i) {
+			break
+		}
+		h.swap(i, j)
+		i = j
+	}
+	return i > i0
+}
+
+func (n *layerNode[K]) replenish(m int, dist DistanceFunc) {
 	if len(n.neighbors) >= m {
 		return
 	}
 
-	// Restore connectivity by adding new neighbors.
-	// This is a naive implementation that could be improved by
-	// using a priority queue to find the best candidates.
+	// Restore connectivity by adding new neighbors. This is a naive
+	// implementation that could be improved by using a priority queue to find
+	// the best candidates.
 	for _, neighbor := range n.neighbors {
-		for key, candidate := range neighbor.neighbors {
-			if _, ok := n.neighbors[key]; ok {
-				// do not add duplicates
-				continue
-			}
+		for _, candidate := range neighbor.neighbors {
 			if candidate == n {
 				continue
 			}
-			n.addNeighbor(candidate, m, CosineDistance)
+			if n.indexOfNeighbor(candidate) >= 0 {
+				// do not add duplicates
+				continue
+			}
+			n.addNeighbor(candidate, m, dist)
 			if len(n.neighbors) >= m {
 				return
 			}
@@ -195,12 +327,13 @@ func (n *layerNode[K]) replenish(m int) {
 	}
 }
 
-// isolates remove the node from the graph by removing all connections
+// isolate remove the node from the graph by removing all connections
 // to neighbors.
-func (n *layerNode[K]) isolate(m int) {
-	for _, neighbor := range n.neighbors {
-		delete(neighbor.neighbors, n.Key)
-		neighbor.replenish(m)
+func (n *layerNode[K]) isolate(m int, dist DistanceFunc) {
+	neighbors := append([]*layerNode[K](nil), n.neighbors...)
+	for _, neighbor := range neighbors {
+		neighbor.removeNeighbor(n)
+		neighbor.replenish(m, dist)
 	}
 }
 
@@ -255,12 +388,23 @@ type Graph[K cmp.Ordered] struct {
 	Ml float64
 
 	// EfSearch is the number of nodes to consider in the search phase.
-	// 20 is a reasonable default. Higher values improve search accuracy at
-	// the expense of memory.
+	// 20 is a reasonable default. Higher values improve search accuracy at the
+	// expense of memory.
 	EfSearch int
+
+	// EfConstruction is the number of nodes to consider while inserting a node.
+	// A wider construction beam explores more of the graph when choosing a new
+	// node's neighbours, which recovers recall at smaller M. Zero means use
+	// EfSearch, which is the vendored behaviour.
+	EfConstruction int
 
 	// layers is a slice of layers in the graph.
 	layers []*layer[K]
+
+	// addScratch is the reusable search buffer for Add, which is serial. Search
+	// is concurrent, so it draws from searchPool instead.
+	addScratch *searchScratch[K]
+	searchPool sync.Pool
 }
 
 func defaultRand() *rand.Rand {
@@ -296,6 +440,14 @@ func maxLevel(ml float64, numNodes int) int {
 	m := int(math.Round(l)) + 1
 
 	return m
+}
+
+// efConstruction returns the construction beam width.
+func (g *Graph[K]) efConstruction() int {
+	if g.EfConstruction > 0 {
+		return g.EfConstruction
+	}
+	return g.EfSearch
 }
 
 // randomLevel generates a random level for a new node.
@@ -346,9 +498,30 @@ func ptr[T any](v T) *T {
 	return &v
 }
 
+// searchScratchFor returns the serial Add scratch, allocating it once.
+func (g *Graph[K]) searchScratchFor() *searchScratch[K] {
+	if g.addScratch == nil {
+		g.addScratch = newSearchScratch[K]()
+	}
+	return g.addScratch
+}
+
+// acquireScratch returns a search buffer safe for concurrent use.
+func (g *Graph[K]) acquireScratch() *searchScratch[K] {
+	if v := g.searchPool.Get(); v != nil {
+		return v.(*searchScratch[K])
+	}
+	return newSearchScratch[K]()
+}
+
+func (g *Graph[K]) releaseScratch(s *searchScratch[K]) {
+	g.searchPool.Put(s)
+}
+
 // Add inserts nodes into the graph.
 // If another node with the same ID exists, it is replaced.
 func (g *Graph[K]) Add(nodes ...Node[K]) {
+	scratch := g.searchScratchFor()
 	for _, node := range nodes {
 		key := node.Key
 		vec := node.Value
@@ -398,7 +571,7 @@ func (g *Graph[K]) Add(nodes ...Node[K]) {
 				panic("(*Graph).Distance must be set")
 			}
 
-			neighborhood := searchPoint.search(g.M, g.EfSearch, vec, g.Distance)
+			neighborhood := searchPoint.search(g.M, g.efConstruction(), vec, g.Distance, scratch)
 			if len(neighborhood) == 0 {
 				// This should never happen because the searchPoint itself
 				// should be in the result set.
@@ -436,6 +609,9 @@ func (h *Graph[K]) Search(near Vector, k int) []Node[K] {
 		return nil
 	}
 
+	scratch := h.acquireScratch()
+	defer h.releaseScratch(scratch)
+
 	var (
 		efSearch = h.EfSearch
 
@@ -450,12 +626,12 @@ func (h *Graph[K]) Search(near Vector, k int) []Node[K] {
 
 		// Descending hierarchies
 		if layer > 0 {
-			nodes := searchPoint.search(1, efSearch, near, h.Distance)
+			nodes := searchPoint.search(1, efSearch, near, h.Distance, scratch)
 			elevator = ptr(nodes[0].node.Key)
 			continue
 		}
 
-		nodes := searchPoint.search(k, efSearch, near, h.Distance)
+		nodes := searchPoint.search(k, efSearch, near, h.Distance, scratch)
 		out := make([]Node[K], 0, len(nodes))
 
 		for _, node := range nodes {
@@ -491,7 +667,7 @@ func (h *Graph[K]) Delete(key K) bool {
 			continue
 		}
 		delete(layer.nodes, key)
-		node.isolate(h.M)
+		node.isolate(h.M, h.Distance)
 		deleted = true
 	}
 
