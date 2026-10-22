@@ -145,21 +145,51 @@ func isStale(m asymptoteobserve.LearningMemoryV1, now time.Time, maxAgeDays int)
 // significant terms but express opposite polarity (one directive, one
 // prohibition). It is a heuristic for human review, not a decision.
 func detectContradictions(memories []asymptoteobserve.LearningMemoryV1, opts TrustOptions) []Contradiction {
+	// Mirror AnnotateTrust's default so a caller that passes zero options cannot
+	// accidentally make every opposite-polarity pair a contradiction.
+	if opts.ContradictionTerms <= 0 {
+		opts.ContradictionTerms = 2
+	}
+	// Precompute polarity and term sets once. The pairwise scan is O(n^2), so
+	// recomputing the term set inside it is wasteful on a real corpus.
+	type entry struct {
+		memory asymptoteobserve.LearningMemoryV1
+		pol    int
+		terms  map[string]bool
+	}
+	entries := make([]entry, len(memories))
+	for i, m := range memories {
+		entries[i] = entry{memory: m, pol: directivePolarity(m.Body), terms: significantTerms(m.Body)}
+	}
+
 	var out []Contradiction
-	for i := 0; i < len(memories); i++ {
-		for j := i + 1; j < len(memories); j++ {
-			a, b := memories[i], memories[j]
-			if a.Project.ID != b.Project.ID || a.Kind != b.Kind || distinctExplicitVersions(a.Applicability, b.Applicability) {
+	for i := 0; i < len(entries); i++ {
+		a := entries[i]
+		if a.pol == 0 {
+			continue
+		}
+		for j := i + 1; j < len(entries); j++ {
+			b := entries[j]
+			if a.memory.Project.ID != b.memory.Project.ID || a.memory.Kind != b.memory.Kind || distinctExplicitVersions(a.memory.Applicability, b.memory.Applicability) {
 				continue
 			}
-			pa, pb := directivePolarity(a.Body), directivePolarity(b.Body)
-			if pa == 0 || pb == 0 || pa == pb {
+			if b.pol == 0 || a.pol == b.pol {
 				continue
 			}
-			shared := sharedSignificantTerms(a.Body, b.Body, opts.ContradictionTerms)
-			if len(shared) >= opts.ContradictionTerms {
-				out = append(out, Contradiction{A: a, B: b, SharedTerm: shared})
+			shared := intersectTerms(a.terms, b.terms)
+			if len(shared) < opts.ContradictionTerms {
+				continue
 			}
+			// Two memories only contradict if they are about the same subject.
+			// Requiring the shared terms to be more than half of the smaller
+			// memory's significant terms rejects coincidental collisions on
+			// generic directive verbs ("pin", "before", "always") that share two
+			// words but concern different things.
+			minTerms := min(len(a.terms), len(b.terms))
+			if minTerms > 0 && len(shared)*2 <= minTerms {
+				continue
+			}
+			out = append(out, Contradiction{A: a.memory, B: b.memory, SharedTerm: shared})
 		}
 	}
 	return out
@@ -188,6 +218,18 @@ func distinctExplicitVersions(a, b string) bool {
 	}
 	av, bv := version(a), version(b)
 	return av != "" && bv != "" && av != bv
+}
+
+// intersectTerms returns the shared terms of two term sets, sorted.
+func intersectTerms(a, b map[string]bool) []string {
+	var shared []string
+	for w := range a {
+		if b[w] {
+			shared = append(shared, w)
+		}
+	}
+	sort.Strings(shared)
+	return shared
 }
 
 var (

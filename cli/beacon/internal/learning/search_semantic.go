@@ -235,6 +235,12 @@ type HybridOptions struct {
 	// UseANN selects the HNSW approximate semantic source instead of exact
 	// cosine search. It requires an embedder; ignored otherwise.
 	UseANN bool
+	// LexicalWeight and SemanticWeight scale each source's reciprocal-rank
+	// contribution. Zero means the default of 1, which reproduces standard RRF.
+	// They exist so a weighting can be tuned and validated; the default stays
+	// standard RRF unless held-out evidence justifies a change.
+	LexicalWeight  float64
+	SemanticWeight float64
 }
 
 func (o HybridOptions) withDefaults() HybridOptions {
@@ -246,6 +252,12 @@ func (o HybridOptions) withDefaults() HybridOptions {
 	}
 	if o.RRFK <= 0 {
 		o.RRFK = 60
+	}
+	if o.LexicalWeight <= 0 {
+		o.LexicalWeight = 1
+	}
+	if o.SemanticWeight <= 0 {
+		o.SemanticWeight = 1
 	}
 	return o
 }
@@ -310,11 +322,11 @@ func (s *Store) SearchHybrid(query Query, opts HybridOptions) ([]HybridResult, e
 		}
 		if lexicalRank > 0 {
 			entry.LexicalRank = lexicalRank
-			entry.Score += 1.0 / (opts.RRFK + float64(lexicalRank))
+			entry.Score += opts.LexicalWeight / (opts.RRFK + float64(lexicalRank))
 		}
 		if semanticRank > 0 {
 			entry.SemanticRank = semanticRank
-			entry.Score += 1.0 / (opts.RRFK + float64(semanticRank))
+			entry.Score += opts.SemanticWeight / (opts.RRFK + float64(semanticRank))
 		}
 	}
 	for i, m := range lexical {

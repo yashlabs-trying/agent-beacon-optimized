@@ -112,6 +112,7 @@ func (s *Store) ensureSchemaOnce(db *sql.DB) error {
 	if err := ensureSchema(db); err != nil {
 		return err
 	}
+	faultPoint("migration_post_schema")
 	_ = ensureSearchSchema(db)
 	schemaInitialized.Store(s.dbPath, struct{}{})
 	return nil
@@ -209,6 +210,7 @@ func rebuildMemoryIndexTx(tx *sql.Tx) error {
 	if _, err := tx.Exec(`DELETE FROM memories_fts`); err != nil {
 		return err
 	}
+	faultPoint("index_rebuild")
 	insert, err := tx.Prepare(`INSERT INTO memories_fts (memory_id, hay) VALUES (?, ?)`)
 	if err != nil {
 		return err

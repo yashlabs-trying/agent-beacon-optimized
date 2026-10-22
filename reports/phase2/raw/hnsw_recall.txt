@@ -1,0 +1,14 @@
+ANN stage n=10000 M=64 gen_ms=15 peak_rss_mb=0
+ANN stage n=10000 M=64 built_ms=5104 peak_rss_mb=0
+ANN recall n=10000 M=64 recall@10=1.0000 exact_truth_ms=427
+goos: darwin
+goarch: arm64
+pkg: github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning
+cpu: Apple M5
+BenchmarkANNvsExact/n=10000/ann-10         	       1	     69625 ns/op
+ANN stage n=25000 M=64 gen_ms=17 peak_rss_mb=0
+ANN stage n=25000 M=64 built_ms=13795 peak_rss_mb=0
+ANN recall n=25000 M=64 recall@10=1.0000 exact_truth_ms=1022
+BenchmarkANNvsExact/n=25000/ann-10         	       1	     96166 ns/op
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	20.670s

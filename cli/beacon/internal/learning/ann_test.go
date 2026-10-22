@@ -218,6 +218,16 @@ func BenchmarkANNvsExact(b *testing.B) {
 				params.M = v
 			}
 		}
+		if e := os.Getenv("BEACON_ANN_EFC"); e != "" {
+			if v, err := strconv.Atoi(e); err == nil && v > 0 {
+				params.EfConstruction = v
+			}
+		}
+		if sd := os.Getenv("BEACON_ANN_SEED"); sd != "" {
+			if v, err := strconv.ParseInt(sd, 10, 64); err == nil {
+				params.Seed = v
+			}
+		}
 		t0 := time.Now()
 		ids, vecs, queries := syntheticVectors(n, 128, 256, 7)
 		fmt.Printf("ANN stage n=%d M=%d gen_ms=%d peak_rss_mb=%d\n", n, params.M, time.Since(t0).Milliseconds(), peakRSSKB()/1024)

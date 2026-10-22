@@ -3,6 +3,7 @@ package learning
 import (
 	"database/sql"
 	"math"
+	"math/rand"
 	"strings"
 	"sync"
 
@@ -25,6 +26,10 @@ type annParams struct {
 	M        int
 	Ml       float64
 	EfSearch int
+	// EfConstruction is the build-time beam width. Zero means use EfSearch.
+	EfConstruction int
+	// Seed, when non-zero, makes level generation reproducible for benchmarks.
+	Seed int64
 }
 
 func defaultANNParams() annParams {
@@ -46,6 +51,10 @@ func newANNIndex(p annParams) *annIndex {
 	g.M = p.M
 	g.Ml = p.Ml
 	g.EfSearch = p.EfSearch
+	g.EfConstruction = p.EfConstruction
+	if p.Seed != 0 {
+		g.Rng = rand.New(rand.NewSource(p.Seed))
+	}
 	return &annIndex{graph: g}
 }
 
