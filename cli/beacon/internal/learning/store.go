@@ -28,6 +28,20 @@ type Store struct {
 	embedder Embedder
 }
 
+// faultHook, when non-nil, is called at named points during a memory write. It
+// is a test seam for crash injection: it is nil in production, so each call site
+// costs one nil comparison, and no fault-injection behaviour is reachable on a
+// normal execution path. Tests set it to terminate the process at a chosen stage
+// and then reopen the database to check durability.
+var faultHook func(stage string)
+
+// faultPoint invokes the test fault hook when one is installed.
+func faultPoint(stage string) {
+	if faultHook != nil {
+		faultHook(stage)
+	}
+}
+
 // Query selects stored learning records.
 //
 // ProjectPath is the trust boundary of this package. The CLI resolves an
@@ -589,10 +603,12 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 		return err
 	}
 	defer db.Close()
+	faultPoint("tx_begin_pre")
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin memory write: %w", err)
 	}
+	faultPoint("tx_begin_post")
 	defer tx.Rollback()
 	if _, err = tx.Exec(`INSERT INTO memories (id, candidate_id, project_id, kind, title, created_at, updated_at, superseded_by, memory_json)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -600,6 +616,7 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 		m.ID, m.CandidateID, m.Project.ID, m.Kind, m.Title, m.CreatedAt, m.UpdatedAt, m.SupersededBy, string(data)); err != nil {
 		return fmt.Errorf("insert memory: %w", err)
 	}
+	faultPoint("memory_insert")
 	// Refresh the derived index row in the same transaction when the index is
 	// known-good, and advance the durable generation either way so every process
 	// sees that cached results for this store are now stale.
@@ -615,18 +632,22 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 			}
 		}
 	}
+	faultPoint("fts_update")
 	if _, err := tx.Exec(`UPDATE memory_index_meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'generation'`); err != nil {
 		return fmt.Errorf("bump generation: %w", err)
 	}
+	faultPoint("generation_update")
 	if s.embedder != nil {
 		// Embeddings are derived state, updated incrementally in the same
 		// transaction. A failure here must never fail the authoritative write;
 		// RebuildEmbeddings can repair it later.
 		_ = s.upsertEmbeddingTx(tx, m)
 	}
+	faultPoint("pre_commit")
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit memory: %w", err)
 	}
+	faultPoint("post_commit")
 	if !indexHealthy {
 		schemaInitialized.Delete(s.dbPath)
 		indexReadyCache.Delete(s.dbPath)
