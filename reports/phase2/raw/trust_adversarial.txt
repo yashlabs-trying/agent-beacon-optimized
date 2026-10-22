@@ -1,0 +1,20 @@
+=== RUN   TestPhase2AdversarialContradictionMatrix
+    phase2_trust_adversarial_test.go:179: category=canonical_conflict   tp=20 fp=0 fn=0 tn=0
+    phase2_trust_adversarial_test.go:179: category=same_polarity_decoy  tp=0 fp=0 fn=0 tn=15
+    phase2_trust_adversarial_test.go:179: category=unrelated            tp=0 fp=0 fn=0 tn=10
+    phase2_trust_adversarial_test.go:179: category=cross_kind_missed    tp=0 fp=0 fn=8 tn=0
+    phase2_trust_adversarial_test.go:179: category=insufficient_overlap tp=0 fp=0 fn=0 tn=7
+    phase2_trust_adversarial_test.go:179: category=hidden_in_long_text  tp=5 fp=0 fn=0 tn=0
+    phase2_trust_adversarial_test.go:183: ADVERSARIAL contradiction: cases=65 detected=62 cross_talk=37 tp=25 fp=0 fn=8 tn=32 precision=1.000 recall=0.758 false_positive_rate=0.000
+--- PASS: TestPhase2AdversarialContradictionMatrix (0.00s)
+=== RUN   TestPhase2CrossScopeLeakageAllPaths
+--- PASS: TestPhase2CrossScopeLeakageAllPaths (0.07s)
+=== RUN   TestPhase2UnapprovedEvidenceNotVisible
+--- PASS: TestPhase2UnapprovedEvidenceNotVisible (0.01s)
+=== RUN   TestPhase2HostileMemoryContent
+--- PASS: TestPhase2HostileMemoryContent (0.02s)
+=== RUN   TestPhase2TrustAnnotationLatency
+    phase2_trust_adversarial_test.go:400: AnnotateTrust n=500 elapsed_ms=0.94 per_item_us=1.9
+--- PASS: TestPhase2TrustAnnotationLatency (0.00s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.366s
