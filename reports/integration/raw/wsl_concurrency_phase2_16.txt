@@ -1,0 +1,8 @@
+=== RUN   TestPhase2ConcurrencyStress
+    phase2_concurrency_test.go:198: STRESS concurrency=16 duration_s=5 reads=2176 writes=572 supersedes=135 errors=0 busy=0 stale=0
+    phase2_concurrency_test.go:200: STRESS read_latency_us p50=2041 p95=5971 p99=37488 mean=4008 n=2176
+    phase2_concurrency_test.go:201: STRESS write_latency_us p50=13143 p95=248806 p99=747453 mean=60458 n=707
+    phase2_concurrency_test.go:202: STRESS goroutines before=3 after=2 heap_alloc_mb=2.4 heap_sys_mb=25.9 num_gc=1238 wal_bytes=0
+--- PASS: TestPhase2ConcurrencyStress (5.54s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	5.545s

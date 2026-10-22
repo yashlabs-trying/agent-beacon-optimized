@@ -1,0 +1,10 @@
+=== RUN   TestPutMemoryWaitsForBoundedWriteContention
+--- PASS: TestPutMemoryWaitsForBoundedWriteContention (11.06s)
+=== RUN   TestPhase2UpgradeFromOriginalStorage
+--- PASS: TestPhase2UpgradeFromOriginalStorage (0.01s)
+=== RUN   TestPhase2IndexRebuildAfterDeletion
+--- PASS: TestPhase2IndexRebuildAfterDeletion (0.02s)
+=== RUN   TestPhase2ReopenAfterInterruptedStartup
+--- PASS: TestPhase2ReopenAfterInterruptedStartup (0.01s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	11.108s

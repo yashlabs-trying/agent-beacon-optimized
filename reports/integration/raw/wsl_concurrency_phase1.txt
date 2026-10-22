@@ -1,0 +1,64 @@
+=== RUN   TestConcurrencyPhase1Matrix
+=== RUN   TestConcurrencyPhase1Matrix/read-1
+CONCURRENCY mode=read clients=1 ops=25 throughput=2831.5/s errors=0 p95_ms=0.43 p99_ms=0.54 peak_rss_mb=17.4
+=== RUN   TestConcurrencyPhase1Matrix/write-1
+CONCURRENCY mode=write clients=1 ops=25 throughput=1408.0/s errors=0 p95_ms=1.02 p99_ms=1.21 peak_rss_mb=19.5
+=== RUN   TestConcurrencyPhase1Matrix/mixed-1
+CONCURRENCY mode=mixed clients=1 ops=25 throughput=583.2/s errors=0 p95_ms=2.40 p99_ms=13.76 peak_rss_mb=20.4
+=== RUN   TestConcurrencyPhase1Matrix/supersede-1
+CONCURRENCY mode=supersede clients=1 ops=25 throughput=534.9/s errors=0 p95_ms=10.39 p99_ms=11.29 peak_rss_mb=20.9
+=== RUN   TestConcurrencyPhase1Matrix/rebuild-1
+CONCURRENCY mode=rebuild clients=1 ops=25 throughput=2091.9/s errors=0 p95_ms=0.68 p99_ms=1.10 peak_rss_mb=21.1
+=== RUN   TestConcurrencyPhase1Matrix/read-4
+CONCURRENCY mode=read clients=4 ops=100 throughput=2908.9/s errors=0 p95_ms=3.74 p99_ms=14.03 peak_rss_mb=21.5
+=== RUN   TestConcurrencyPhase1Matrix/write-4
+CONCURRENCY mode=write clients=4 ops=100 throughput=724.2/s errors=0 p95_ms=14.22 p99_ms=57.92 peak_rss_mb=21.6
+=== RUN   TestConcurrencyPhase1Matrix/mixed-4
+CONCURRENCY mode=mixed clients=4 ops=100 throughput=661.0/s errors=0 p95_ms=15.35 p99_ms=37.62 peak_rss_mb=22.9
+=== RUN   TestConcurrencyPhase1Matrix/supersede-4
+CONCURRENCY mode=supersede clients=4 ops=100 throughput=786.5/s errors=0 p95_ms=19.64 p99_ms=55.12 peak_rss_mb=22.7
+=== RUN   TestConcurrencyPhase1Matrix/rebuild-4
+CONCURRENCY mode=rebuild clients=4 ops=100 throughput=3896.8/s errors=0 p95_ms=1.98 p99_ms=2.11 peak_rss_mb=22.7
+=== RUN   TestConcurrencyPhase1Matrix/read-8
+CONCURRENCY mode=read clients=8 ops=200 throughput=2994.5/s errors=0 p95_ms=14.44 p99_ms=15.07 peak_rss_mb=23.3
+=== RUN   TestConcurrencyPhase1Matrix/write-8
+CONCURRENCY mode=write clients=8 ops=200 throughput=759.2/s errors=0 p95_ms=2.55 p99_ms=131.07 peak_rss_mb=23.1
+=== RUN   TestConcurrencyPhase1Matrix/mixed-8
+CONCURRENCY mode=mixed clients=8 ops=200 throughput=864.2/s errors=0 p95_ms=9.76 p99_ms=82.00 peak_rss_mb=24.2
+=== RUN   TestConcurrencyPhase1Matrix/supersede-8
+CONCURRENCY mode=supersede clients=8 ops=200 throughput=557.1/s errors=0 p95_ms=3.60 p99_ms=231.48 peak_rss_mb=24.2
+=== RUN   TestConcurrencyPhase1Matrix/rebuild-8
+CONCURRENCY mode=rebuild clients=8 ops=200 throughput=4601.8/s errors=0 p95_ms=2.81 p99_ms=3.31 peak_rss_mb=24.2
+=== RUN   TestConcurrencyPhase1Matrix/read-16
+CONCURRENCY mode=read clients=16 ops=400 throughput=3708.6/s errors=0 p95_ms=6.66 p99_ms=17.39 peak_rss_mb=24.4
+=== RUN   TestConcurrencyPhase1Matrix/write-16
+CONCURRENCY mode=write clients=16 ops=400 throughput=540.8/s errors=0 p95_ms=54.96 p99_ms=331.25 peak_rss_mb=25.7
+=== RUN   TestConcurrencyPhase1Matrix/mixed-16
+CONCURRENCY mode=mixed clients=16 ops=400 throughput=505.7/s errors=0 p95_ms=35.90 p99_ms=332.27 peak_rss_mb=27.1
+=== RUN   TestConcurrencyPhase1Matrix/supersede-16
+CONCURRENCY mode=supersede clients=16 ops=400 throughput=510.2/s errors=0 p95_ms=35.25 p99_ms=434.24 peak_rss_mb=27.1
+=== RUN   TestConcurrencyPhase1Matrix/rebuild-16
+CONCURRENCY mode=rebuild clients=16 ops=400 throughput=3540.1/s errors=0 p95_ms=16.13 p99_ms=19.07 peak_rss_mb=27.1
+--- PASS: TestConcurrencyPhase1Matrix (6.92s)
+    --- PASS: TestConcurrencyPhase1Matrix/read-1 (0.12s)
+    --- PASS: TestConcurrencyPhase1Matrix/write-1 (0.10s)
+    --- PASS: TestConcurrencyPhase1Matrix/mixed-1 (0.15s)
+    --- PASS: TestConcurrencyPhase1Matrix/supersede-1 (0.18s)
+    --- PASS: TestConcurrencyPhase1Matrix/rebuild-1 (0.10s)
+    --- PASS: TestConcurrencyPhase1Matrix/read-4 (0.15s)
+    --- PASS: TestConcurrencyPhase1Matrix/write-4 (0.25s)
+    --- PASS: TestConcurrencyPhase1Matrix/mixed-4 (0.29s)
+    --- PASS: TestConcurrencyPhase1Matrix/supersede-4 (0.36s)
+    --- PASS: TestConcurrencyPhase1Matrix/rebuild-4 (0.13s)
+    --- PASS: TestConcurrencyPhase1Matrix/read-8 (0.17s)
+    --- PASS: TestConcurrencyPhase1Matrix/write-8 (0.35s)
+    --- PASS: TestConcurrencyPhase1Matrix/mixed-8 (0.34s)
+    --- PASS: TestConcurrencyPhase1Matrix/supersede-8 (0.68s)
+    --- PASS: TestConcurrencyPhase1Matrix/rebuild-8 (0.15s)
+    --- PASS: TestConcurrencyPhase1Matrix/read-16 (0.20s)
+    --- PASS: TestConcurrencyPhase1Matrix/write-16 (0.83s)
+    --- PASS: TestConcurrencyPhase1Matrix/mixed-16 (0.90s)
+    --- PASS: TestConcurrencyPhase1Matrix/supersede-16 (1.27s)
+    --- PASS: TestConcurrencyPhase1Matrix/rebuild-16 (0.21s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	6.923s

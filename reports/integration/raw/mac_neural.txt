@@ -1,0 +1,21 @@
+=== RUN   TestNeuralExtendedQuality
+EXTENDED method=lexical category=paraphrase n=10 recall@1=0.000 recall@5=0.000 mrr=0.000 p50_ms=1.56 p95_ms=10.77
+EXTENDED method=lexical category=synonym n=10 recall@1=0.000 recall@5=0.000 mrr=0.000 p50_ms=0.93 p95_ms=1.33
+EXTENDED method=lexical category=hard_negative n=10 recall@1=0.000 recall@5=0.000 mrr=0.000 p50_ms=0.89 p95_ms=2.26
+EXTENDED method=lexical category=identifier n=10 recall@1=0.300 recall@5=0.300 mrr=0.300 p50_ms=0.75 p95_ms=1.09
+EXTENDED method=hashed category=paraphrase n=10 recall@1=0.500 recall@5=0.800 mrr=0.570 p50_ms=0.77 p95_ms=0.88
+EXTENDED method=hashed category=synonym n=10 recall@1=0.000 recall@5=0.200 mrr=0.075 p50_ms=0.66 p95_ms=0.87
+EXTENDED method=hashed category=hard_negative n=10 recall@1=0.300 recall@5=0.900 mrr=0.517 p50_ms=0.63 p95_ms=0.74
+EXTENDED method=hashed category=identifier n=10 recall@1=1.000 recall@5=1.000 mrr=1.000 p50_ms=0.54 p95_ms=0.66
+EXTENDED method=neural category=paraphrase n=10 recall@1=0.700 recall@5=1.000 mrr=0.850 p50_ms=20.76 p95_ms=54.20
+EXTENDED method=neural category=synonym n=10 recall@1=0.200 recall@5=0.600 mrr=0.370 p50_ms=16.17 p95_ms=28.65
+EXTENDED method=neural category=hard_negative n=10 recall@1=0.700 recall@5=1.000 mrr=0.808 p50_ms=21.14 p95_ms=28.50
+EXTENDED method=neural category=identifier n=10 recall@1=1.000 recall@5=1.000 mrr=1.000 p50_ms=21.39 p95_ms=25.00
+--- PASS: TestNeuralExtendedQuality (2.03s)
+=== RUN   TestNeuralVsHashedQuality
+NEURAL model=BAAI/bge-small-en-v1.5 dim=384
+NEURAL hashed recall@1=0.412 recall@5=0.706 mrr=0.549 ndcg@5=0.590
+NEURAL neural recall@1=0.471 recall@5=1.000 mrr=0.676 ndcg@5=0.758
+--- PASS: TestNeuralVsHashedQuality (0.90s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	3.322s
