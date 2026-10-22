@@ -212,12 +212,18 @@ func BenchmarkANNvsExact(b *testing.B) {
 		}
 	}
 	for _, n := range sizes {
+		params := defaultANNParams()
+		if m := os.Getenv("BEACON_ANN_M"); m != "" {
+			if v, err := strconv.Atoi(m); err == nil && v > 0 {
+				params.M = v
+			}
+		}
 		t0 := time.Now()
 		ids, vecs, queries := syntheticVectors(n, 128, 256, 7)
-		fmt.Printf("ANN stage n=%d gen_ms=%d peak_rss_mb=%d\n", n, time.Since(t0).Milliseconds(), peakRSSKB()/1024)
+		fmt.Printf("ANN stage n=%d M=%d gen_ms=%d peak_rss_mb=%d\n", n, params.M, time.Since(t0).Milliseconds(), peakRSSKB()/1024)
 
 		buildStart := time.Now()
-		idx := newANNIndex(defaultANNParams())
+		idx := newANNIndex(params)
 		for i := range vecs {
 			idx.add(ids[i], vecs[i])
 			if (i+1)%100000 == 0 {
@@ -225,7 +231,25 @@ func BenchmarkANNvsExact(b *testing.B) {
 					n, i+1, time.Since(buildStart).Milliseconds(), peakRSSKB()/1024)
 			}
 		}
-		fmt.Printf("ANN stage n=%d built_ms=%d peak_rss_mb=%d\n", n, time.Since(buildStart).Milliseconds(), peakRSSKB()/1024)
+		fmt.Printf("ANN stage n=%d M=%d built_ms=%d peak_rss_mb=%d\n", n, params.M, time.Since(buildStart).Milliseconds(), peakRSSKB()/1024)
+
+		// Recall@10 and ground-truth cost, measured against exact NN.
+		exactStart := time.Now()
+		hits := 0
+		for _, q := range queries {
+			exact := map[string]bool{}
+			for _, id := range exactTopK(ids, vecs, q, 10) {
+				exact[id] = true
+			}
+			for _, id := range idx.search(q, 10) {
+				if exact[id] {
+					hits++
+				}
+			}
+		}
+		recall := float64(hits) / float64(10*len(queries))
+		fmt.Printf("ANN recall n=%d M=%d recall@10=%.4f exact_truth_ms=%d\n",
+			n, params.M, recall, time.Since(exactStart).Milliseconds())
 
 		b.Run(fmt.Sprintf("n=%d/ann", n), func(b *testing.B) {
 			b.ResetTimer()
