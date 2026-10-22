@@ -1,0 +1,21 @@
+WSL2 Ubuntu, same PATH with OpenCode installed, Go 1.27.3, 2026-10-22.
+
+V6 (85e6ea1c plus Phase 1 local edits):
+go test -p 2 -timeout 30m -count=1 ./...
+--- FAIL: TestMCPConnectEndToEndOpenCode (2.37s)
+    mcp_connect_e2e_test.go:152: opencode mcp list: <nil>
+    No MCP servers configured
+FAIL github.com/asymptote-labs/agent-beacon/cli/beacon/cmd
+ok   github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning 82.604s
+
+Untouched detached baseline (99c709081ad49da1c5ade205929b61b19360ed9b):
+go test -count=1 -run ^TestMCPConnectEndToEndOpenCode$ -v ./cmd
+=== RUN   TestMCPConnectEndToEndOpenCode
+    mcp_connect_e2e_test.go:152: opencode mcp list: <nil>
+    No MCP servers configured
+--- FAIL: TestMCPConnectEndToEndOpenCode (2.83s)
+FAIL github.com/asymptote-labs/agent-beacon/cli/beacon/cmd
+
+With a minimal PATH lacking OpenCode, the same baseline test skips:
+    mcp_connect_e2e_test.go:147: opencode is not installed
+--- SKIP: TestMCPConnectEndToEndOpenCode

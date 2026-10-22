@@ -61,18 +61,37 @@ func truncateBody(body string, maxTokens int) (string, bool) {
 func SelectContext(results []HybridResult, opts ContextOptions) ContextSelection {
 	var sel ContextSelection
 	for _, r := range results {
-		body, truncated := truncateBody(r.Memory.Body, opts.TruncateBodyTokens)
-		tokens := EstimateTokens(r.Memory.Title) + EstimateTokens(body)
 		sel.TotalUnbounded += EstimateTokens(r.Memory.Title) + EstimateTokens(r.Memory.Body)
 		if opts.MaxItems > 0 && len(sel.Items) >= opts.MaxItems {
 			sel.Dropped++
 			continue
 		}
-		if opts.MaxTokens > 0 && sel.TotalTokens+tokens > opts.MaxTokens && len(sel.Items) > 0 {
+		titleTokens := EstimateTokens(r.Memory.Title)
+		bodyLimit := opts.TruncateBodyTokens
+		if opts.MaxTokens > 0 {
+			remaining := opts.MaxTokens - sel.TotalTokens - titleTokens
+			if remaining < 0 {
+				sel.Dropped++
+				continue
+			}
+			if bodyLimit == 0 || bodyLimit > remaining {
+				bodyLimit = remaining
+			}
+		}
+		body, truncated := r.Memory.Body, false
+		if opts.MaxTokens > 0 && bodyLimit == 0 {
+			body, truncated = "", body != ""
+		} else {
+			body, truncated = truncateBody(body, bodyLimit)
+		}
+		tokens := titleTokens + EstimateTokens(body)
+		if opts.MaxTokens > 0 && sel.TotalTokens+tokens > opts.MaxTokens {
 			sel.Dropped++
 			continue
 		}
-		sel.Items = append(sel.Items, ContextItem{Memory: r.Memory, Tokens: tokens, Truncated: truncated})
+		selected := r.Memory
+		selected.Body = body
+		sel.Items = append(sel.Items, ContextItem{Memory: selected, Tokens: tokens, Truncated: truncated})
 		sel.TotalTokens += tokens
 	}
 	return sel

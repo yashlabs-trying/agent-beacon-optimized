@@ -1,6 +1,7 @@
 package learning
 
 import (
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -148,7 +149,7 @@ func detectContradictions(memories []asymptoteobserve.LearningMemoryV1, opts Tru
 	for i := 0; i < len(memories); i++ {
 		for j := i + 1; j < len(memories); j++ {
 			a, b := memories[i], memories[j]
-			if a.Project.ID != b.Project.ID || a.Kind != b.Kind {
+			if a.Project.ID != b.Project.ID || a.Kind != b.Kind || distinctExplicitVersions(a.Applicability, b.Applicability) {
 				continue
 			}
 			pa, pb := directivePolarity(a.Body), directivePolarity(b.Body)
@@ -162,6 +163,31 @@ func detectContradictions(memories []asymptoteobserve.LearningMemoryV1, opts Tru
 		}
 	}
 	return out
+}
+
+var explicitVersionPattern = regexp.MustCompile(`(?i)\b(?:version|v)\s*([0-9]+(?:\.[0-9]+)*)\b`)
+
+// Only suppress a conflict when both applicability strings name one distinct,
+// unambiguous software version. Ranges and alternatives remain candidates for
+// review because they may overlap.
+func distinctExplicitVersions(a, b string) bool {
+	version := func(value string) string {
+		lower := strings.ToLower(value)
+		if strings.Contains(lower, " or ") || strings.Contains(lower, " through ") || strings.ContainsAny(lower, "><+,") {
+			return ""
+		}
+		matches := explicitVersionPattern.FindAllStringSubmatch(lower, -1)
+		if len(matches) != 1 {
+			return ""
+		}
+		out := matches[0][1]
+		for strings.HasSuffix(out, ".0") {
+			out = strings.TrimSuffix(out, ".0")
+		}
+		return out
+	}
+	av, bv := version(a), version(b)
+	return av != "" && bv != "" && av != bv
 }
 
 var (

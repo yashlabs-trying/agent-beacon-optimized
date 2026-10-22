@@ -1,3 +1,22 @@
+# Phase 1 — Phase 2 Readiness (22 October 2026 revalidation)
+
+Phase 1 validation now includes both WSL2 and the Apple M5 Mac. The Mac SSH, neural inference, and actual local-agent execution blockers listed in the earlier report below were resolved. The new work remains local; no paid compute, push, or PR was used.
+
+| Component | Phase 1 verdict | Phase 2 entry condition |
+|---|---|---|
+| Lexical and cache | PASS | Preserve 10K differential-query equivalence in future planner changes. |
+| Build/portability | CONDITIONAL PASS | Resolve or classify the remaining repository-wide test failures recorded in `BUILD_AND_COMPATIBILITY.md`. |
+| ANN | CONDITIONAL PASS | Improve M64 build cost/allocations while protecting recall; evaluate real embedding distributions. |
+| Neural | CONDITIONAL PASS | Use a larger held-out, independently labeled set and repeat across seeds/domains. |
+| Trust/security | CONDITIONAL PASS | Calibrate on real reviewed memories; run a live-agent adversarial prompt-injection evaluation. |
+| Crash/concurrency | CONDITIONAL PASS | Add interrupted migration, power-loss/storage simulation where possible, long soak and multi-process stress. |
+| Token budgeting | CONDITIONAL PASS | Count actual serialized/model tokens and validate critical-evidence retention on a larger set. |
+| Real agent | CONDITIONAL PASS | Run many blinded task fixtures and repetitions; compare original/V6 when their retrieval differs. |
+
+The 10K M64 ANN build took 17.18 s and allocated about 5.07 GB cumulatively on Mac; no extrapolated 1M build is claimed from it. The 40-case neural and 50-case trust suites are useful regression seeds, not statistical certification. The three-task agent comparison yielded original=V6=2/3. A V6-specific end-to-end benefit is still unproven. Stop here for review before Phase 2 or large-scale ANN runs.
+
+## Prior Phase 1 report (preserved below)
+
 # Phase 1 — Phase 2 Readiness
 
 ## Ready

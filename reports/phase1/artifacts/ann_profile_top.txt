@@ -1,0 +1,116 @@
+File: learning.test
+Type: cpu
+Time: 2026-10-22 18:06:22 IST
+Duration: 37.04s, Total samples = 37.77s (101.97%)
+Showing nodes accounting for 35.23s, 93.28% of 37.77s total
+Dropped 202 nodes (cum <= 0.19s)
+      flat  flat%   sum%        cum   cum%
+    11.74s 31.08% 31.08%     11.80s 31.24%  github.com/viterin/vek/internal/functions.CosineSimilarity_Go_F32
+     2.56s  6.78% 37.86%      3.10s  8.21%  internal/runtime/maps.(*Iter).Next
+     2.38s  6.30% 44.16%      2.93s  7.76%  slices.partitionOrdered[go.shape.string]
+     1.87s  4.95% 49.11%      2.66s  7.04%  slices.insertionSortOrdered[go.shape.string]
+     1.42s  3.76% 52.87%      1.42s  3.76%  cmpbody
+     1.31s  3.47% 56.34%      1.31s  3.47%  runtime.pthread_cond_wait
+     1.16s  3.07% 59.41%      1.16s  3.07%  internal/runtime/maps.ctrlGroupMatchEmpty (inline)
+     1.13s  2.99% 62.40%      1.13s  2.99%  runtime.pthread_kill
+     1.06s  2.81% 65.21%      1.06s  2.81%  runtime.madvise
+     0.95s  2.52% 67.73%      3.40s  9.00%  runtime.mapaccess2_faststr
+     0.95s  2.52% 70.24%      0.97s  2.57%  runtime.pthread_cond_signal
+     0.78s  2.07% 72.31%     10.61s 28.09%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw.(*layerNode[go.shape.string]).addNeighbor
+     0.56s  1.48% 73.79%      0.58s  1.54%  container/heap.up
+     0.55s  1.46% 75.24%     20.49s 54.25%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw.(*layerNode[go.shape.string]).search
+     0.47s  1.24% 76.49%      0.52s  1.38%  container/heap.down
+     0.46s  1.22% 77.71%      0.59s  1.56%  slices.order2Ordered[go.shape.string] (inline)
+     0.44s  1.16% 78.87%      0.44s  1.16%  runtime.memclrNoHeapPointers
+     0.43s  1.14% 80.01%      0.43s  1.14%  internal/runtime/maps.(*groupReference).key (inline)
+     0.42s  1.11% 81.12%      0.42s  1.11%  internal/runtime/maps.memHashAES
+     0.39s  1.03% 82.16%      0.39s  1.03%  runtime.usleep
+     0.37s  0.98% 83.13%      0.37s  0.98%  internal/runtime/maps.(*ctrlGroup).get (inline)
+     0.31s  0.82% 83.96%      0.31s  0.82%  runtime.memequal
+     0.30s  0.79% 84.75%      0.65s  1.72%  runtime.scanObject
+     0.29s  0.77% 85.52%      0.29s  0.77%  runtime.kevent
+     0.28s  0.74% 86.26%      0.36s  0.95%  runtime.tryDeferToSpanScan
+     0.26s  0.69% 86.95%      2.90s  7.68%  golang.org/x/exp/maps.Keys[go.shape.map[go.shape.string]*github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw.layerNode[go.shape.string],go.shape.string,go.shape.*uint8] (inline)
+     0.21s  0.56% 87.50%      6.62s 17.53%  slices.pdqsortOrdered[go.shape.string]
+     0.20s  0.53% 88.03%      1.49s  3.94%  runtime.mapassign_faststr
+     0.20s  0.53% 88.56%      0.20s  0.53%  runtime.memmove
+     0.18s  0.48% 89.04%      0.37s  0.98%  runtime.typedmemmove
+     0.17s  0.45% 89.49%      3.49s  9.24%  runtime.mapaccess1_faststr
+     0.14s  0.37% 89.86%      0.23s  0.61%  internal/runtime/maps.(*table).Delete
+     0.12s  0.32% 90.18%     11.93s 31.59%  github.com/viterin/vek/vek32.CosineSimilarity
+     0.11s  0.29% 90.47%      2.55s  6.75%  runtime.mapIterNext
+     0.10s  0.26% 90.73%      0.87s  2.30%  container/heap.Push
+     0.10s  0.26% 91.00%      0.69s  1.83%  slices.medianOrdered[go.shape.string]
+     0.09s  0.24% 91.24%      0.78s  2.07%  slices.choosePivotOrdered[go.shape.string]
+     0.08s  0.21% 91.45%     12.01s 31.80%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw.CosineDistance
+     0.08s  0.21% 91.66%      0.42s  1.11%  internal/runtime/maps.(*table).uncheckedPutSlot
+     0.08s  0.21% 91.87%      0.19s   0.5%  runtime.mallocgcSmallScanNoHeaderSC2
+     0.07s  0.19% 92.06%      0.93s  2.46%  internal/runtime/maps.(*table).grow
+     0.07s  0.19% 92.24%      0.29s  0.77%  internal/runtime/maps.typedmemmove
+     0.06s  0.16% 92.40%      1.08s  2.86%  runtime.mallocgc
+     0.05s  0.13% 92.53%      0.33s  0.87%  runtime.convT
+     0.05s  0.13% 92.67%      2.33s  6.17%  runtime.gcDrain
+     0.04s  0.11% 92.77%      1.46s  3.87%  cmp.Less[go.shape.string] (inline)
+     0.04s  0.11% 92.88%      0.19s   0.5%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw.(*distHeap[go.shape.string]).Push
+     0.02s 0.053% 92.93%      0.25s  0.66%  internal/runtime/maps.(*Map).Delete
+     0.02s 0.053% 92.98%      0.21s  0.56%  runtime.(*mcache).nextFree
+     0.02s 0.053% 93.04%      0.44s  1.16%  runtime.lock2
+     0.01s 0.026% 93.06%     31.09s 82.31%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw.(*Graph[go.shape.string]).Add
+     0.01s 0.026% 93.09%      0.23s  0.61%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw.(*layerNode[go.shape.string]).replenish
+     0.01s 0.026% 93.12%      0.49s  1.30%  internal/runtime/maps.(*table).reset
+     0.01s 0.026% 93.14%      1.44s  3.81%  runtime.(*gcControllerState).enlistWorker
+     0.01s 0.026% 93.17%      0.34s   0.9%  runtime.makeslice
+     0.01s 0.026% 93.20%      0.60s  1.59%  runtime.mallocgcSmallScanHeader
+     0.01s 0.026% 93.22%      0.26s  0.69%  runtime.mapdelete_faststr
+     0.01s 0.026% 93.25%      2.06s  5.45%  runtime.mcall
+     0.01s 0.026% 93.28%      2.07s  5.48%  runtime.schedule
+         0     0% 93.28%      0.61s  1.62%  container/heap.Pop
+         0     0% 93.28%     31.10s 82.34%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.(*annIndex).add
+         0     0% 93.28%     31.23s 82.68%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.TestANNPhase1Matrix
+         0     0% 93.28%      1.11s  2.94%  internal/runtime/maps.(*table).rehash
+         0     0% 93.28%      1.16s  3.07%  internal/runtime/maps.ctrlGroup.matchEmpty (inline)
+         0     0% 93.28%      0.38s  1.01%  internal/runtime/maps.newGroups (inline)
+         0     0% 93.28%      0.50s  1.32%  internal/runtime/maps.newTable
+         0     0% 93.28%      0.38s  1.01%  internal/runtime/maps.newarray
+         0     0% 93.28%      1.20s  3.18%  runtime.(*mheap).alloc.func1
+         0     0% 93.28%      1.22s  3.23%  runtime.(*mheap).allocSpan
+         0     0% 93.28%      1.79s  4.74%  runtime.findRunnable
+         0     0% 93.28%         1s  2.65%  runtime.gcBgMarkWorker
+         0     0% 93.28%      2.34s  6.20%  runtime.gcBgMarkWorker.func2
+         0     0% 93.28%      1.13s  2.99%  runtime.gcDrainMarkWorkerDedicated (inline)
+         0     0% 93.28%      1.20s  3.18%  runtime.gcDrainMarkWorkerIdle (inline)
+         0     0% 93.28%      0.24s  0.64%  runtime.gcStart.func4
+         0     0% 93.28%      0.61s  1.62%  runtime.gopreempt_m (inline)
+         0     0% 93.28%      0.61s  1.62%  runtime.goschedImpl
+         0     0% 93.28%      0.44s  1.16%  runtime.lock (inline)
+         0     0% 93.28%      0.44s  1.16%  runtime.lockWithRank (inline)
+         0     0% 93.28%      1.29s  3.42%  runtime.mPark (inline)
+         0     0% 93.28%      0.19s   0.5%  runtime.mProf_Malloc
+         0     0% 93.28%      0.70s  1.85%  runtime.mapIterStart
+         0     0% 93.28%      0.61s  1.62%  runtime.morestack
+         0     0% 93.28%      0.29s  0.77%  runtime.netpoll
+         0     0% 93.28%      0.38s  1.01%  runtime.newarray
+         0     0% 93.28%      0.61s  1.62%  runtime.newstack
+         0     0% 93.28%      1.29s  3.42%  runtime.notesleep
+         0     0% 93.28%      0.96s  2.54%  runtime.notewakeup
+         0     0% 93.28%      0.37s  0.98%  runtime.osyield (inline)
+         0     0% 93.28%      2.05s  5.43%  runtime.park_m
+         0     0% 93.28%      1.14s  3.02%  runtime.preemptM
+         0     0% 93.28%      1.14s  3.02%  runtime.preemptone
+         0     0% 93.28%      0.19s   0.5%  runtime.profilealloc
+         0     0% 93.28%      0.23s  0.61%  runtime.resetspinning
+         0     0% 93.28%      1.33s  3.52%  runtime.semasleep
+         0     0% 93.28%      0.98s  2.59%  runtime.semawakeup
+         0     0% 93.28%      1.13s  2.99%  runtime.signalM (inline)
+         0     0% 93.28%      0.29s  0.77%  runtime.startTheWorldWithSema
+         0     0% 93.28%      0.97s  2.57%  runtime.startm
+         0     0% 93.28%      1.36s  3.60%  runtime.stopm
+         0     0% 93.28%      1.05s  2.78%  runtime.sysUsed (inline)
+         0     0% 93.28%      1.05s  2.78%  runtime.sysUsedOS (inline)
+         0     0% 93.28%      3.98s 10.54%  runtime.systemstack
+         0     0% 93.28%      1.01s  2.67%  runtime.wakep
+         0     0% 93.28%      6.62s 17.53%  slices.Sort[go.shape.[]go.shape.string,go.shape.string] (inline)
+         0     0% 93.28%      0.21s  0.56%  slices.medianAdjacentOrdered[go.shape.string] (inline)
+         0     0% 93.28%      0.21s  0.56%  sort.Slice
+         0     0% 93.28%      0.20s  0.53%  sort.pdqsort_func
+         0     0% 93.28%     31.23s 82.68%  testing.tRunner

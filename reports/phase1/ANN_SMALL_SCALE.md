@@ -1,3 +1,20 @@
+# Phase 1 — ANN Small-Scale Correctness (22 October 2026 Mac revalidation)
+
+On the Apple M5 Mac, `BEACON_ANN_MATRIX=1 go test -run '^TestANNPhase1Matrix$' -v -timeout 30m ./internal/learning` tested 128-dimensional synthetic clustered vectors (seed 7), 64 queries per cell, exact brute-force top-10 ground truth, n=100/1K/5K/10K and M=16/32/64. Raw 12-cell results with recall@1, p50/p95/p99, heap, and allocations are in `artifacts/ann_matrix.txt`.
+
+| n | M16 R@10 / build s | M32 R@10 / build s | M64 R@10 / build s |
+|---:|---:|---:|---:|
+| 100 | 0.9547 / 0.012 | 0.9984 / 0.021 | 1.0000 / 0.030 |
+| 1,000 | 0.8703 / 0.126 | 0.9625 / 0.338 | 0.9953 / 0.947 |
+| 5,000 | 0.7516 / 0.785 | 0.9844 / 2.436 | 1.0000 / 7.646 |
+| 10,000 | 0.8187 / 1.731 | 0.9844 / 5.240 | 1.0000 / 17.177 |
+
+At 10K, M64 search p50/p95/p99 was 132/149/155 microseconds, versus 40/47/51 microseconds at M16. M64 reported 65 MB post-build Go heap, about 5.07 GB cumulative build allocations, and 270 allocations per search. The latter two are optimization targets; post-build heap is not process peak RSS. A repeated 12-cell CPU-profile run (`BEACON_ANN_MATRIX=1 go test -run '^TestANNPhase1Matrix$' -cpuprofile=ann_cpu.pprof ./internal/learning`, 37.78 s) attributed 82.31% cumulative samples to `Graph.Add`, with 54.25% in layer search and 28.09% in neighbor addition; cosine similarity alone took 31.08% flat samples. The profile and top output are `artifacts/ann_cpu.pprof` and `artifacts/ann_profile_top.txt`. M64 reaches the small-scale recall target, but build cost remains a blocker for larger scale. No 1M ANN run was attempted.
+
+`TestANNInsertionOrderAndDuplicates`, `TestANNRejectsInvalidVectors`, and `TestHybridANNPath` passed. A dimension mismatch previously caused a panic during graph operations; the regression now rejects zero, NaN, infinite, empty, and mismatched vectors, and skips stored embeddings whose dimension disagrees with the embedder. The matrix is synthetic and seed-specific; it does not establish recall on real neural embeddings. Earlier WSL and paid-pod ANN results belong to the prior record below.
+
+## Prior Phase 1 report (preserved below)
+
 # Phase 1 — ANN Small-Scale Correctness
 
 Corrected `internal/hnsw` (vendored). Synthetic clustered vectors, 128-dim, 256

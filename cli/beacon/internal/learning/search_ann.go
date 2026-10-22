@@ -2,6 +2,7 @@ package learning
 
 import (
 	"database/sql"
+	"math"
 	"strings"
 	"sync"
 
@@ -36,6 +37,7 @@ func defaultANNParams() annParams {
 // annIndex wraps an HNSW graph keyed by memory ID.
 type annIndex struct {
 	graph *hnsw.Graph[string]
+	dim   int
 }
 
 func newANNIndex(p annParams) *annIndex {
@@ -47,11 +49,35 @@ func newANNIndex(p annParams) *annIndex {
 	return &annIndex{graph: g}
 }
 
-func (a *annIndex) add(id string, vec []float32) {
+func validANNVector(vec []float32) bool {
+	if len(vec) == 0 {
+		return false
+	}
+	var norm float64
+	for _, value := range vec {
+		if math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) {
+			return false
+		}
+		norm += float64(value) * float64(value)
+	}
+	return norm > 0 && !math.IsInf(norm, 0)
+}
+
+func (a *annIndex) add(id string, vec []float32) bool {
+	if !validANNVector(vec) || (a.dim != 0 && len(vec) != a.dim) {
+		return false
+	}
+	if a.dim == 0 {
+		a.dim = len(vec)
+	}
 	a.graph.Add(hnsw.MakeNode(id, vec))
+	return true
 }
 
 func (a *annIndex) search(qvec []float32, k int) []string {
+	if k <= 0 || a.dim == 0 || len(qvec) != a.dim || !validANNVector(qvec) {
+		return nil
+	}
 	nodes := a.graph.Search(qvec, k)
 	out := make([]string, 0, len(nodes))
 	for _, n := range nodes {
@@ -106,10 +132,12 @@ func (s *Store) buildANN(db *sql.DB, query Query, params annParams) (*annIndex, 
 			return nil, err
 		}
 		vec := decodeVector(blob)
-		if vec == nil || dim != len(vec) {
+		if vec == nil || dim != len(vec) || dim != s.embedder.Dim() {
 			continue
 		}
-		idx.add(id, vec)
+		if !idx.add(id, vec) {
+			continue
+		}
 		added++
 		if annBuildHook != nil && added%annBuildHookEvery == 0 {
 			annBuildHook(added)

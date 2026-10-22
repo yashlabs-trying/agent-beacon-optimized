@@ -1,3 +1,13 @@
+# Phase 1 — Durability and Recovery (22 October 2026)
+
+`go test -run 'TestPutMemoryProcessCrashRecovery|TestPutMemoryWaitsForBoundedWriteContention' -v ./internal/learning` passed on WSL2 and Mac after repair. A subprocess opened a disposable SQLite database and exited at six write checkpoints: after transaction begin, authoritative row, FTS/index update, generation update, before commit, and after commit. On restart, `PRAGMA integrity_check`, authoritative row visibility, index/retrieval behavior, and generation consistency matched the commit boundary. Pre-commit exits rolled back; after-commit exit preserved the committed row, although the child caller did not receive an acknowledgement. The checkpoint callback is unexported and unset in normal operation. Existing index-drop, rebuild, cross-store, and cache tests also passed.
+
+A separate real write-lock holder kept an immediate SQLite transaction open for 11 seconds. Before repair, the 5-second busy timeout returned `SQLITE_BUSY`, despite a write becoming possible shortly afterward. Raising the DSN `_pragma` and `_busy_timeout` to 30 seconds let the waiting PutMemory complete; reopening confirmed its acknowledged write. This bounds local contention, but is not a throughput or arbitrary-duration starvation guarantee.
+
+Process exit is **not** a power cut. This harness does not simulate torn storage writes, interrupted schema migration, a kill inside SQLite's commit implementation, or a process exit specifically during index rebuild/cache invalidation. Those remain Phase 2 reliability work. Earlier claims and tests are retained below as historical provenance.
+
+## Prior Phase 1 report (preserved below)
+
 # Phase 1 — Durability and Recovery
 
 ## Verified (WSL2)

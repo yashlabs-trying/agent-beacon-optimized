@@ -26,6 +26,8 @@ const (
 type Store struct {
 	dbPath   string
 	embedder Embedder
+	// Set only by subprocess fault-injection tests.
+	writeCheckpoint func(string)
 }
 
 // Query selects stored learning records.
@@ -73,12 +75,13 @@ func (s *Store) db() (*sql.DB, error) {
 		return nil, err
 	}
 	// _txlock=immediate makes Begin take the write lock up front and wait on
-	// busy_timeout. A deferred transaction that reads before it writes cannot
+	// busy_timeout. Thirty seconds bounds writer contention under heavy local
+	// concurrency; a deferred transaction that reads before it writes cannot
 	// wait for a competing writer without risking deadlock, so it fails with
 	// SQLITE_BUSY instead; PutMemory's transaction must be immediate.
 	db, err := sql.Open("sqlite", sqliteuri.File(s.dbPath, url.Values{
-		"_pragma":       {"busy_timeout(5000)"},
-		"_busy_timeout": {"5000"},
+		"_pragma":       {"busy_timeout(30000)"},
+		"_busy_timeout": {"30000"},
 		"_txlock":       {"immediate"},
 	}))
 	if err != nil {
@@ -594,11 +597,17 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 		return fmt.Errorf("begin memory write: %w", err)
 	}
 	defer tx.Rollback()
+	if s.writeCheckpoint != nil {
+		s.writeCheckpoint("after-begin")
+	}
 	if _, err = tx.Exec(`INSERT INTO memories (id, candidate_id, project_id, kind, title, created_at, updated_at, superseded_by, memory_json)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET title = excluded.title, updated_at = excluded.updated_at, superseded_by = excluded.superseded_by, memory_json = excluded.memory_json`,
 		m.ID, m.CandidateID, m.Project.ID, m.Kind, m.Title, m.CreatedAt, m.UpdatedAt, m.SupersededBy, string(data)); err != nil {
 		return fmt.Errorf("insert memory: %w", err)
+	}
+	if s.writeCheckpoint != nil {
+		s.writeCheckpoint("after-authoritative")
 	}
 	// Refresh the derived index row in the same transaction when the index is
 	// known-good, and advance the durable generation either way so every process
@@ -615,8 +624,14 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 			}
 		}
 	}
+	if s.writeCheckpoint != nil {
+		s.writeCheckpoint("after-index")
+	}
 	if _, err := tx.Exec(`UPDATE memory_index_meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'generation'`); err != nil {
 		return fmt.Errorf("bump generation: %w", err)
+	}
+	if s.writeCheckpoint != nil {
+		s.writeCheckpoint("after-generation")
 	}
 	if s.embedder != nil {
 		// Embeddings are derived state, updated incrementally in the same
@@ -624,8 +639,14 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 		// RebuildEmbeddings can repair it later.
 		_ = s.upsertEmbeddingTx(tx, m)
 	}
+	if s.writeCheckpoint != nil {
+		s.writeCheckpoint("before-commit")
+	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit memory: %w", err)
+	}
+	if s.writeCheckpoint != nil {
+		s.writeCheckpoint("after-commit")
 	}
 	if !indexHealthy {
 		schemaInitialized.Delete(s.dbPath)
