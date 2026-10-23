@@ -1,0 +1,111 @@
+=== RUN   TestPutMemoryWaitsForBoundedWriteContention
+--- PASS: TestPutMemoryWaitsForBoundedWriteContention (11.09s)
+=== RUN   TestPutMemoryProcessCrashRecovery
+=== RUN   TestPutMemoryProcessCrashRecovery/after-begin
+=== RUN   TestPutMemoryProcessCrashRecovery/after-authoritative
+=== RUN   TestPutMemoryProcessCrashRecovery/after-index
+=== RUN   TestPutMemoryProcessCrashRecovery/after-generation
+=== RUN   TestPutMemoryProcessCrashRecovery/before-commit
+=== RUN   TestPutMemoryProcessCrashRecovery/after-commit
+--- PASS: TestPutMemoryProcessCrashRecovery (0.10s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/after-begin (0.02s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/after-authoritative (0.01s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/after-index (0.01s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/after-generation (0.02s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/before-commit (0.01s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/after-commit (0.02s)
+=== RUN   TestPhase2CrashChild
+    phase2_crash_injection_test.go:79: not a crash child
+--- SKIP: TestPhase2CrashChild (0.00s)
+=== RUN   TestPhase2CrashDuringIndexRebuild
+--- PASS: TestPhase2CrashDuringIndexRebuild (0.06s)
+=== RUN   TestPhase2CrashDuringMigration
+--- PASS: TestPhase2CrashDuringMigration (0.01s)
+=== RUN   TestPhase2CrashDurability
+=== RUN   TestPhase2CrashDurability/tx_begin_pre
+=== RUN   TestPhase2CrashDurability/tx_begin_post
+=== RUN   TestPhase2CrashDurability/memory_insert
+=== RUN   TestPhase2CrashDurability/fts_update
+=== RUN   TestPhase2CrashDurability/generation_update
+=== RUN   TestPhase2CrashDurability/pre_commit
+=== RUN   TestPhase2CrashDurability/post_commit
+=== RUN   TestPhase2CrashDurability/post_return
+--- PASS: TestPhase2CrashDurability (0.13s)
+    --- PASS: TestPhase2CrashDurability/tx_begin_pre (0.02s)
+    --- PASS: TestPhase2CrashDurability/tx_begin_post (0.01s)
+    --- PASS: TestPhase2CrashDurability/memory_insert (0.01s)
+    --- PASS: TestPhase2CrashDurability/fts_update (0.01s)
+    --- PASS: TestPhase2CrashDurability/generation_update (0.02s)
+    --- PASS: TestPhase2CrashDurability/pre_commit (0.02s)
+    --- PASS: TestPhase2CrashDurability/post_commit (0.02s)
+    --- PASS: TestPhase2CrashDurability/post_return (0.02s)
+=== RUN   TestPhase2RepeatedRecovery
+--- PASS: TestPhase2RepeatedRecovery (0.03s)
+=== RUN   TestPhase2CrashDuringSupersession
+--- PASS: TestPhase2CrashDuringSupersession (0.02s)
+=== RUN   TestPhase2FaultHookIsNilInProduction
+--- PASS: TestPhase2FaultHookIsNilInProduction (0.00s)
+=== RUN   TestPhase2AdversarialContradictionMatrix
+    phase2_trust_adversarial_test.go:179: category=cross_kind_missed    tp=0 fp=0 fn=8 tn=0
+    phase2_trust_adversarial_test.go:179: category=same_polarity_decoy  tp=0 fp=0 fn=0 tn=15
+    phase2_trust_adversarial_test.go:179: category=hidden_in_long_text  tp=5 fp=0 fn=0 tn=0
+    phase2_trust_adversarial_test.go:179: category=canonical_conflict   tp=20 fp=0 fn=0 tn=0
+    phase2_trust_adversarial_test.go:179: category=unrelated            tp=0 fp=0 fn=0 tn=10
+    phase2_trust_adversarial_test.go:179: category=insufficient_overlap tp=0 fp=0 fn=0 tn=7
+    phase2_trust_adversarial_test.go:183: ADVERSARIAL contradiction: cases=65 detected=62 cross_talk=37 tp=25 fp=0 fn=8 tn=32 precision=1.000 recall=0.758 false_positive_rate=0.000
+--- PASS: TestPhase2AdversarialContradictionMatrix (0.00s)
+=== RUN   TestPhase2CrossScopeLeakageAllPaths
+--- PASS: TestPhase2CrossScopeLeakageAllPaths (0.08s)
+=== RUN   TestPhase2UnapprovedEvidenceNotVisible
+--- PASS: TestPhase2UnapprovedEvidenceNotVisible (0.01s)
+=== RUN   TestPhase2HostileMemoryContent
+--- PASS: TestPhase2HostileMemoryContent (0.06s)
+=== RUN   TestPhase3BContradictionDev
+P3B_DEV cases=23
+P3B_DEV mode=default category=marker_conflict tp=2 fp=0 fn=0 tn=0
+P3B_DEV mode=default category=antonym_conflict tp=5 fp=0 fn=0 tn=0
+P3B_DEV mode=default category=negation_conflict tp=3 fp=0 fn=0 tn=0
+P3B_DEV mode=default category=cross_kind_conflict tp=0 fp=0 fn=3 tn=0
+P3B_DEV mode=default category=distinct_version tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=default category=cross_project tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=default category=same_polarity tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=default category=unrelated tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=default category=insufficient_overlap tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=default total tp=10 fp=0 fn=3 tn=10 precision=1.0000 recall=0.7692
+P3B_DEV mode=cross_kind category=marker_conflict tp=2 fp=0 fn=0 tn=0
+P3B_DEV mode=cross_kind category=antonym_conflict tp=5 fp=0 fn=0 tn=0
+P3B_DEV mode=cross_kind category=negation_conflict tp=3 fp=0 fn=0 tn=0
+P3B_DEV mode=cross_kind category=cross_kind_conflict tp=3 fp=0 fn=0 tn=0
+P3B_DEV mode=cross_kind category=distinct_version tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=cross_kind category=cross_project tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=cross_kind category=same_polarity tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=cross_kind category=unrelated tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=cross_kind category=insufficient_overlap tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=cross_kind total tp=13 fp=0 fn=0 tn=10 precision=1.0000 recall=1.0000
+--- PASS: TestPhase3BContradictionDev (0.00s)
+=== RUN   TestPhase3BTokenLostFindings
+P3B_TOKEN cases=48 tokens_top5=5674 tokens_budget=3840 tokens_dedup=5563
+P3B_TOKEN kept_top5 gold=48 related=24 related2=37
+P3B_TOKEN kept_budget gold=48 related=23 related2=35
+P3B_TOKEN kept_dedup gold=48 related=26 related2=38
+P3B_TOKEN lost_by_group gold=0 related=1 related2=2
+P3B_TOKEN loss topic=11 group=related
+P3B_TOKEN loss topic=17 group=related2
+P3B_TOKEN loss topic=23 group=related2
+P3B_TOKEN evidence_lost_in_budget=0 kept_items=181 kept_unverified=2
+--- PASS: TestPhase3BTokenLostFindings (0.43s)
+=== RUN   TestPhase3BEvidenceDedupPreservesFindings
+P3B_TOKEN dedup_vs_top5 top5=109 dedup=112
+--- PASS: TestPhase3BEvidenceDedupPreservesFindings (0.38s)
+=== RUN   TestAdversarialMemoryRetrieval
+--- PASS: TestAdversarialMemoryRetrieval (0.05s)
+=== RUN   TestTrustPhase1LabeledScenarios
+TRUST_MATRIX status_cases=20 pair_cases=30 tp=10 fp=0 fn=0 precision=1.000 recall=1.000
+--- PASS: TestTrustPhase1LabeledScenarios (0.00s)
+=== RUN   TestTrustContradictionPrecisionRecall
+TRUST contradiction true_pairs=4 detected=4 tp=4 fp=0 fn=0 precision=1.000 recall=1.000
+--- PASS: TestTrustContradictionPrecisionRecall (0.00s)
+=== RUN   TestTrustNoCrossScopeLeakage
+--- PASS: TestTrustNoCrossScopeLeakage (0.09s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	12.577s

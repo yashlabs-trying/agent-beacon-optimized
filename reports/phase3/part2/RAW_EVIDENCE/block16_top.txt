@@ -1,0 +1,23 @@
+File: learning.test
+Build ID: 8c01381352c229d6478833381ff37b9287d83977
+Type: delay
+Time: 2026-10-23 05:44:57 UTC
+Showing nodes accounting for 149.03s, 99.74% of 149.43s total
+Dropped 650 nodes (cum <= 0.75s)
+Showing top 15 nodes out of 16
+      flat  flat%   sum%        cum   cum%
+   126.91s 84.93% 84.93%    126.91s 84.93%  runtime.selectgo
+    13.98s  9.36% 94.28%     13.98s  9.36%  runtime.chanrecv1
+     8.15s  5.45% 99.74%      8.15s  5.45%  sync.(*WaitGroup).Wait
+         0     0% 99.74%      5.33s  3.57%  database/sql.(*DB).beginDC.gowrap1
+         0     0% 99.74%    126.90s 84.92%  database/sql.(*DB).connectionOpener
+         0     0% 99.74%      5.33s  3.57%  database/sql.(*Tx).awaitDone
+         0     0% 99.74%    126.90s 84.92%  database/sql.OpenDB.gowrap1
+         0     0% 99.74%      8.15s  5.45%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.TestPhase3BWriterLatency
+         0     0% 99.74%      8.65s  5.79%  main.main
+         0     0% 99.74%      8.65s  5.79%  runtime.main
+         0     0% 99.74%      8.65s  5.79%  testing.(*M).Run
+         0     0% 99.74%      8.65s  5.79%  testing.(*T).Run
+         0     0% 99.74%      8.15s  5.45%  testing.(*T).Run.gowrap1
+         0     0% 99.74%      8.65s  5.79%  testing.runTests
+         0     0% 99.74%      8.65s  5.79%  testing.runTests.func1

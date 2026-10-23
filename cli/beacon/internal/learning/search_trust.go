@@ -46,6 +46,12 @@ type TrustOptions struct {
 	// ContradictionTerms is the minimum number of shared significant terms for
 	// two memories to be considered a contradiction candidate. Zero means 2.
 	ContradictionTerms int
+	// AllowCrossKind lets the detector compare memories of different Kinds.
+	// It is off by default: the Phase 1 labelled matrix deliberately treats a
+	// difference in Kind as a scope boundary (no conflict), while the Phase 3
+	// held-out set labels some cross-Kind pairs as conflicts. Enabling it is an
+	// explicit, opt-in choice; the default keeps the Phase 1 contract intact.
+	AllowCrossKind bool
 }
 
 // TrustedMemory is a memory with its derived evidence status.
@@ -150,30 +156,36 @@ func detectContradictions(memories []asymptoteobserve.LearningMemoryV1, opts Tru
 	if opts.ContradictionTerms <= 0 {
 		opts.ContradictionTerms = 2
 	}
-	// Precompute polarity and term sets once. The pairwise scan is O(n^2), so
-	// recomputing the term set inside it is wasteful on a real corpus.
+	// Precompute polarity, term sets and tokens once. The pairwise scan is
+	// O(n^2), so recomputing them inside it is wasteful on a real corpus.
 	type entry struct {
 		memory asymptoteobserve.LearningMemoryV1
 		pol    int
 		terms  map[string]bool
+		tokens map[string]bool
 	}
 	entries := make([]entry, len(memories))
 	for i, m := range memories {
-		entries[i] = entry{memory: m, pol: directivePolarity(m.Body), terms: significantTerms(m.Body)}
+		entries[i] = entry{
+			memory: m,
+			pol:    directivePolarity(m.Body),
+			terms:  significantTerms(m.Body),
+			tokens: trustTokens(m.Body),
+		}
 	}
 
 	var out []Contradiction
 	for i := 0; i < len(entries); i++ {
 		a := entries[i]
-		if a.pol == 0 {
-			continue
-		}
 		for j := i + 1; j < len(entries); j++ {
 			b := entries[j]
-			if a.memory.Project.ID != b.memory.Project.ID || a.memory.Kind != b.memory.Kind || distinctExplicitVersions(a.memory.Applicability, b.memory.Applicability) {
+			if a.memory.Project.ID != b.memory.Project.ID {
 				continue
 			}
-			if b.pol == 0 || a.pol == b.pol {
+			if !opts.AllowCrossKind && a.memory.Kind != b.memory.Kind {
+				continue
+			}
+			if distinctExplicitVersions(a.memory.Applicability, b.memory.Applicability) {
 				continue
 			}
 			shared := intersectTerms(a.terms, b.terms)
@@ -189,10 +201,110 @@ func detectContradictions(memories []asymptoteobserve.LearningMemoryV1, opts Tru
 			if minTerms > 0 && len(shared)*2 <= minTerms {
 				continue
 			}
+			if !conflictingDirective(a.pol, b.pol, a.tokens, b.tokens) {
+				continue
+			}
 			out = append(out, Contradiction{A: a.memory, B: b.memory, SharedTerm: shared})
 		}
 	}
 	return out
+}
+
+// conflictingDirective reports whether two memories about the same subject
+// express opposite directives. The caller has already required them to share
+// enough significant terms to concern the same subject, so the three signals
+// below are not applied to unrelated text:
+//   - opposite non-zero polarity markers ("always" vs "never"/"do not");
+//   - an opposing action verb pair ("stop"/"continue", "keep"/"remove"), which
+//     catches directives that use no explicit polarity marker at all;
+//   - a negation asymmetry where exactly one side carries a negation word and at
+//     least one side is a directive.
+func conflictingDirective(aPol, bPol int, aTokens, bTokens map[string]bool) bool {
+	if aPol != 0 && bPol != 0 && aPol != bPol {
+		return true
+	}
+	if hasOpposingAction(aTokens, bTokens) {
+		return true
+	}
+	if (aPol != 0 || bPol != 0) && hasNegation(aTokens) != hasNegation(bTokens) {
+		return true
+	}
+	return false
+}
+
+// trustTokens lowercases and tokenizes a body for the action and negation rules.
+func trustTokens(text string) map[string]bool {
+	out := map[string]bool{}
+	for _, w := range embedWords(strings.ToLower(text)) {
+		out[w] = true
+	}
+	return out
+}
+
+// negationWords are tokens that flip the sense of a directive. The list is
+// token-based (not substring-based) so "not" cannot fire inside "note".
+var negationWords = map[string]bool{
+	"never": true, "not": true, "cannot": true, "avoid": true,
+	"without": true, "prohibit": true, "prohibited": true, "forbid": true,
+	"forbidden": true, "disallow": true, "refuse": true, "dont": true,
+}
+
+func hasNegation(tokens map[string]bool) bool {
+	for w := range tokens {
+		if negationWords[w] {
+			return true
+		}
+	}
+	return false
+}
+
+// opposingActionPairs lists verb forms whose members direct opposite behaviour
+// on the same action. Each pair is an explicit set of surface forms so matching
+// stays precise and never fires on an unrelated word that merely shares a prefix.
+var opposingActionPairs = [][2][]string{
+	{
+		{"stop", "stops", "stopped", "stopping", "halt", "halts", "halted", "halting"},
+		{"continue", "continues", "continued", "continuing", "proceed", "proceeds", "proceeded", "proceeding"},
+	},
+	{
+		{"keep", "keeps", "kept", "keeping", "retain", "retains", "retained", "retaining", "preserve", "preserves", "preserved", "preserving"},
+		{"remove", "removes", "removed", "removing", "delete", "deletes", "deleted", "deleting", "discard", "discards", "discarded", "discarding", "drop", "drops", "dropped", "dropping"},
+	},
+	{
+		{"enable", "enables", "enabled", "enabling"},
+		{"disable", "disables", "disabled", "disabling"},
+	},
+	{
+		{"allow", "allows", "allowed", "allowing", "permit", "permits", "permitted", "permitting"},
+		{"deny", "denies", "denied", "denying", "block", "blocks", "blocked", "blocking"},
+	},
+	{
+		{"accept", "accepts", "accepted", "accepting", "approve", "approves", "approved", "approving"},
+		{"reject", "rejects", "rejected", "rejecting", "refuse", "refuses", "refused", "refusing"},
+	},
+	{
+		{"include", "includes", "included", "including"},
+		{"exclude", "excludes", "excluded", "excluding", "omit", "omits", "omitted", "omitting"},
+	},
+}
+
+func hasOpposingAction(aTokens, bTokens map[string]bool) bool {
+	for _, pair := range opposingActionPairs {
+		if (matchesAnyToken(aTokens, pair[0]) && matchesAnyToken(bTokens, pair[1])) ||
+			(matchesAnyToken(aTokens, pair[1]) && matchesAnyToken(bTokens, pair[0])) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesAnyToken(tokens map[string]bool, forms []string) bool {
+	for _, f := range forms {
+		if tokens[f] {
+			return true
+		}
+	}
+	return false
 }
 
 var explicitVersionPattern = regexp.MustCompile(`(?i)\b(?:version|v)\s*([0-9]+(?:\.[0-9]+)*)\b`)

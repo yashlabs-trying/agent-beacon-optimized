@@ -1,0 +1,4 @@
+P3B_SYNC mode=FULL concurrency=16 p50=35 p95=85 p99=214 mean=698 n=115162
+P3B_SYNC mode=NORMAL concurrency=16 p50=30 p95=73 p99=187 mean=612 n=131663
+P3B_SYNC mode=OFF concurrency=16 p50=28 p95=69 p99=175 mean=606 n=132926
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	15.473s

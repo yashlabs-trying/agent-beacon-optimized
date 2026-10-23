@@ -1,0 +1,23 @@
+=== RUN   TestPhase2TokenSelectionStrategies
+    phase2_token_ranking_test.go:415: TOKEN strategy=fixed_top5       cases=48 tokens=5674 tokens/case=118.2 relevant_retained=109/144 redundancy=0.569 latency_us/case=0.0
+    phase2_token_ranking_test.go:415: TOKEN strategy=token_budget     cases=48 tokens=3840 tokens/case=80.0 relevant_retained=106/144 redundancy=0.574 latency_us/case=15.1
+    phase2_token_ranking_test.go:415: TOKEN strategy=evidence_dedup   cases=48 tokens=5563 tokens/case=115.9 relevant_retained=112/144 redundancy=0.525 latency_us/case=4.0
+    phase2_token_ranking_test.go:415: TOKEN strategy=trust_aware      cases=48 tokens=5670 tokens/case=118.1 relevant_retained=109/144 redundancy=0.581 latency_us/case=2052.5
+    phase2_token_ranking_test.go:415: TOKEN strategy=diversity_mmr    cases=48 tokens=5674 tokens/case=118.2 relevant_retained=109/144 redundancy=0.569 latency_us/case=8091.5
+--- PASS: TestPhase2TokenSelectionStrategies (0.89s)
+=== RUN   TestPhase3BTokenLostFindings
+P3B_TOKEN cases=48 tokens_top5=5674 tokens_budget=3840 tokens_dedup=5563
+P3B_TOKEN kept_top5 gold=48 related=24 related2=37
+P3B_TOKEN kept_budget gold=48 related=23 related2=35
+P3B_TOKEN kept_dedup gold=48 related=26 related2=38
+P3B_TOKEN lost_by_group gold=0 related=1 related2=2
+P3B_TOKEN loss topic=11 group=related
+P3B_TOKEN loss topic=17 group=related2
+P3B_TOKEN loss topic=23 group=related2
+P3B_TOKEN evidence_lost_in_budget=0 kept_items=181 kept_unverified=2
+--- PASS: TestPhase3BTokenLostFindings (0.33s)
+=== RUN   TestPhase3BEvidenceDedupPreservesFindings
+P3B_TOKEN dedup_vs_top5 top5=109 dedup=112
+--- PASS: TestPhase3BEvidenceDedupPreservesFindings (0.32s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	1.572s

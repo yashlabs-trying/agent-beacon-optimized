@@ -1,0 +1,20 @@
+--- 16/mixed/churnON ---
+P3B_WRITER rep=1 mode=mixed churn=true concurrency=16 duration_s=10 reads=11423 writes=2855 errors=0 busy=0 read_p50=679 read_p95=1962 read_p99=5617 write_p50=4126 write_p95=231777 write_p99=1036141 write_mean=51048 rn=11423 wn=2855 goroutines=3->2 wal_bytes=0 peak_rss_mb=31
+P3B_WRITER rep=2 mode=mixed churn=true concurrency=16 duration_s=10 reads=12559 writes=3139 errors=0 busy=0 read_p50=617 read_p95=1435 read_p99=3493 write_p50=3984 write_p95=183046 write_p99=746482 write_mean=47125 rn=12559 wn=3139 goroutines=3->2 wal_bytes=0 peak_rss_mb=32
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	21.536s
+--- 16/mixed/churnOFF ---
+P3B_WRITER rep=1 mode=mixed churn=false concurrency=16 duration_s=10 reads=11350 writes=2837 errors=0 busy=0 read_p50=736 read_p95=2097 read_p99=5993 write_p50=4805 write_p95=232331 write_p99=936481 write_mean=51396 rn=11350 wn=2837 goroutines=3->2 wal_bytes=0 peak_rss_mb=27
+P3B_WRITER rep=2 mode=mixed churn=false concurrency=16 duration_s=10 reads=12132 writes=3032 errors=0 busy=0 read_p50=651 read_p95=2111 read_p99=6369 write_p50=4144 write_p95=231692 write_p99=842865 write_mean=49116 rn=12132 wn=3032 goroutines=3->2 wal_bytes=0 peak_rss_mb=27
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	21.489s
+--- 16/write/churnOFF ---
+P3B_WRITER rep=1 mode=write churn=false concurrency=16 duration_s=10 reads=0 writes=13157 errors=0 busy=0 read_p50=0 read_p95=0 read_p99=0 write_p50=3098 write_p95=55095 write_p99=131468 write_mean=12174 rn=0 wn=13157 goroutines=3->2 wal_bytes=0 peak_rss_mb=25
+P3B_WRITER rep=2 mode=write churn=false concurrency=16 duration_s=10 reads=0 writes=11805 errors=0 busy=0 read_p50=0 read_p95=0 read_p99=0 write_p50=4023 write_p95=57511 write_p99=134000 write_mean=13587 rn=0 wn=11805 goroutines=3->2 wal_bytes=0 peak_rss_mb=27
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	21.228s
+--- 8/mixed/churnON ---
+P3B_WRITER rep=1 mode=mixed churn=true concurrency=8 duration_s=10 reads=12168 writes=3042 errors=0 busy=0 read_p50=620 read_p95=1416 read_p99=3751 write_p50=3334 write_p95=81272 write_p99=432317 write_mean=22542 rn=12168 wn=3042 goroutines=3->2 wal_bytes=0 peak_rss_mb=29
+P3B_WRITER rep=2 mode=mixed churn=true concurrency=8 duration_s=10 reads=10542 writes=2635 errors=0 busy=0 read_p50=726 read_p95=2011 read_p99=5653 write_p50=3962 write_p95=106477 write_p99=531565 write_mean=25896 rn=10542 wn=2635 goroutines=3->2 wal_bytes=0 peak_rss_mb=29
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	21.135s
+--- 8/mixed/churnOFF ---
+P3B_WRITER rep=1 mode=mixed churn=false concurrency=8 duration_s=10 reads=12043 writes=3010 errors=0 busy=0 read_p50=661 read_p95=1610 read_p99=3368 write_p50=3699 write_p95=84007 write_p99=433396 write_mean=23342 rn=12043 wn=3010 goroutines=3->2 wal_bytes=0 peak_rss_mb=26
+P3B_WRITER rep=2 mode=mixed churn=false concurrency=8 duration_s=10 reads=12701 writes=3175 errors=0 busy=0 read_p50=644 read_p95=1562 read_p99=3637 write_p50=3512 write_p95=82500 write_p99=438735 write_mean=22094 rn=12701 wn=3175 goroutines=3->2 wal_bytes=0 peak_rss_mb=27
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	21.555s
