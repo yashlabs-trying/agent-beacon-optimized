@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "purpose": "Beacon V7 local validation and raw evidence provenance",
+  "original_source_commit": "99c709081ad49da1c5ade205929b61b19360ed9b",
+  "phase5_source_commit": "02e34f98dec1c5d34a2f0d52904969edc39e389f",
+  "v7_locked_candidate_commit": "a5f078247a5a36f531d777578d63427893ee6f36",
+  "v7_trust_repair_commit": "133135b4536a09e658dc1fe954e5e78d9ce7bb0a",
+  "v7_bridge_repair_commit": "3f7970d0f4a27abe2c2852cdf75f5bdf8b667a70",
+  "fixture": {
+    "path": "holdout_v1.json",
+    "sha256": "0c55552721e1ae0dedb979bd9eabdced6e03eeb440ca38e7bb7209d7013ad044",
+    "locked_before_model_calls": true,
+    "task_count": 56,
+    "families": 7
+  },
+  "binaries_sha256": {
+    "beacon_original": "a486ef9f9c1bdc6c5dd9c039aff5c38881ef6a68c63922c27a6f0d29963b3592",
+    "phase5seed": "ebcf6aceee9d14911d73b593ca68e3863670e769737422b16aedf76942e0452d",
+    "v7_locked": "2229ea756caa3b7a8b37a34ab58e05264b43b4a126dffd407a83f78da4c94489",
+    "v7_trust_repair": "f25b8b6df59b97e562d3dd8753d482ed2ebd9c3c3622429328527282f07a110a",
+    "v7_bridge_repair": "24d1e8aa6892d44c5e395dde7406d415c76cf3b2d1231c5274b6d355e1d59078"
+  },
+  "agent_protocol": {
+    "model": "qwen2.5-coder:7b",
+    "ollama_version": "0.40.6",
+    "temperature": 0,
+    "seed": 0,
+    "context_tokens": 4096,
+    "max_prediction_tokens": 384,
+    "system_prompt_and_grader": "reports/phase5/harness/agent_eval.py",
+    "retrieval": "real original and V7 CLIs on the same per-task seeded SQLite store",
+    "execution": "WSL2 host and local Mac, randomized arm order, no paid compute"
+  },
+  "raw_sha256": {
+    "holdout_v1_results.json": "7d42bae6b86c0abc2b79938db54da7faa381ef3141c0da4cb3ceb75dbc4d1e0b",
+    "holdout_v1_repair_results.json": "eb585b0175ccceee045a4c364a57026fe84006a53c941ddeefb40d13fee503a5",
+    "holdout_v1_lexical_ablation.json": "625299a304d59e8396e70b3fa94e3fe03ef2e1fb19d94e9b058b8683cf984e14",
+    "holdout_v1_bridge_regression.json": "977b9a3891063bf954145c0f3e1220a2f2b2a9d014a72822c090a1beb2b43028",
+    "go_test_all.log": "cdd54b5f0ea273c95f9f8431b326470228d22d8e3471d8e9607c0131feb99094",
+    "go_test_all_lf.log": "018cf1e8497be806d30d39c63bcc7196f888767aec433ab8c2b51ab2136ed2cb",
+    "phase5_fullsuite_failures_control.log": "fed3bf8e23dc713d2bc422e1d4e77ff2f0f0f6546a3ef185db6d6268de534a10",
+    "race_crash.log": "eb335d39eca0e86518a207a80aed4a541679f9cb2752b3f727f34860b82db5f1",
+    "race_final.log": "563e4ba963ebbd732def9e14b416433a9545d95fdbc52f113d845bbf3ba2bbd2",
+    "writer16.log": "87a7615b9223acdf8fec010b8c33d7c8bd58a96715fa1fd1fec15d32e56fc20b",
+    "writer16_phase5_control.log": "8775ce0397548bb26f54dbbb94b61c4fc8e7b2ea54010cee6e6df5cf819d9d07",
+    "phase5_historical_selection_revised.json": "eb4fcbc6dc923e5654a4f02879f09d5bcfbf8cf314c3783a351956c398e9b286"
+  },
+  "interpretation": {
+    "holdout_v1_results.json": "fresh pilot for the locked initial V7 candidate only",
+    "holdout_v1_repair_results.json": "post-feedback trust regression check, not independent",
+    "holdout_v1_lexical_ablation.json": "post-feedback semantic-off component ablation, not independent",
+    "holdout_v1_bridge_regression.json": "post-feedback bridge regression check, not independent"
+  }
+}

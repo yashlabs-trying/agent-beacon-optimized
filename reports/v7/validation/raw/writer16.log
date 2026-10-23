@@ -1,0 +1,5 @@
+=== RUN   TestPhase3BWriterLatency
+P3B_WRITER rep=1 mode=mixed churn=false concurrency=16 duration_s=5 reads=8300 writes=2075 errors=0 busy=0 read_p50=232 read_p95=673 read_p99=1713 write_p50=3759 write_p95=179784 write_p99=742048 write_mean=37606 rn=8300 wn=2075 goroutines=4->4 wal_bytes=4606192 peak_rss_mb=29
+--- PASS: TestPhase3BWriterLatency (5.45s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	5.456s
