@@ -133,7 +133,6 @@ func TestPhase2RankingAlternatives(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
 
 	methods := []struct {
 		name string

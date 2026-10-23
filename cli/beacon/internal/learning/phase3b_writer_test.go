@@ -83,7 +83,6 @@ func TestPhase3BWriterLatency(t *testing.T) {
 						_, _ = db.Exec(`UPDATE memory_index_meta SET value = '0' WHERE key = 'index_ready'`)
 						schemaInitialized.Delete(dbPath)
 						indexReadyCache.Delete(dbPath)
-						db.Close()
 					}
 				}
 			}()
@@ -154,6 +153,7 @@ func TestPhase3BWriterLatency(t *testing.T) {
 		db := openRaw(t, dbPath)
 		integrityCheck(t, db)
 		db.Close()
+		_ = store.Close()
 	}
 }
 
@@ -172,13 +172,11 @@ func TestPhase3BConnectionCost(t *testing.T) {
 	const n = 2000
 	start := time.Now()
 	for i := 0; i < n; i++ {
-		db, err := store.db()
-		if err != nil {
+		if _, err := store.db(); err != nil {
 			t.Fatal(err)
 		}
-		db.Close()
 	}
-	fmt.Printf("P3B_CONN open_close_noquery n=%d per_us=%.1f\n", n, float64(time.Since(start).Microseconds())/float64(n))
+	fmt.Printf("P3B_CONN pooled_reuse n=%d per_us=%.1f\n", n, float64(time.Since(start).Microseconds())/float64(n))
 }
 
 // TestPhase3BConnectionMaterialised compares, under concurrent goroutines, the
@@ -202,18 +200,9 @@ func TestPhase3BConnectionMaterialised(t *testing.T) {
 			Evidence: []asymptoteobserve.LearningEvidenceV1{{TraceID: "t"}},
 		})
 	}
-	run := func(shared bool) (p50, p95, p99 float64, n int) {
+	run := func(perOp bool) (p50, p95, p99 float64, n int) {
 		var lat latencyRecorder
 		deadline := time.Now().Add(time.Duration(seconds) * time.Second)
-		var pool *sql.DB
-		if shared {
-			db, err := store.db()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer db.Close()
-			pool = db
-		}
 		var wg sync.WaitGroup
 		for w := 0; w < concurrency; w++ {
 			wg.Add(1)
@@ -221,8 +210,14 @@ func TestPhase3BConnectionMaterialised(t *testing.T) {
 				defer wg.Done()
 				for time.Now().Before(deadline) {
 					start := time.Now()
-					db := pool
-					if !shared {
+					var db *sql.DB
+					if perOp {
+						d, err := sql.Open("sqlite", dbPath)
+						if err != nil {
+							continue
+						}
+						db = d
+					} else {
 						d, err := store.db()
 						if err != nil {
 							continue
@@ -231,7 +226,7 @@ func TestPhase3BConnectionMaterialised(t *testing.T) {
 					}
 					var c int
 					_ = db.QueryRow(`SELECT COUNT(*) FROM memories WHERE project_id = ?`, "proj-c").Scan(&c)
-					if !shared {
+					if perOp {
 						_ = db.Close()
 					}
 					lat.record(start)
@@ -242,8 +237,8 @@ func TestPhase3BConnectionMaterialised(t *testing.T) {
 		p50, p95, p99, _, n = lat.stats()
 		return
 	}
-	p50, p95, p99, n := run(false)
-	fmt.Printf("P3B_CONN perop_query concurrency=%d p50=%.0f p95=%.0f p99=%.0f n=%d\n", concurrency, p50, p95, p99, n)
-	p50, p95, p99, n = run(true)
-	fmt.Printf("P3B_CONN shared_pool concurrency=%d p50=%.0f p95=%.0f p99=%.0f n=%d\n", concurrency, p50, p95, p99, n)
+	p50, p95, p99, n := run(true)
+	fmt.Printf("P3B_CONN perop_raw concurrency=%d p50=%.0f p95=%.0f p99=%.0f n=%d\n", concurrency, p50, p95, p99, n)
+	p50, p95, p99, n = run(false)
+	fmt.Printf("P3B_CONN store_pooled concurrency=%d p50=%.0f p95=%.0f p99=%.0f n=%d\n", concurrency, p50, p95, p99, n)
 }

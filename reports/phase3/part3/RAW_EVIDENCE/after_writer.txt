@@ -1,0 +1,58 @@
+### after (Phase 3C pooled code) ###
+go: go version go1.27.3 linux/amd64  uname: Linux lappiiii 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64 GNU/Linux  nproc: 8
+
+########## Phase 3B writer harness: 16/mixed/churnOFF x3 ##########
+P3B_WRITER rep=1 mode=mixed churn=false concurrency=16 duration_s=10 reads=22028 writes=5507 errors=0 busy=0 read_p50=117 read_p95=273 read_p99=564 write_p50=1953 write_p95=106212 write_p99=631771 write_mean=28675 rn=22028 wn=5507 goroutines=4->4 wal_bytes=4499072 peak_rss_mb=31
+P3B_WRITER rep=2 mode=mixed churn=false concurrency=16 duration_s=10 reads=21646 writes=5411 errors=0 busy=0 read_p50=119 read_p95=274 read_p99=565 write_p50=1996 write_p95=106352 write_p99=534758 write_mean=29125 rn=21646 wn=5411 goroutines=4->4 wal_bytes=4437272 peak_rss_mb=32
+P3B_WRITER rep=3 mode=mixed churn=false concurrency=16 duration_s=10 reads=21376 writes=5344 errors=0 busy=0 read_p50=124 read_p95=284 read_p99=581 write_p50=1997 write_p95=106460 write_p99=632323 write_mean=29465 rn=21376 wn=5344 goroutines=4->4 wal_bytes=5401352 peak_rss_mb=32
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	31.550s
+
+########## Phase 3B writer harness: 16/mixed/churnON x3 ##########
+P3B_WRITER rep=1 mode=mixed churn=true concurrency=16 duration_s=10 reads=19924 writes=4981 errors=0 busy=0 read_p50=128 read_p95=304 read_p99=601 write_p50=2114 write_p95=129562 write_p99=731666 write_mean=31492 rn=19924 wn=4981 goroutines=4->4 wal_bytes=6443712 peak_rss_mb=33
+P3B_WRITER rep=2 mode=mixed churn=true concurrency=16 duration_s=10 reads=17672 writes=4418 errors=0 busy=0 read_p50=141 read_p95=362 read_p99=728 write_p50=2343 write_p95=130004 write_p99=732634 write_mean=35509 rn=17672 wn=4418 goroutines=4->4 wal_bytes=6390152 peak_rss_mb=33
+P3B_WRITER rep=3 mode=mixed churn=true concurrency=16 duration_s=10 reads=15740 writes=3935 errors=0 busy=0 read_p50=176 read_p95=494 read_p99=1162 write_p50=2838 write_p95=181561 write_p99=734732 write_mean=39782 rn=15740 wn=3935 goroutines=4->4 wal_bytes=5302472 peak_rss_mb=33
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	31.440s
+
+########## Phase 3B writer harness: 8/mixed/churnOFF x3 ##########
+P3B_WRITER rep=1 mode=mixed churn=false concurrency=8 duration_s=10 reads=16863 writes=4215 errors=0 busy=0 read_p50=156 read_p95=466 read_p99=1053 write_p50=2149 write_p95=81423 write_p99=332491 write_mean=18183 rn=16863 wn=4215 goroutines=4->4 wal_bytes=4350752 peak_rss_mb=29
+P3B_WRITER rep=2 mode=mixed churn=false concurrency=8 duration_s=10 reads=19776 writes=4944 errors=0 busy=0 read_p50=132 read_p95=330 read_p99=764 write_p50=1815 write_p95=55436 write_p99=232156 write_mean=15553 rn=19776 wn=4944 goroutines=4->4 wal_bytes=4647392 peak_rss_mb=29
+P3B_WRITER rep=3 mode=mixed churn=false concurrency=8 duration_s=10 reads=21272 writes=5318 errors=0 busy=0 read_p50=121 read_p95=275 read_p99=601 write_p50=1763 write_p95=55299 write_p99=330977 write_mean=14515 rn=21272 wn=5318 goroutines=4->4 wal_bytes=4494952 peak_rss_mb=29
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	31.256s
+
+########## Phase 3B writer harness: 16/write/churnOFF x2 ##########
+P3B_WRITER rep=1 mode=write churn=false concurrency=16 duration_s=10 reads=0 writes=9139 errors=0 busy=0 read_p50=0 read_p95=0 read_p99=0 write_p50=3932 write_p95=84132 write_p99=183618 write_mean=17533 rn=0 wn=9139 goroutines=4->4 wal_bytes=4371352 peak_rss_mb=28
+P3B_WRITER rep=2 mode=write churn=false concurrency=16 duration_s=10 reads=0 writes=9036 errors=0 busy=0 read_p50=0 read_p95=0 read_p99=0 write_p50=4156 write_p95=83671 write_p99=186316 write_mean=17755 rn=0 wn=9036 goroutines=4->4 wal_bytes=4486712 peak_rss_mb=28
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	20.763s
+
+########## Phase 3B writer harness: 16/select/churnOFF x2 ##########
+P3B_WRITER rep=1 mode=select churn=false concurrency=16 duration_s=10 reads=16588 writes=4147 errors=0 busy=0 read_p50=554 read_p95=1203 read_p99=1738 write_p50=3341 write_p95=132441 write_p99=732217 write_mean=36304 rn=16588 wn=4147 goroutines=4->4 wal_bytes=6229472 peak_rss_mb=32
+P3B_WRITER rep=2 mode=select churn=false concurrency=16 duration_s=10 reads=15904 writes=3976 errors=0 busy=0 read_p50=591 read_p95=1326 read_p99=1986 write_p50=3373 write_p95=132243 write_p99=733580 write_mean=37620 rn=15904 wn=3976 goroutines=4->4 wal_bytes=5277752 peak_rss_mb=33
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	20.889s
+
+########## Phase 2 harness: 8 and 16 clients x2 ##########
+    phase2_concurrency_test.go:197: STRESS concurrency=8 duration_s=10 reads=3633 writes=960 supersedes=225 errors=0 busy=0 stale=0
+    phase2_concurrency_test.go:199: STRESS read_latency_us p50=849 p95=3264 p99=8260 mean=1483 n=3633
+    phase2_concurrency_test.go:200: STRESS write_latency_us p50=6243 p95=56743 p99=117607 mean=14054 n=1185
+    phase2_concurrency_test.go:201: STRESS goroutines before=4 after=4 heap_alloc_mb=2.2 heap_sys_mb=38.0 num_gc=2501 wal_bytes=23212112
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.351s
+    phase2_concurrency_test.go:197: STRESS concurrency=8 duration_s=10 reads=3460 writes=915 supersedes=217 errors=0 busy=0 stale=0
+    phase2_concurrency_test.go:199: STRESS read_latency_us p50=924 p95=3826 p99=9132 mean=1687 n=3460
+    phase2_concurrency_test.go:200: STRESS write_latency_us p50=6958 p95=58835 p99=134891 mean=15369 n=1132
+    phase2_concurrency_test.go:201: STRESS goroutines before=4 after=4 heap_alloc_mb=2.1 heap_sys_mb=34.0 num_gc=2263 wal_bytes=24678832
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.371s
+    phase2_concurrency_test.go:197: STRESS concurrency=16 duration_s=10 reads=3564 writes=938 supersedes=221 errors=0 busy=0 stale=0
+    phase2_concurrency_test.go:199: STRESS read_latency_us p50=1062 p95=5168 p99=15924 mean=2147 n=3564
+    phase2_concurrency_test.go:200: STRESS write_latency_us p50=12095 p95=188750 p99=744167 mean=53443 n=1159
+    phase2_concurrency_test.go:201: STRESS goroutines before=4 after=4 heap_alloc_mb=2.3 heap_sys_mb=30.2 num_gc=2377 wal_bytes=32078352
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.389s
+    phase2_concurrency_test.go:197: STRESS concurrency=16 duration_s=10 reads=2839 writes=749 supersedes=177 errors=0 busy=0 stale=0
+    phase2_concurrency_test.go:199: STRESS read_latency_us p50=1149 p95=8600 p99=47832 mean=3960 n=2839
+    phase2_concurrency_test.go:200: STRESS write_latency_us p50=14207 p95=341143 p99=794709 mean=69388 n=926
+    phase2_concurrency_test.go:201: STRESS goroutines before=4 after=4 heap_alloc_mb=0.9 heap_sys_mb=42.1 num_gc=1716 wal_bytes=35856392
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.506s
+
+########## connection microbenchmarks (after) ##########
+P3B_CONN pooled_reuse n=2000 per_us=0.0
+P3B_CONN perop_raw concurrency=16 p50=4728 p95=13196 p99=19166 n=14347
+P3B_CONN store_pooled concurrency=16 p50=88 p95=421 p99=7110 n=250039
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.340s

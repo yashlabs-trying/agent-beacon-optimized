@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -28,7 +30,18 @@ type Store struct {
 	embedder Embedder
 	// Set only by subprocess fault-injection tests.
 	writeCheckpoint func(string)
+
+	// mu guards lazy pool creation and Close. A Store owns exactly one *sql.DB
+	// pool for its lifetime: opening it is deferred until the first operation
+	// and reused by every subsequent operation, instead of opening and closing a
+	// fresh pool per call.
+	mu     sync.Mutex
+	dbPool *sql.DB
+	closed bool
 }
+
+// ErrStoreClosed is returned by store operations after Close.
+var ErrStoreClosed = errors.New("learning: store is closed")
 
 // faultHook, when non-nil, is called at named points during a memory write. It
 // is a test seam for crash injection: it is nil in production, so each call site
@@ -63,6 +76,9 @@ type Query struct {
 }
 
 func Open(path string) *Store {
+	if path == "" {
+		path = storeFile
+	}
 	return &Store{dbPath: path}
 }
 
@@ -81,12 +97,27 @@ func (s *Store) Path() string {
 	return s.dbPath
 }
 
+// db returns the Store's shared, lazily created database pool. The pool is
+// owned by the Store and released by Close; callers must not close it.
 func (s *Store) db() (*sql.DB, error) {
-	if s.dbPath == "" {
-		s.dbPath = storeFile
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return nil, ErrStoreClosed
 	}
+	if s.dbPool == nil {
+		if err := s.openLocked(); err != nil {
+			return nil, err
+		}
+	}
+	return s.dbPool, nil
+}
+
+// openLocked creates the pool and initializes the schema. It must be called with
+// s.mu held. On any failure the pool is closed so no handle leaks.
+func (s *Store) openLocked() error {
 	if err := os.MkdirAll(filepath.Dir(s.dbPath), 0700); err != nil && filepath.Dir(s.dbPath) != "." {
-		return nil, err
+		return err
 	}
 	// _txlock=immediate makes Begin take the write lock up front and wait on
 	// busy_timeout. Thirty seconds bounds writer contention under heavy local
@@ -99,16 +130,38 @@ func (s *Store) db() (*sql.DB, error) {
 		"_txlock":       {"immediate"},
 	}))
 	if err != nil {
-		return nil, err
+		return err
 	}
+	// Bound idle connections so an abandoned pool cannot hold file descriptors
+	// open indefinitely; a Store still in use keeps reusing its pool.
+	db.SetMaxIdleConns(2)
+	db.SetConnMaxIdleTime(30 * time.Second)
 	// busy_timeout is applied per connection by the DSN. journal_mode=WAL is
 	// persistent in the database file and is set once, in ensureSchemaOnce, so a
 	// read does not take a write lock just to open the store.
 	if err := s.ensureSchemaOnce(db); err != nil {
 		_ = db.Close()
-		return nil, err
+		return err
 	}
-	return db, nil
+	s.dbPool = db
+	return nil
+}
+
+// Close releases the Store's database pool. It is safe to call more than once;
+// subsequent operations return ErrStoreClosed.
+func (s *Store) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return nil
+	}
+	s.closed = true
+	if s.dbPool != nil {
+		err := s.dbPool.Close()
+		s.dbPool = nil
+		return err
+	}
+	return nil
 }
 
 func ensureSchema(db *sql.DB) error {
@@ -230,7 +283,6 @@ func (s *Store) KnownProjects() ([]asymptoteobserve.LearningProjectV1, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	rows, err := db.Query(`
 		SELECT project_id, json_extract(evaluation_json, '$.project.path') FROM evaluations
 		UNION
@@ -428,7 +480,6 @@ func (s *Store) Status() (asymptoteobserve.LearningStatusV1, error) {
 	if err != nil {
 		return asymptoteobserve.LearningStatusV1{}, err
 	}
-	defer db.Close()
 	status := asymptoteobserve.LearningStatusV1{
 		SchemaVersion: asymptoteobserve.LearningSchemaVersion,
 		Path:          s.dbPath,
@@ -460,7 +511,6 @@ func (s *Store) PutEvaluation(e asymptoteobserve.LearningEvaluationV1) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	_, err = db.Exec(`INSERT INTO evaluations (id, project_id, trace_id, status, created_at, updated_at, rubric_hash, evaluator, evaluation_json)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at, evaluator = excluded.evaluator, evaluation_json = excluded.evaluation_json`,
@@ -477,7 +527,6 @@ func (s *Store) ListEvaluations(query Query) ([]asymptoteobserve.LearningEvaluat
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	where, args := queryWhere(query, "project_id", "status", "")
 	rows, err := db.Query(`SELECT evaluation_json FROM evaluations`+where+` ORDER BY updated_at DESC LIMIT ? OFFSET ?`, append(args, normalizeLimit(query.Limit), offset(query))...)
 	if err != nil {
@@ -534,7 +583,6 @@ func (s *Store) PutCandidate(c asymptoteobserve.LearningCandidateV1) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	_, err = db.Exec(`INSERT INTO candidates (id, project_id, state, kind, title, source_evaluation_id, memory_id, created_at, updated_at, candidate_json)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET state = excluded.state, kind = excluded.kind, title = excluded.title, memory_id = excluded.memory_id, updated_at = excluded.updated_at, candidate_json = excluded.candidate_json`,
@@ -551,7 +599,6 @@ func (s *Store) ListCandidates(query Query) ([]asymptoteobserve.LearningCandidat
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	where, args := queryWhere(query, "project_id", "state", "kind")
 	rows, err := db.Query(`SELECT candidate_json FROM candidates`+where+` ORDER BY updated_at DESC LIMIT ? OFFSET ?`, append(args, normalizeLimit(query.Limit), offset(query))...)
 	if err != nil {
@@ -605,7 +652,6 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	faultPoint("tx_begin_pre")
 	tx, err := db.Begin()
 	if err != nil {
@@ -670,8 +716,10 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 	}
 	faultPoint("post_commit")
 	if !indexHealthy {
-		schemaInitialized.Delete(s.dbPath)
-		indexReadyCache.Delete(s.dbPath)
+		// The derived index did not refresh with this write; mark it unhealthy
+		// so the next search rebuilds it and re-ensure the derived schema in case
+		// a table is missing. The authoritative row is already committed.
+		s.markIndexUnhealthy(db)
 	}
 	return nil
 }
@@ -689,7 +737,6 @@ func (s *Store) ListMemories(query Query) ([]asymptoteobserve.LearningMemoryV1, 
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	if strings.TrimSpace(query.Q) == "" {
 		return s.listMemoriesOrdered(db, query)
 	}
@@ -784,7 +831,6 @@ func (s *Store) getJSON(query, id string, dest *string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
 	err = db.QueryRow(query, id).Scan(dest)
 	if err == sql.ErrNoRows {
 		return false, nil

@@ -278,7 +278,6 @@ func setMemoryUpdatedAt(t *testing.T, store *Store, id, updatedAt string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
 	if _, err := db.Exec(`UPDATE memories SET updated_at = ? WHERE id = ?`, updatedAt, id); err != nil {
 		t.Fatal(err)
 	}

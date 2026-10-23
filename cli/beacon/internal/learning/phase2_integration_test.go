@@ -107,7 +107,6 @@ func TestPhase2IndexRebuildAfterDeletion(t *testing.T) {
 			t.Fatalf("%s: %v", stmt, err)
 		}
 	}
-	db.Close()
 	schemaInitialized.Delete(dbPath)
 	indexReadyCache.Delete(dbPath)
 
@@ -136,7 +135,6 @@ func TestPhase2ReopenAfterInterruptedStartup(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	db.Close()
 	schemaInitialized.Delete(dbPath)
 	indexReadyCache.Delete(dbPath)
 
@@ -168,7 +166,6 @@ func TestPhase2ANNLifecycleAcrossGenerations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
 	q := store.embedder.Embed("ann lifecycle needle")
 	first, err := store.semanticSearchANN(db, Query{ProjectID: integProject}, q, 5, defaultANNParams())
 	if err != nil {
@@ -236,7 +233,6 @@ func TestPhase2EmbeddingModelVersionIsolation(t *testing.T) {
 	if modelV2 != "hashed-subword-v2-test" {
 		t.Fatalf("after rebuild model = %s, want hashed-subword-v2-test", modelV2)
 	}
-	db.Close()
 }
 
 func TestPhase2LargeMemory(t *testing.T) {
@@ -277,7 +273,6 @@ func TestPhase2CorruptRowSurfacedNotSilent(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO memories (id, candidate_id, project_id, kind, title, created_at, updated_at, superseded_by, memory_json) VALUES ('bad','c','p','k','t','','','','{not valid json')`); err != nil {
 		t.Fatal(err)
 	}
-	db.Close()
 	schemaInitialized.Delete(dbPath)
 	indexReadyCache.Delete(dbPath)
 

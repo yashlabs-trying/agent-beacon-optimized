@@ -363,7 +363,6 @@ func TestPhase2HostileMemoryContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
 	if err := db.QueryRow(`SELECT COUNT(*) FROM memories`).Scan(&n); err != nil {
 		t.Fatalf("memories table missing after injection: %v", err)
 	}

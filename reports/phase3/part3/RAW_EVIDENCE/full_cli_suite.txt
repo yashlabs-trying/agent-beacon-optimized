@@ -1,0 +1,303 @@
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon	0.014s
+--- FAIL: TestEndpointHooksInstallAndUninstallDsh (0.00s)
+    dsh_target_test.go:36: installEndpointHookTarget(dsh) returned error: no hooks binary embedded
+--- FAIL: TestEndpointHooksDshRefusesProjectLevel (0.00s)
+    dsh_target_test.go:162: error "no hooks binary embedded" does not tell the operator what to do instead
+--- FAIL: TestEndpointHooksDshLeavesTheUsersPatchRowsAlone (0.00s)
+    dsh_target_test.go:193: installEndpointHookTarget(dsh) returned error: no hooks binary embedded
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: /tmp/TestEndpointInstallBackfillsAfterTheInstallSucceeds3031982219/002/runtime.jsonl
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: /tmp/TestEndpointInstallBackfillsAfterTheInstallSucceeds3031982219/002/runtime.jsonl
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: /tmp/TestEndpointInstallBackfillsAfterTheInstallSucceeds3031982219/002/runtime.jsonl
+--- FAIL: TestDshHookCaptureCheckFindsARealInstall (0.00s)
+    endpoint_dsh_doctor_test.go:188: install dsh hooks: no hooks binary embedded
+Claude Code endpoint hooks were not present
+Codex CLI endpoint hooks were not present
+VS Code endpoint hooks were not present
+Cursor endpoint hooks were not present
+Factory endpoint hooks were not present
+opencode endpoint hooks were not present
+Cline endpoint hooks were not present
+Pi endpoint hooks were not present
+Oh My Pi endpoint hooks were not present
+Prime Agent endpoint hooks were not present
+Senpi endpoint hooks were not present
+OpenHands endpoint hooks were not present
+DeepSeek Harness endpoint hooks were not present
+Kiro endpoint hooks were not present
+Kimi Code endpoint hooks were not present
+OpenClaw Gateway endpoint hooks were not present
+Grok endpoint hooks were not present
+Qwen Code endpoint hooks were not present
+Muse Code endpoint hooks were not present
+Hermes Agent endpoint hooks were not present
+Antigravity CLI endpoint hooks were not present
+Devin CLI endpoint hooks were not present
+Devin Desktop via Cascade/Windsurf endpoint hooks were not present
+--- FAIL: TestEndpointHooksInstallAndUninstallQwen (0.00s)
+    endpoint_hooks_test.go:65: installEndpointHookTarget(qwen) returned error: no hooks binary embedded
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Endpoint repaired. Manifest: 
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Endpoint repaired. Manifest: 
+Endpoint repaired. Manifest: 
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Endpoint repaired. Manifest: 
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Endpoint repaired. Manifest: 
+Scheduled inventory job installed (/fake/plist).
+Beacon endpoint dashboard: http://127.0.0.1:0
+Runtime log: /tmp/TestRunEndpointDashboardPassesRequestedLogPathToHandler179278642/001/.beacon/endpoint/logs/runtime.jsonl
+--check was set; no package was downloaded or applied.
+Installed via Homebrew. Update with:
+  brew update && brew upgrade beacon
+--- FAIL: TestEndpointInstallHookFailureIsAWarningAndOtherHooksStillInstall (0.00s)
+    endpoint_test.go:2514: report = "", want the Codex hooks written and no warnings
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+--- FAIL: TestEndpointHooksInstallAndUninstallKimi (0.00s)
+    kimi_target_test.go:51: installEndpointHookTarget(kimi) returned error: no hooks binary embedded
+--- FAIL: TestEndpointHooksKimiRefusesProjectLevel (0.00s)
+    kimi_target_test.go:168: error "no hooks binary embedded" does not tell the operator what to do instead
+--- FAIL: TestKimiDiscoveryTracksTheInstall (0.00s)
+    kimi_target_test.go:203: install: no hooks binary embedded
+--- FAIL: TestEndpointHooksInstallAndUninstallKiro (0.00s)
+    kiro_target_test.go:34: installEndpointHookTarget(kiro) returned error: no hooks binary embedded
+--- FAIL: TestEndpointHooksInstallKiroAtProjectLevel (0.00s)
+    kiro_target_test.go:171: installEndpointHookTarget(kiro, project) returned error: no hooks binary embedded
+--- FAIL: TestEndpointHooksKiroLeavesOtherHookFilesAlone (0.00s)
+    kiro_target_test.go:214: installEndpointHookTarget(kiro) returned error: no hooks binary embedded
+Beacon MCP doctor
+
+Transport: http
+--- FAIL: TestEndpointHooksInstallAndUninstallMuse (0.00s)
+    muse_target_test.go:36: installEndpointHookTarget(muse) returned error: no hooks binary embedded
+--- FAIL: TestInstallEndpointHookTargetHandlesOmp (0.00s)
+    omp_target_test.go:84: installEndpointHookTarget(omp) returned error: no hooks binary embedded
+--- FAIL: TestEndpointHooksInstallAndUninstallOpenHands (0.00s)
+    openhands_target_test.go:34: installEndpointHookTarget(openhands) returned error: no hooks binary embedded
+--- FAIL: TestEndpointHooksInstallOpenHandsAtProjectLevel (0.00s)
+    openhands_target_test.go:171: installEndpointHookTarget(openhands, project) returned error: no hooks binary embedded
+--- FAIL: TestInstallEndpointHookTargetHandlesPrime (0.00s)
+    prime_target_test.go:84: installEndpointHookTarget(prime) returned error: no hooks binary embedded
+--- FAIL: TestScanFlagsIndirectInjectionCapturedByLiveHooks (0.00s)
+    scan_live_hook_tool_result_test.go:125: the embedded hooks binary is the placeholder; run `make build-hooks-current` first
+--- FAIL: TestLiveHookToolResultIsRedacted (0.00s)
+    scan_live_hook_tool_result_test.go:225: the embedded hooks binary is the placeholder; run `make build-hooks-current` first
+FAIL
+FAIL	github.com/asymptote-labs/agent-beacon/cli/beacon/cmd	5.978s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/account	0.377s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/agentskills	0.005s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/atomicfile	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/auth	0.034s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/brewpath	0.002s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/ci	1.040s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/claudesession	0.156s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/clinesession	0.016s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/codexsession	0.012s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/copilotsession	0.016s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/cursorsession	0.015s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/cursorusage	0.147s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/devincloud	0.106s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/dshsession	0.111s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/embedded	0.004s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/activity	0.011s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/asymptote	0.701s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/cloudwatch	0.004s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/collector	0.772s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config	0.007s
+--- FAIL: TestHookStatusesIncludesDsh (0.00s)
+    dsh_test.go:44: InstallDsh: no hooks binary embedded
+--- FAIL: TestHookStatusesIncludesKimi (0.00s)
+    kimi_test.go:47: InstallKimi: no hooks binary embedded
+--- FAIL: TestHookStatusesIncludesKiro (0.00s)
+    kiro_test.go:48: InstallKiro: no hooks binary embedded
+--- FAIL: TestHookStatusesIncludesOpenHands (0.00s)
+    openhands_test.go:48: InstallOpenHands: no hooks binary embedded
+FAIL
+FAIL	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard	10.327s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard/e2eserver	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/datadog	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/detect	0.049s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/diagnostics	0.027s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/edition	0.020s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/elastic	0.007s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/falcon	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/gcs	0.006s
+--- FAIL: TestDiscoveryRecognizesTheHooksInstallWrites (0.00s)
+    --- FAIL: TestDiscoveryRecognizesTheHooksInstallWrites/cursor (0.00s)
+        installed_hooks_test.go:50: install: no hooks binary embedded
+    --- FAIL: TestDiscoveryRecognizesTheHooksInstallWrites/antigravity (0.00s)
+        installed_hooks_test.go:50: install: no hooks binary embedded
+    --- FAIL: TestDiscoveryRecognizesTheHooksInstallWrites/hermes (0.00s)
+        installed_hooks_test.go:50: install: no hooks binary embedded
+    --- FAIL: TestDiscoveryRecognizesTheHooksInstallWrites/devin (0.00s)
+        installed_hooks_test.go:50: install: no hooks binary embedded
+    --- FAIL: TestDiscoveryRecognizesTheHooksInstallWrites/devin_desktop (0.00s)
+        installed_hooks_test.go:50: install: no hooks binary embedded
+FAIL
+FAIL	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/harness	0.063s
+--- FAIL: TestInstallFactoryUsesSystemConfigForSystemLog (0.00s)
+    factory_test.go:257: InstallFactory returned error: no hooks binary embedded
+--- FAIL: TestHermesHooksInstallStatusUninstallAgreeOnHermesHome (0.00s)
+    --- FAIL: TestHermesHooksInstallStatusUninstallAgreeOnHermesHome/unset (0.00s)
+        hermes_test.go:222: InstallHermes: no hooks binary embedded
+    --- FAIL: TestHermesHooksInstallStatusUninstallAgreeOnHermesHome/HERMES_HOME (0.00s)
+        hermes_test.go:222: InstallHermes: no hooks binary embedded
+    --- FAIL: TestHermesHooksInstallStatusUninstallAgreeOnHermesHome/relative_HERMES_HOME (0.00s)
+        hermes_test.go:222: InstallHermes: no hooks binary embedded
+    --- FAIL: TestHermesHooksInstallStatusUninstallAgreeOnHermesHome/active_profile (0.00s)
+        hermes_test.go:222: InstallHermes: no hooks binary embedded
+    --- FAIL: TestHermesHooksInstallStatusUninstallAgreeOnHermesHome/HERMES_HOME_names_a_profile (0.00s)
+        hermes_test.go:222: InstallHermes: no hooks binary embedded
+--- FAIL: TestHermesHooksRefuseUnusableActiveProfile (0.00s)
+    hermes_test.go:272: InstallHermes err = no hooks binary embedded, want the active profile named
+--- FAIL: TestOpenClawInstallWritesTheWholePluginDirectory (0.00s)
+    openclaw_test.go:36: install: no hooks binary embedded
+--- FAIL: TestOpenClawInstallRendersTheHookInvocation (0.00s)
+    openclaw_test.go:52: install: no hooks binary embedded
+--- FAIL: TestOpenClawInstallWritesTheReviewedManifests (0.00s)
+    openclaw_test.go:79: install: no hooks binary embedded
+--- FAIL: TestOpenClawInstallIsIdempotent (0.00s)
+    openclaw_test.go:123: first install: no hooks binary embedded
+--- FAIL: TestOpenClawUninstallRemovesTheDirectory (0.00s)
+    openclaw_test.go:170: install: no hooks binary embedded
+--- FAIL: TestOpenClawUninstallKeepsAnOperatorFile (0.00s)
+    openclaw_test.go:187: install: no hooks binary embedded
+--- FAIL: TestOpenClawStatusRejectsAMissingManifest (0.00s)
+    openclaw_test.go:232: install: no hooks binary embedded
+--- FAIL: TestOpenClawStatusRejectsAMissingBinary (0.00s)
+    openclaw_test.go:247: install: no hooks binary embedded
+--- FAIL: TestOpenClawStateDirOverrideMovesThePlugin (0.00s)
+    openclaw_test.go:268: install: no hooks binary embedded
+--- FAIL: TestOpenClawInstallDoesNotTouchTheGatewayConfig (0.00s)
+    openclaw_test.go:432: install: no hooks binary embedded
+FAIL
+FAIL	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks	0.118s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/cline	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/omo	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/omp	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/openclaw	0.034s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/opencode	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/pi	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/prime	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/integrations	0.006s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/integrations/cowork	0.004s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/integrations/openclaw	0.006s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/integrations/vscode	0.005s
+--- FAIL: TestBeaconManagedRecognizesTheHooksInstallWrites (0.00s)
+    installed_hooks_test.go:20: no hooks binary embedded
+FAIL
+FAIL	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/inventory	0.073s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lensstore	0.040s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle	2.375s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/rapid7	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/s3	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/selfupdate	0.256s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/sentinel	0.007s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/service	0.718s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/siempack	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/sumo	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/sysacl	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/traceview	0.010s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/wazuh	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/writer	0.073s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/factorysession	0.018s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/fxsession	0.914s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/gitlink	7.992s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/groksession	0.055s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/handoff	0.238s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hermessession	0.024s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw	0.327s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	39.228s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/managedprivacy	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/mcpconnect	0.089s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/mcpserver	0.035s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/onboarding	0.190s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/openclawsession	0.010s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/opencodesession	0.025s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/osuser	0.004s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/pisession	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/pricing	0.022s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/pricing/internal/gen	0.008s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/primesession	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/sessionfs	0.063s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/sessionwindow	0.002s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/sqliteuri	0.002s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/testenv	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/tokens	0.013s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/updatecheck	0.013s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/version	0.003s
+FAIL

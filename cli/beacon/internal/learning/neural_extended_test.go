@@ -117,7 +117,6 @@ func TestNeuralExtendedQuality(t *testing.T) {
 					t.Fatal(err)
 				}
 				hits, searchErr := method.store.semanticSearchExact(db, Query{ProjectID: "proj-a"}, method.embedder.Embed(c.query), 5)
-				_ = db.Close()
 				if searchErr != nil {
 					t.Fatal(searchErr)
 				}

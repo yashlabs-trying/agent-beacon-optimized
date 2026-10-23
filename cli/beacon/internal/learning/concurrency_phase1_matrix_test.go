@@ -90,7 +90,6 @@ func TestConcurrencyPhase1Matrix(t *testing.T) {
 									db, dbErr := store.db()
 									if dbErr == nil {
 										_, dbErr = db.Exec(`UPDATE memory_index_meta SET value = '0' WHERE key = 'index_ready'`)
-										_ = db.Close()
 									}
 									if dbErr != nil {
 										err = dbErr

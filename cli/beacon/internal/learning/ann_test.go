@@ -141,7 +141,6 @@ func TestANNRecallFlatSpace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
 	idx, err := store.buildANN(db, Query{ProjectID: "proj-a"}, defaultANNParams())
 	if err != nil {
 		t.Fatal(err)

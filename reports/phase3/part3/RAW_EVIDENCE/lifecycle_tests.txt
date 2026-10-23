@@ -1,0 +1,16 @@
+=== RUN   TestStoreReusesOnePool
+--- PASS: TestStoreReusesOnePool (0.05s)
+=== RUN   TestStoreCloseIsIdempotentAndBlocksUse
+--- PASS: TestStoreCloseIsIdempotentAndBlocksUse (0.04s)
+=== RUN   TestMultipleStoresIndependent
+--- PASS: TestMultipleStoresIndependent (0.09s)
+=== RUN   TestConcurrentStoreInitRaceFree
+--- PASS: TestConcurrentStoreInitRaceFree (0.03s)
+=== RUN   TestConcurrentStoresSamePathInitRaceFree
+--- PASS: TestConcurrentStoresSamePathInitRaceFree (0.06s)
+=== RUN   TestFailedInitializationDoesNotLeakPool
+--- PASS: TestFailedInitializationDoesNotLeakPool (0.03s)
+=== RUN   TestConcurrentReadsWritesThenClose
+--- PASS: TestConcurrentReadsWritesThenClose (2.20s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	3.559s

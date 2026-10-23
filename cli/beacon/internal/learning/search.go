@@ -98,11 +98,24 @@ func ftsMatch(terms []string) string {
 // can recreate a dropped table.
 var schemaInitialized sync.Map
 
+// schemaInitMu serializes schema initialization across Stores in this process so
+// two Stores on the same path cannot run the DDL concurrently or observe a
+// partially initialized schema.
+var schemaInitMu sync.Mutex
+
 // ensureSchemaOnce verifies the authoritative schema and creates the derived
 // index tables once per process per path. The derived schema is best-effort: if
 // it cannot be created, the authoritative schema is still marked ready and
 // search falls back to the scan path.
 func (s *Store) ensureSchemaOnce(db *sql.DB) error {
+	if _, ok := schemaInitialized.Load(s.dbPath); ok {
+		return nil
+	}
+	// Serialize initialization across Stores in this process. Re-check under the
+	// lock: the first winner marks the path initialized before releasing it, so
+	// later callers return without re-running the DDL.
+	schemaInitMu.Lock()
+	defer schemaInitMu.Unlock()
 	if _, ok := schemaInitialized.Load(s.dbPath); ok {
 		return nil
 	}
@@ -330,9 +343,12 @@ func (s *Store) ensureIndexReady(db *sql.DB) bool {
 // rather than trusted again.
 func (s *Store) markIndexUnhealthy(db *sql.DB) {
 	_, _ = db.Exec(`UPDATE memory_index_meta SET value = '0' WHERE key = 'index_ready'`)
-	// Re-check the schema on the next open, in case a table is missing.
-	schemaInitialized.Delete(s.dbPath)
 	indexReadyCache.Delete(s.dbPath)
+	// The Store reuses one pool, so a later call will not re-run schema
+	// initialization on its own. Re-check the schema now, in case a derived
+	// table is missing, so the next search can rebuild the index.
+	schemaInitialized.Delete(s.dbPath)
+	_ = s.ensureSchemaOnce(db)
 }
 
 // termTrigrams returns the distinct 3-rune substrings of a term. A trigram

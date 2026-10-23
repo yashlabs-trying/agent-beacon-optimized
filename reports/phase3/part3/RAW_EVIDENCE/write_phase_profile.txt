@@ -1,0 +1,11 @@
+=== RUN   TestPhase3CWritePhaseProfile
+P3C_PHASE total p50=358 p95=530 p99=779 n=300
+P3C_PHASE phase=after-begin p50=219 p95=316 p99=418 n=299
+P3C_PHASE phase=after-authoritative p50=30 p95=54 p99=67 n=300
+P3C_PHASE phase=after-index p50=13 p95=24 p99=37 n=300
+P3C_PHASE phase=after-generation p50=9 p95=15 p99=25 n=300
+P3C_PHASE phase=before-commit p50=42 p95=79 p99=95 n=300
+P3C_PHASE phase=after-commit p50=36 p95=62 p99=106 n=300
+--- PASS: TestPhase3CWritePhaseProfile (0.24s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.248s

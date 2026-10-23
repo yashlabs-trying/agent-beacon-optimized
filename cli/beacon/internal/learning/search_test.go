@@ -28,7 +28,6 @@ func seedMemories(tb testing.TB, store *Store, memories []asymptoteobserve.Learn
 	if err != nil {
 		tb.Fatal(err)
 	}
-	defer db.Close()
 	tx, err := db.Begin()
 	if err != nil {
 		tb.Fatal(err)
@@ -129,7 +128,6 @@ func oracleScan(t *testing.T, store *Store, query Query) []asymptoteobserve.Lear
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
 	scoped, err := store.scopeQuery(query)
 	if err != nil {
 		t.Fatal(err)
@@ -208,7 +206,6 @@ func TestSearchIndexFallsBackWhenIndexTableDropped(t *testing.T) {
 	if _, err := db.Exec(`DROP TABLE memories_fts`); err != nil {
 		t.Fatal(err)
 	}
-	_ = db.Close()
 	resetSearchCacheForTest()
 
 	got, err := store.ListMemories(Query{ProjectID: "proj-a", Q: "unique-needle"})
@@ -299,7 +296,6 @@ func TestPlannerSelectivity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
 	if !store.ensureIndexReady(db) {
 		t.Fatal("index did not become ready")
 	}
@@ -326,7 +322,6 @@ func TestSearchIndexRebuildIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
 	for i := 0; i < 3; i++ {
 		if !store.ensureIndexReady(db) {
 			t.Fatalf("rebuild %d failed", i)

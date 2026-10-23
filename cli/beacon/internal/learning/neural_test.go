@@ -13,7 +13,6 @@ func evaluateEmbedder(t *testing.T, e Embedder) (float64, float64, float64, floa
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
 	var r1, r5, mrr, ndcg float64
 	for i, c := range cases {
 		qvec := e.Embed(c.query)

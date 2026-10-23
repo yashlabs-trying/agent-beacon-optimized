@@ -43,6 +43,9 @@ func ensureSemanticSchema(db *sql.DB) error {
 // OpenSemantic opens a store with the semantic layer enabled using the given
 // embedder. Passing nil is equivalent to Open.
 func OpenSemantic(path string, embedder Embedder) *Store {
+	if path == "" {
+		path = storeFile
+	}
 	return &Store{dbPath: path, embedder: embedder}
 }
 
@@ -281,7 +284,6 @@ func (s *Store) SearchHybrid(query Query, opts HybridOptions) ([]HybridResult, e
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	lexQuery := query
 	lexQuery.Limit = opts.CandidateK
@@ -363,7 +365,6 @@ func (s *Store) RebuildEmbeddings() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	rows, err := db.Query(`SELECT memory_json FROM memories`)
 	if err != nil {
 		return err

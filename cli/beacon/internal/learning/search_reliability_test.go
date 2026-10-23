@@ -67,7 +67,6 @@ func TestSearchRecoversAfterIndexDrop(t *testing.T) {
 	if _, err := db.Exec(`DROP TABLE memories_fts`); err != nil {
 		t.Fatal(err)
 	}
-	db.Close()
 
 	// A write must succeed even though the derived index is gone.
 	if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
@@ -100,7 +99,6 @@ func TestSearchRecoversAfterIndexDrop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
 	var ready string
 	if err := db.QueryRow(`SELECT value FROM memory_index_meta WHERE key = 'index_ready'`).Scan(&ready); err != nil {
 		t.Fatal(err)
