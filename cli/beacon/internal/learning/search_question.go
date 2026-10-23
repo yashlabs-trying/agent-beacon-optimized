@@ -221,6 +221,27 @@ var questionNoise = map[string]bool{
 	"you": true, "your": true, "our": true, "ours": true,
 }
 
+// questionVerbNoise lists linking, modal, and light verbs that carry no fact
+// attribute. They must be skipped when locating the requested attribute so a
+// "what is the X" question resolves to X, not to the verb or the subject.
+var questionVerbNoise = map[string]bool{
+	"are": true, "was": true, "were": true, "been": true, "being": true,
+	"has": true, "have": true, "had": true, "can": true, "could": true,
+	"will": true, "would": true, "shall": true, "may": true, "might": true,
+	"did": true, "get": true, "got": true, "many": true, "much": true,
+	"long": true, "kind": true, "type": true,
+}
+
+// firstContentWord returns the first attribute-bearing word in a slice.
+func firstContentWord(words []string) string {
+	for _, w := range words {
+		if len(w) >= 3 && !questionNoise[w] && !trustStopWords[w] && !questionVerbNoise[w] {
+			return w
+		}
+	}
+	return ""
+}
+
 var genericAnswerWords = map[string]bool{
 	"value": true, "approach": true, "step": true, "action": true,
 	"choice": true, "fixed": true, "fix": true, "answer": true,
@@ -244,22 +265,12 @@ func analyzeQuestion(question, retrievalQuery string) questionIntent {
 		}
 	}
 	for i, word := range words {
-		if word == "which" || word == "where" || word == "when" {
-			for _, next := range words[i+1:] {
-				if len(next) >= 3 && !questionNoise[next] && !trustStopWords[next] {
-					intent.slot = next
-					break
-				}
-			}
-			if intent.slot != "" {
-				break
-			}
-		} else if word == "what" || word == "how" {
-			for _, next := range words[i+1:] {
-				if len(next) >= 3 && !questionNoise[next] && !trustStopWords[next] {
-					intent.slot = next
-				}
-			}
+		if word == "which" || word == "where" || word == "when" || word == "what" || word == "how" {
+			// The requested attribute is the first content noun after the
+			// interrogative. Linking and modal verbs ("is", "should", "use")
+			// are not attributes, and taking the last noun would select the
+			// question's subject ("service") instead of what is asked about.
+			intent.slot = firstContentWord(words[i+1:])
 			break
 		}
 	}

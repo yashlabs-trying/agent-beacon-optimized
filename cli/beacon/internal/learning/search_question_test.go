@@ -281,3 +281,38 @@ func TestSearchQuestionDoesNotClaimPartialChainSufficient(t *testing.T) {
 		t.Fatalf("partial chain treated as enough evidence: %+v", r)
 	}
 }
+
+func TestSearchQuestionWhatFormUsesRequestedAttribute(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "memory.db")
+	s := Open(path)
+	defer s.Close()
+	fact := questionMemory("environment", "p", "Deployment environment", "The orion service deployment environment is staging.", "verified")
+	owner := questionMemory("owner", "p", "Release owner", "The orion service release owner is Maya.", "verified")
+	hint := questionMemory("hint", "p", "Possible environment", "The orion service environment is often canary.", "verified")
+	old := questionMemory("old", "p", "Previous environment", "The orion service deployment environment was production.", "verified")
+	old.SupersededBy = fact.ID
+	other := questionMemory("other-project", "q", "Deployment environment", "The orion service deployment environment is production.", "verified")
+	for _, m := range []asymptoteobserve.LearningMemoryV1{fact, owner, hint, old, other} {
+		if err := s.PutMemory(m); err != nil { t.Fatal(err) }
+	}
+	for _, question := range []string{
+		"What is the environment for the orion service?",
+		"What environment should the orion service use for deployment?",
+	} {
+		r, err := s.SearchQuestion(Query{ProjectID: "p", Q: "orion service"}, question, QuestionOptions{})
+		if err != nil { t.Fatal(err) }
+		if ids := questionIDs(r); !r.Signals.Sufficient || len(ids) != 1 || ids[0] != fact.ID {
+			t.Fatalf("question %q selected %v; signals=%+v", question, ids, r.Signals)
+		}
+	}
+	// A near miss and a qualified hint must not become an answer when the
+	// requested attribute is absent or uncertain.
+	if err := s.PutMemory(questionMemory("owner-only", "isolated", "Release owner", "The orion service release owner is Maya.", "verified")); err != nil { t.Fatal(err) }
+	if err := s.PutMemory(questionMemory("hint-only", "isolated", "Possible environment", "The orion service environment is often canary.", "verified")); err != nil { t.Fatal(err) }
+	r, err := s.SearchQuestion(Query{ProjectID: "isolated", Q: "orion service"},
+		"What is the environment for the orion service?", QuestionOptions{})
+	if err != nil { t.Fatal(err) }
+	if r.Signals.Sufficient || len(r.Context.Items) != 0 {
+		t.Fatalf("near-miss evidence was accepted: %+v", r)
+	}
+}
