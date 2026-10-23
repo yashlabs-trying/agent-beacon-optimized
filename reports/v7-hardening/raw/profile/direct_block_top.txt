@@ -1,0 +1,23 @@
+File: learning.test
+Build ID: 22868944051ce04e68f79973bbe44b3b7067f03d
+Type: delay
+Time: 2026-10-23 16:39:04 UTC
+Showing nodes accounting for 77557.45ms, 100% of 77558.14ms total
+Dropped 21 nodes (cum <= 387.79ms)
+Showing top 15 nodes out of 20
+      flat  flat%   sum%        cum   cum%
+46806.51ms 60.35% 60.35% 46806.51ms 60.35%  runtime.chanrecv1
+30750.94ms 39.65%   100% 30750.94ms 39.65%  runtime.selectgo
+         0     0%   100% 15349.91ms 19.79%  database/sql.(*DB).connectionCleaner
+         0     0%   100% 15362.13ms 19.81%  database/sql.(*DB).connectionOpener
+         0     0%   100% 15349.91ms 19.79%  database/sql.(*DB).startCleanerLocked.gowrap1
+         0     0%   100% 15362.13ms 19.81%  database/sql.OpenDB.gowrap1
+         0     0%   100% 15633.91ms 20.16%  main.main
+         0     0%   100% 15241.46ms 19.65%  runtime.(*traceAdvancerState).start.func1
+         0     0%   100% 30869.22ms 39.80%  runtime.(*wakeableSleep).sleep
+         0     0%   100% 15633.91ms 20.16%  runtime.main
+         0     0%   100% 15627.77ms 20.15%  runtime.traceStartReadCPU.func1
+         0     0%   100% 15372.95ms 19.82%  testing.(*B).Run
+         0     0%   100% 14578.05ms 18.80%  testing.(*B).doBench
+         0     0%   100% 14578.05ms 18.80%  testing.(*B).run
+         0     0%   100%   794.90ms  1.02%  testing.(*B).run1

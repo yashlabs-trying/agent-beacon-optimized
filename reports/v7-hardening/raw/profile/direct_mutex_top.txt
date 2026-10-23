@@ -1,0 +1,23 @@
+File: learning.test
+Build ID: 22868944051ce04e68f79973bbe44b3b7067f03d
+Type: delay
+Time: 2026-10-23 16:39:04 UTC
+Showing nodes accounting for 17.44ms, 99.74% of 17.49ms total
+Dropped 46 nodes (cum <= 0.09ms)
+Showing top 15 nodes out of 116
+      flat  flat%   sum%        cum   cum%
+   17.01ms 97.24% 97.24%    17.01ms 97.24%  runtime.unlock (inline)
+    0.44ms  2.49% 99.74%     0.44ms  2.49%  sync.(*Mutex).Unlock
+         0     0% 99.74%     0.43ms  2.47%  context.(*cancelCtx).Done
+         0     0% 99.74%     0.20ms  1.14%  database/sql.(*DB).QueryContext
+         0     0% 99.74%     0.20ms  1.14%  database/sql.(*DB).QueryContext.func1
+         0     0% 99.74%     0.20ms  1.14%  database/sql.(*DB).QueryRow
+         0     0% 99.74%     0.20ms  1.14%  database/sql.(*DB).QueryRowContext (inline)
+         0     0% 99.74%     0.20ms  1.14%  database/sql.(*DB).query
+         0     0% 99.74%     0.63ms  3.61%  database/sql.(*DB).queryDC
+         0     0% 99.74%     0.20ms  1.14%  database/sql.(*DB).queryDC.func1
+         0     0% 99.74%     0.20ms  1.14%  database/sql.(*DB).retry
+         0     0% 99.74%     0.10ms  0.55%  database/sql.(*Row).Scan
+         0     0% 99.74%     0.10ms  0.55%  database/sql.(*Rows).Close
+         0     0% 99.74%     0.10ms  0.55%  database/sql.(*Rows).close
+         0     0% 99.74%     0.09ms  0.53%  database/sql.(*Rows).close.func1
