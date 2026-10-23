@@ -2,6 +2,7 @@ package learning
 
 import (
 	"errors"
+	"sort"
 	"strings"
 
 	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve"
@@ -54,11 +55,23 @@ func (s *Store) SearchQuestion(query Query, question string, opts QuestionOption
 	}
 	result.LexicalCandidates = len(lexical)
 	result.Route = "lexical"
+	// A note containing an embedded instruction is not reliable evidence for
+	// this answer-oriented path. Sentence sanitization can leave a forged fact
+	// behind, even when the memory carries a verified source tag.
+	rejectedInjection := map[string]bool{}
+	cleanLexical := make([]asymptoteobserve.LearningMemoryV1, 0, len(lexical))
+	for _, m := range lexical {
+		if hasInjection(m.Body) {
+			rejectedInjection[m.ID] = true
+			continue
+		}
+		cleanLexical = append(cleanLexical, m)
+	}
 	trustOpts := TrustContextOptions{
 		EnableSupersession: true, EnableTrust: true,
 		EnableInjectionDefense: true,
 	}
-	trustedLexical := SelectTrustContext(lexical, question, trustOpts).Memories
+	trustedLexical := SelectTrustContext(cleanLexical, question, trustOpts).Memories
 	intent := analyzeQuestion(question, query.Q)
 	var direct []asymptoteobserve.LearningMemoryV1
 	var bridges []asymptoteobserve.LearningMemoryV1
@@ -101,6 +114,10 @@ func (s *Store) SearchQuestion(query Query, question string, opts QuestionOption
 		result.SemanticCandidates = len(hits)
 		for _, hit := range hits {
 			m := hit.memory
+			if hasInjection(m.Body) {
+				rejectedInjection[m.ID] = true
+				continue
+			}
 			if intent.direct(m) {
 				selected = appendUniqueMemory(selected, m)
 				continue
@@ -123,6 +140,10 @@ func (s *Store) SearchQuestion(query Query, question string, opts QuestionOption
 	trustOpts.EnableConflict = true
 	curated := SelectTrustContext(selected, question, trustOpts)
 	result.Signals = curated.Signals
+	for id := range rejectedInjection {
+		result.Signals.InjectionIDs = append(result.Signals.InjectionIDs, id)
+	}
+	sort.Strings(result.Signals.InjectionIDs)
 	result.Signals.Sufficient = len(curated.Memories) > 0 && !curated.Signals.Unresolved
 	result.Signals.Insufficient = !result.Signals.Sufficient
 	if result.Signals.Insufficient {
