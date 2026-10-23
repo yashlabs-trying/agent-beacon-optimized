@@ -112,6 +112,18 @@ func (s *Store) SearchQuestion(query Query, question string, opts QuestionOption
 			}
 		}
 		result.SemanticCandidates = len(hits)
+		// A bridge must distinguish its destination from other semantic
+		// candidates. Shared type words (for example a storage kind) do not
+		// justify including every candidate with the requested fact slot.
+		bridgeOwners := map[string]map[string]bool{}
+		for _, hit := range hits {
+			for term := range intent.memoryTerms(hit.memory) {
+				if bridgeOwners[term] == nil {
+					bridgeOwners[term] = map[string]bool{}
+				}
+				bridgeOwners[term][hit.memory.ID] = true
+			}
+		}
 		for _, hit := range hits {
 			m := hit.memory
 			if hasInjection(m.Body) {
@@ -126,7 +138,7 @@ func (s *Store) SearchQuestion(query Query, question string, opts QuestionOption
 				continue
 			}
 			for _, bridge := range bridges {
-				if intent.linked(bridge, m) {
+				if intent.linked(bridge, m, bridgeOwners) {
 					selected = appendUniqueMemory(selected, bridge)
 					selected = appendUniqueMemory(selected, m)
 					break
@@ -316,13 +328,19 @@ var uncertaintyWords = map[string]bool{
 	"unconfirmed": true, "tentative": true, "unknown": true,
 }
 
-func (q questionIntent) linked(seed, candidate asymptoteobserve.LearningMemoryV1) bool {
+func (q questionIntent) linked(seed, candidate asymptoteobserve.LearningMemoryV1, owners map[string]map[string]bool) bool {
 	a, b := q.memoryTerms(seed), q.memoryTerms(candidate)
 	for term := range a {
 		if q.terms[term] || questionNoise[term] || bridgeNoise[term] {
 			continue
 		}
-		if b[term] {
+		// The seed may itself appear in the semantic hit list. Otherwise,
+		// the candidate must be the sole owner of this bridge term.
+		ownerCount := len(owners[term])
+		if owners[term][seed.ID] {
+			ownerCount--
+		}
+		if b[term] && ownerCount == 1 {
 			return true
 		}
 	}

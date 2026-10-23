@@ -119,6 +119,28 @@ func TestSearchQuestionFollowsEntityBridgeWithoutDecoy(t *testing.T) {
 	}
 }
 
+func TestSearchQuestionBridgeMustDistinguishDestination(t *testing.T) {
+	s := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), NewHashedEmbedder())
+	defer s.Close()
+	for _, m := range []asymptoteobserve.LearningMemoryV1{
+		questionMemory("service", "p", "Log location", "The mailer service writes logs to the nova bucket.", "verified"),
+		questionMemory("retention", "p", "Bucket retention", "The nova bucket retention is 45 days.", "verified"),
+		questionMemory("decoy", "p", "Legacy retention", "The legacy bucket retention is 90 days.", "verified"),
+	} {
+		if err := s.PutMemory(m); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r, err := s.SearchQuestion(Query{ProjectID: "p", Q: "mailer logs"},
+		"Which retention applies to mailer logs?", QuestionOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ids := questionIDs(r); len(ids) != 2 || ids[0] != "service" || ids[1] != "retention" {
+		t.Fatalf("generic bucket linked a decoy: %v", ids)
+	}
+}
+
 func TestSearchQuestionTrustAndScopeOnFastPath(t *testing.T) {
 	s := Open(filepath.Join(t.TempDir(), "memory.db"))
 	defer s.Close()
