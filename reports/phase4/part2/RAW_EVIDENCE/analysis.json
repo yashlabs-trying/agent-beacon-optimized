@@ -1,0 +1,164 @@
+{
+  "n_cases": 20,
+  "arms": {
+    "none": {
+      "correct": 2,
+      "n": 20,
+      "acc": 0.1,
+      "ci": [
+        0.027865893984153196,
+        0.30103820641179335
+      ]
+    },
+    "original": {
+      "correct": 2,
+      "n": 20,
+      "acc": 0.1,
+      "ci": [
+        0.027865893984153196,
+        0.30103820641179335
+      ]
+    },
+    "v6_lexical": {
+      "correct": 2,
+      "n": 20,
+      "acc": 0.1,
+      "ci": [
+        0.027865893984153196,
+        0.30103820641179335
+      ]
+    },
+    "v6_hashed": {
+      "correct": 15,
+      "n": 20,
+      "acc": 0.75,
+      "ci": [
+        0.5312949900419365,
+        0.888139947210597
+      ]
+    },
+    "v6_hybrid": {
+      "correct": 15,
+      "n": 20,
+      "acc": 0.75,
+      "ci": [
+        0.5312949900419365,
+        0.888139947210597
+      ]
+    },
+    "v6_neural": {
+      "correct": 16,
+      "n": 20,
+      "acc": 0.8,
+      "ci": [
+        0.5839782779742402,
+        0.9193436467288001
+      ]
+    },
+    "oracle": {
+      "correct": 19,
+      "n": 20,
+      "acc": 0.95,
+      "ci": [
+        0.7638641064874331,
+        0.9911187805671267
+      ]
+    }
+  },
+  "categories": [
+    "adversarial",
+    "ambiguity",
+    "context",
+    "contradiction",
+    "distractor",
+    "evidence",
+    "generalization",
+    "multi_hop",
+    "selection",
+    "temporal"
+  ],
+  "paired": {
+    "v6_neural_vs_original": {
+      "a_wins": 14,
+      "b_wins": 0,
+      "ties": 6,
+      "p": 0.0001220703125
+    },
+    "v6_neural_vs_v6_hashed": {
+      "a_wins": 1,
+      "b_wins": 0,
+      "ties": 19,
+      "p": 1.0
+    },
+    "v6_neural_vs_none": {
+      "a_wins": 14,
+      "b_wins": 0,
+      "ties": 6,
+      "p": 0.0001220703125
+    },
+    "v6_hashed_vs_original": {
+      "a_wins": 13,
+      "b_wins": 0,
+      "ties": 7,
+      "p": 0.000244140625
+    },
+    "oracle_vs_v6_neural": {
+      "a_wins": 4,
+      "b_wins": 1,
+      "ties": 15,
+      "p": 0.375
+    },
+    "v6_lexical_vs_original": {
+      "a_wins": 0,
+      "b_wins": 0,
+      "ties": 20,
+      "p": 1.0
+    }
+  },
+  "latency": {
+    "none": {
+      "agent_s": 1.63205,
+      "prompt_tokens": 73.0,
+      "gen_tokens": 8.0
+    },
+    "original": {
+      "agent_s": 0.54045,
+      "prompt_tokens": 73.0,
+      "gen_tokens": 8.0
+    },
+    "v6_lexical": {
+      "agent_s": 0.3782,
+      "prompt_tokens": 73.0,
+      "gen_tokens": 8.0
+    },
+    "v6_hashed": {
+      "agent_s": 1.5683500000000001,
+      "prompt_tokens": 116.95,
+      "gen_tokens": 7.1
+    },
+    "v6_hybrid": {
+      "agent_s": 1.1126,
+      "prompt_tokens": 116.95,
+      "gen_tokens": 7.1
+    },
+    "v6_neural": {
+      "agent_s": 1.3458,
+      "prompt_tokens": 117.2,
+      "gen_tokens": 7.3
+    },
+    "oracle": {
+      "agent_s": 1.2765499999999999,
+      "prompt_tokens": 88.4,
+      "gen_tokens": 6.65
+    }
+  },
+  "evidence_recall": {
+    "none": 0.1,
+    "original": 0.1,
+    "v6_lexical": 0.1,
+    "v6_hashed": 1.0,
+    "v6_hybrid": 1.0,
+    "v6_neural": 1.0,
+    "oracle": 1.0
+  }
+}

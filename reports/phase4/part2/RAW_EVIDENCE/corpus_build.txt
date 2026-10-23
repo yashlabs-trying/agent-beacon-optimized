@@ -1,0 +1,4 @@
+WROTE reports/phase4/part2/fixtures/phase4b_dev_v1.json cases=20 sha256=05853A8761851E2B06393BB358C665947B2CA1F827BB77ABDBD49BBA925210EA
+by_category={'adversarial': 2, 'ambiguity': 2, 'context': 1, 'contradiction': 4, 'distractor': 1, 'evidence': 1, 'generalization': 2, 'multi_hop': 2, 'selection': 2, 'temporal': 3}
+by_difficulty={'easy': 0, 'medium': 4, 'hard': 9, 'extreme': 7}
+VALIDATION OK

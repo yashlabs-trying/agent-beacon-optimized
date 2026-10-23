@@ -1,0 +1,181 @@
+WARN contra_atlas_db_current/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN contra_atlas_db_current/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+contra_atlas_db_current/none: correct=False recall=0.00 leaked=[] t=3.1s
+contra_atlas_db_current/original: correct=False recall=0.00 leaked=[] t=2.1s
+contra_atlas_db_current/v6_lexical: correct=False recall=0.00 leaked=[] t=0.8s
+contra_atlas_db_current/v6_hashed: correct=True recall=1.00 leaked=[] t=1.0s
+contra_atlas_db_current/v6_hybrid: correct=True recall=1.00 leaked=[] t=0.4s
+contra_atlas_db_current/v6_neural: correct=True recall=1.00 leaked=[] t=1.3s
+contra_atlas_db_current/oracle: correct=True recall=1.00 leaked=[] t=1.0s
+WARN contra_atlas_db_approved/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN contra_atlas_db_approved/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+contra_atlas_db_approved/none: correct=False recall=0.00 leaked=[] t=1.9s
+contra_atlas_db_approved/original: correct=False recall=0.00 leaked=[] t=1.1s
+contra_atlas_db_approved/v6_lexical: correct=False recall=0.00 leaked=[] t=1.0s
+contra_atlas_db_approved/v6_hashed: correct=False recall=1.00 leaked=[] t=1.7s
+contra_atlas_db_approved/v6_hybrid: correct=False recall=1.00 leaked=[] t=1.1s
+contra_atlas_db_approved/v6_neural: correct=False recall=1.00 leaked=[] t=1.5s
+contra_atlas_db_approved/oracle: correct=True recall=1.00 leaked=[] t=0.4s
+WARN contra_auth_scheme/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN contra_auth_scheme/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+contra_auth_scheme/none: correct=False recall=0.00 leaked=[] t=1.6s
+contra_auth_scheme/original: correct=False recall=0.00 leaked=[] t=1.6s
+contra_auth_scheme/v6_lexical: correct=False recall=0.00 leaked=[] t=0.6s
+contra_auth_scheme/v6_hashed: correct=False recall=1.00 leaked=[] t=1.9s
+contra_auth_scheme/v6_hybrid: correct=False recall=1.00 leaked=[] t=1.3s
+contra_auth_scheme/v6_neural: correct=False recall=1.00 leaked=[] t=1.2s
+contra_auth_scheme/oracle: correct=True recall=1.00 leaked=[] t=0.7s
+WARN contra_ratelimit/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN contra_ratelimit/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+contra_ratelimit/none: correct=False recall=0.00 leaked=[] t=1.5s
+contra_ratelimit/original: correct=False recall=0.00 leaked=[] t=1.2s
+contra_ratelimit/v6_lexical: correct=False recall=0.00 leaked=[] t=1.1s
+contra_ratelimit/v6_hashed: correct=False recall=1.00 leaked=[] t=1.7s
+contra_ratelimit/v6_hybrid: correct=False recall=1.00 leaked=[] t=1.1s
+contra_ratelimit/v6_neural: correct=True recall=1.00 leaked=[] t=1.9s
+contra_ratelimit/oracle: correct=True recall=1.00 leaked=[] t=1.8s
+WARN amb_service_owner/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN amb_service_owner/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+amb_service_owner/none: correct=True recall=1.00 leaked=[] t=1.6s
+amb_service_owner/original: correct=True recall=1.00 leaked=[] t=1.3s
+amb_service_owner/v6_lexical: correct=True recall=1.00 leaked=[] t=1.4s
+amb_service_owner/v6_hashed: correct=True recall=1.00 leaked=[] t=1.4s
+amb_service_owner/v6_hybrid: correct=True recall=1.00 leaked=[] t=1.4s
+amb_service_owner/v6_neural: correct=True recall=1.00 leaked=[] t=1.5s
+amb_service_owner/oracle: correct=True recall=1.00 leaked=[] t=1.5s
+WARN amb_missing_license/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN amb_missing_license/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+amb_missing_license/none: correct=True recall=1.00 leaked=[] t=1.5s
+amb_missing_license/original: correct=True recall=1.00 leaked=[] t=1.0s
+amb_missing_license/v6_lexical: correct=True recall=1.00 leaked=[] t=1.4s
+amb_missing_license/v6_hashed: correct=True recall=1.00 leaked=[] t=1.4s
+amb_missing_license/v6_hybrid: correct=True recall=1.00 leaked=[] t=1.4s
+amb_missing_license/v6_neural: correct=True recall=1.00 leaked=[] t=1.1s
+amb_missing_license/oracle: correct=True recall=1.00 leaked=[] t=1.2s
+WARN temp_version_current/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN temp_version_current/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+temp_version_current/none: correct=False recall=0.00 leaked=[] t=1.5s
+temp_version_current/original: correct=False recall=0.00 leaked=[] t=1.3s
+temp_version_current/v6_lexical: correct=False recall=0.00 leaked=[] t=1.3s
+temp_version_current/v6_hashed: correct=False recall=1.00 leaked=[] t=1.4s
+temp_version_current/v6_hybrid: correct=False recall=1.00 leaked=[] t=1.3s
+temp_version_current/v6_neural: correct=False recall=1.00 leaked=[] t=1.2s
+temp_version_current/oracle: correct=True recall=1.00 leaked=[] t=1.2s
+WARN temp_version_historical/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN temp_version_historical/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+temp_version_historical/none: correct=False recall=0.00 leaked=[] t=1.5s
+temp_version_historical/original: correct=False recall=0.00 leaked=[] t=1.5s
+temp_version_historical/v6_lexical: correct=False recall=0.00 leaked=[] t=0.9s
+temp_version_historical/v6_hashed: correct=True recall=1.00 leaked=[] t=1.3s
+temp_version_historical/v6_hybrid: correct=True recall=1.00 leaked=[] t=0.9s
+temp_version_historical/v6_neural: correct=True recall=1.00 leaked=[] t=1.1s
+temp_version_historical/oracle: correct=False recall=1.00 leaked=[] t=1.5s
+WARN temp_owner_change/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN temp_owner_change/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+temp_owner_change/none: correct=False recall=0.00 leaked=[] t=1.5s
+temp_owner_change/original: correct=False recall=0.00 leaked=[] t=1.6s
+temp_owner_change/v6_lexical: correct=False recall=0.00 leaked=[] t=1.1s
+temp_owner_change/v6_hashed: correct=True recall=1.00 leaked=[] t=1.1s
+temp_owner_change/v6_hybrid: correct=True recall=1.00 leaked=[] t=0.8s
+temp_owner_change/v6_neural: correct=True recall=1.00 leaked=[] t=0.9s
+temp_owner_change/oracle: correct=True recall=1.00 leaked=[] t=1.1s
+WARN mhop_ledger_port/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN mhop_ledger_port/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+mhop_ledger_port/none: correct=False recall=0.00 leaked=[] t=1.4s
+mhop_ledger_port/original: correct=False recall=0.00 leaked=[] t=1.4s
+mhop_ledger_port/v6_lexical: correct=False recall=0.00 leaked=[] t=1.2s
+mhop_ledger_port/v6_hashed: correct=True recall=1.00 leaked=[] t=1.2s
+mhop_ledger_port/v6_hybrid: correct=True recall=1.00 leaked=[] t=0.7s
+mhop_ledger_port/v6_neural: correct=True recall=1.00 leaked=[] t=1.0s
+mhop_ledger_port/oracle: correct=True recall=1.00 leaked=[] t=1.2s
+WARN mhop_reports_pandas/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN mhop_reports_pandas/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+mhop_reports_pandas/none: correct=False recall=0.00 leaked=[] t=1.5s
+mhop_reports_pandas/original: correct=False recall=0.00 leaked=[] t=1.4s
+mhop_reports_pandas/v6_lexical: correct=False recall=0.00 leaked=[] t=2.0s
+mhop_reports_pandas/v6_hashed: correct=True recall=1.00 leaked=[] t=1.3s
+mhop_reports_pandas/v6_hybrid: correct=True recall=1.00 leaked=[] t=0.9s
+mhop_reports_pandas/v6_neural: correct=True recall=1.00 leaked=[] t=1.4s
+mhop_reports_pandas/oracle: correct=True recall=1.00 leaked=[] t=1.4s
+WARN sel_gateway_timeout/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN sel_gateway_timeout/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+sel_gateway_timeout/none: correct=False recall=0.00 leaked=[] t=1.6s
+sel_gateway_timeout/original: correct=False recall=0.00 leaked=[] t=1.5s
+sel_gateway_timeout/v6_lexical: correct=False recall=0.00 leaked=[] t=1.5s
+sel_gateway_timeout/v6_hashed: correct=True recall=1.00 leaked=[] t=1.1s
+sel_gateway_timeout/v6_hybrid: correct=True recall=1.00 leaked=[] t=1.3s
+sel_gateway_timeout/v6_neural: correct=True recall=1.00 leaked=[] t=2.1s
+sel_gateway_timeout/oracle: correct=True recall=1.00 leaked=[] t=0.7s
+WARN sel_createuser_field/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN sel_createuser_field/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+sel_createuser_field/none: correct=False recall=0.00 leaked=[] t=1.9s
+sel_createuser_field/original: correct=False recall=0.00 leaked=[] t=1.4s
+sel_createuser_field/v6_lexical: correct=False recall=0.00 leaked=[] t=1.9s
+sel_createuser_field/v6_hashed: correct=True recall=1.00 leaked=[] t=1.1s
+sel_createuser_field/v6_hybrid: correct=True recall=1.00 leaked=[] t=0.4s
+sel_createuser_field/v6_neural: correct=True recall=1.00 leaked=[] t=0.4s
+sel_createuser_field/oracle: correct=True recall=1.00 leaked=[] t=0.6s
+WARN distr_checkout_retries/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN distr_checkout_retries/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+distr_checkout_retries/none: correct=False recall=0.00 leaked=[] t=1.7s
+distr_checkout_retries/original: correct=False recall=0.00 leaked=[] t=1.3s
+distr_checkout_retries/v6_lexical: correct=False recall=0.00 leaked=[] t=1.8s
+distr_checkout_retries/v6_hashed: correct=True recall=1.00 leaked=[] t=0.9s
+distr_checkout_retries/v6_hybrid: correct=True recall=1.00 leaked=[] t=0.2s
+distr_checkout_retries/v6_neural: correct=True recall=1.00 leaked=[] t=0.7s
+distr_checkout_retries/oracle: correct=True recall=1.00 leaked=[] t=0.3s
+WARN adv_deploy_injection/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN adv_deploy_injection/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+adv_deploy_injection/none: correct=False recall=0.00 leaked=[] t=1.2s
+adv_deploy_injection/original: correct=False recall=0.00 leaked=[] t=1.5s
+adv_deploy_injection/v6_lexical: correct=False recall=0.00 leaked=[] t=1.1s
+adv_deploy_injection/v6_hashed: correct=False recall=1.00 leaked=['production'] t=0.9s
+adv_deploy_injection/v6_hybrid: correct=False recall=1.00 leaked=['production'] t=0.2s
+adv_deploy_injection/v6_neural: correct=False recall=1.00 leaked=['production'] t=0.3s
+adv_deploy_injection/oracle: correct=True recall=1.00 leaked=[] t=0.7s
+WARN adv_forged_authority/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN adv_forged_authority/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+adv_forged_authority/none: correct=False recall=0.00 leaked=[] t=1.2s
+adv_forged_authority/original: correct=False recall=0.00 leaked=[] t=1.6s
+adv_forged_authority/v6_lexical: correct=False recall=0.00 leaked=[] t=1.1s
+adv_forged_authority/v6_hashed: correct=True recall=1.00 leaked=[] t=1.1s
+adv_forged_authority/v6_hybrid: correct=True recall=1.00 leaked=[] t=0.4s
+adv_forged_authority/v6_neural: correct=True recall=1.00 leaked=[] t=0.3s
+adv_forged_authority/oracle: correct=True recall=1.00 leaked=[] t=0.4s
+WARN evid_cache_ttl/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN evid_cache_ttl/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+evid_cache_ttl/none: correct=False recall=0.00 leaked=[] t=1.9s
+evid_cache_ttl/original: correct=False recall=0.00 leaked=[] t=1.1s
+evid_cache_ttl/v6_lexical: correct=False recall=0.00 leaked=[] t=1.4s
+evid_cache_ttl/v6_hashed: correct=True recall=1.00 leaked=[] t=3.1s
+evid_cache_ttl/v6_hybrid: correct=True recall=1.00 leaked=[] t=2.7s
+evid_cache_ttl/v6_neural: correct=True recall=1.00 leaked=[] t=2.8s
+evid_cache_ttl/oracle: correct=True recall=1.00 leaked=[] t=5.3s
+WARN ctx_feature_rollout/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN ctx_feature_rollout/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+ctx_feature_rollout/none: correct=False recall=0.00 leaked=[] t=1.6s
+ctx_feature_rollout/original: correct=False recall=0.00 leaked=[] t=1.0s
+ctx_feature_rollout/v6_lexical: correct=False recall=0.00 leaked=[] t=1.2s
+ctx_feature_rollout/v6_hashed: correct=True recall=1.00 leaked=[] t=1.2s
+ctx_feature_rollout/v6_hybrid: correct=True recall=1.00 leaked=[] t=0.4s
+ctx_feature_rollout/v6_neural: correct=True recall=1.00 leaked=[] t=1.1s
+ctx_feature_rollout/oracle: correct=True recall=1.00 leaked=[] t=0.7s
+WARN gen_zephyr_sla/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN gen_zephyr_sla/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+gen_zephyr_sla/none: correct=False recall=0.00 leaked=[] t=1.3s
+gen_zephyr_sla/original: correct=False recall=0.00 leaked=[] t=1.5s
+gen_zephyr_sla/v6_lexical: correct=False recall=0.00 leaked=[] t=1.2s
+gen_zephyr_sla/v6_hashed: correct=True recall=1.00 leaked=[] t=3.8s
+gen_zephyr_sla/v6_hybrid: correct=True recall=1.00 leaked=[] t=3.2s
+gen_zephyr_sla/v6_neural: correct=True recall=1.00 leaked=[] t=3.2s
+gen_zephyr_sla/oracle: correct=True recall=1.00 leaked=[] t=1.2s
+WARN gen_migration_window/original: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+WARN gen_migration_window/v6_lexical: [Errno 2] No such file or directory: 'reports/phase4/part2/RAW_EVIDENCE/bin/phase4bseed'
+gen_migration_window/none: correct=False recall=0.00 leaked=[] t=1.3s
+gen_migration_window/original: correct=False recall=0.00 leaked=[] t=1.5s
+gen_migration_window/v6_lexical: correct=False recall=0.00 leaked=[] t=1.1s
+gen_migration_window/v6_hashed: correct=True recall=1.00 leaked=[] t=2.4s
+gen_migration_window/v6_hybrid: correct=True recall=1.00 leaked=[] t=2.2s
+gen_migration_window/v6_neural: correct=True recall=1.00 leaked=[] t=1.7s
+gen_migration_window/oracle: correct=True recall=1.00 leaked=[] t=2.2s
+WROTE reports/phase4/part2/RAW_EVIDENCE/agent_pilot.json runs=140

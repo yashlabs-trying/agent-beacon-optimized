@@ -1,0 +1,46 @@
+cases=20 arms=7 runs=140
+
+PER-ARM ACCURACY (correct/total, Wilson 95% CI)
+  none          2/20  acc=0.100  CI=[0.028,0.301]
+  original      2/20  acc=0.100  CI=[0.028,0.301]
+  v6_lexical    2/20  acc=0.100  CI=[0.028,0.301]
+  v6_hashed    15/20  acc=0.750  CI=[0.531,0.888]
+  v6_hybrid    15/20  acc=0.750  CI=[0.531,0.888]
+  v6_neural    16/20  acc=0.800  CI=[0.584,0.919]
+  oracle       19/20  acc=0.950  CI=[0.764,0.991]
+
+PER-CATEGORY ACCURACY
+  arm          adversar ambiguit  context contradi distract evidence generali multi_ho selectio temporal
+  none              0/2      2/2      0/1      0/4      0/1      0/1      0/2      0/2      0/2      0/3
+  original          0/2      2/2      0/1      0/4      0/1      0/1      0/2      0/2      0/2      0/3
+  v6_lexical        0/2      2/2      0/1      0/4      0/1      0/1      0/2      0/2      0/2      0/3
+  v6_hashed         1/2      2/2      1/1      1/4      1/1      1/1      2/2      2/2      2/2      2/3
+  v6_hybrid         1/2      2/2      1/1      1/4      1/1      1/1      2/2      2/2      2/2      2/3
+  v6_neural         1/2      2/2      1/1      2/4      1/1      1/1      2/2      2/2      2/2      2/3
+  oracle            2/2      2/2      1/1      4/4      1/1      1/1      2/2      2/2      2/2      2/3
+
+PAIRED COMPARISONS (A vs B: A-wins / B-wins / ties, exact McNemar p)
+  v6_neural    vs original    : 14 / 0 / 6  p=0.0001
+  v6_neural    vs v6_hashed   : 1 / 0 / 19  p=1.0000
+  v6_neural    vs none        : 14 / 0 / 6  p=0.0001
+  v6_hashed    vs original    : 13 / 0 / 7  p=0.0002
+  oracle       vs v6_neural   : 4 / 1 / 15  p=0.3750
+  v6_lexical   vs original    : 0 / 0 / 20  p=1.0000
+
+REQUIRED-EVIDENCE RECALL@K (mean over cases)
+  none         0.100
+  original     0.100
+  v6_lexical   0.100
+  v6_hashed    1.000
+  v6_hybrid    1.000
+  v6_neural    1.000
+  oracle       1.000
+
+LATENCY / TOKENS (mean over cases)
+  none         agent_s=1.63 prompt_tok=73 gen_tok=8
+  original     agent_s=0.54 prompt_tok=73 gen_tok=8
+  v6_lexical   agent_s=0.38 prompt_tok=73 gen_tok=8
+  v6_hashed    agent_s=1.57 prompt_tok=117 gen_tok=7
+  v6_hybrid    agent_s=1.11 prompt_tok=117 gen_tok=7
+  v6_neural    agent_s=1.35 prompt_tok=117 gen_tok=7
+  oracle       agent_s=1.28 prompt_tok=88 gen_tok=7
