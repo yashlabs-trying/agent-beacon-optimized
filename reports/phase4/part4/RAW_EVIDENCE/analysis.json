@@ -1,0 +1,93 @@
+{
+  "arms": {
+    "none": {
+      "correct": 6,
+      "n": 35,
+      "acc": 0.17142857142857143,
+      "ci": [
+        0.08102529944856719,
+        0.3268260763958882
+      ],
+      "evidence_recall": 0.2571428571428571
+    },
+    "original": {
+      "correct": 6,
+      "n": 35,
+      "acc": 0.17142857142857143,
+      "ci": [
+        0.08102529944856719,
+        0.3268260763958882
+      ],
+      "evidence_recall": 0.2571428571428571
+    },
+    "v6_semantic": {
+      "correct": 20,
+      "n": 35,
+      "acc": 0.5714285714285714,
+      "ci": [
+        0.4085712925897337,
+        0.7201566691832108
+      ],
+      "evidence_recall": 1.0
+    },
+    "v6_intelligent": {
+      "correct": 27,
+      "n": 35,
+      "acc": 0.7714285714285715,
+      "ci": [
+        0.60982362219898,
+        0.8793426325382091
+      ],
+      "evidence_recall": 1.0
+    },
+    "oracle": {
+      "correct": 27,
+      "n": 35,
+      "acc": 0.7714285714285715,
+      "ci": [
+        0.60982362219898,
+        0.8793426325382091
+      ],
+      "evidence_recall": 1.0
+    }
+  },
+  "paired": {
+    "v6_intelligent_vs_v6_semantic": {
+      "a": 7,
+      "b": 0,
+      "ties": 28,
+      "p": 0.015625
+    },
+    "v6_intelligent_vs_original": {
+      "a": 21,
+      "b": 0,
+      "ties": 14,
+      "p": 9.5367431640625e-07
+    },
+    "v6_intelligent_vs_none": {
+      "a": 21,
+      "b": 0,
+      "ties": 14,
+      "p": 9.5367431640625e-07
+    },
+    "v6_intelligent_vs_oracle": {
+      "a": 0,
+      "b": 0,
+      "ties": 35,
+      "p": 1.0
+    },
+    "v6_semantic_vs_original": {
+      "a": 15,
+      "b": 1,
+      "ties": 19,
+      "p": 0.000518798828125
+    }
+  },
+  "categories": [
+    "contradiction",
+    "ambiguity",
+    "adversarial",
+    "decision",
+    "control"
+  ]
+}

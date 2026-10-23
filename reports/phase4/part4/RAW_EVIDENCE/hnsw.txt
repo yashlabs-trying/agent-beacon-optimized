@@ -1,0 +1,1 @@
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw	0.461s

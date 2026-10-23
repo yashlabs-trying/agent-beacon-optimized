@@ -50,6 +50,10 @@ var memoryOpts struct {
 	bodyFile     string
 	applies      string
 	tags         []string
+	// Phase 4D opt-in intelligent context selection.
+	intelligent bool
+	sufficiency bool
+	semantic    bool
 }
 
 var memoryCmd = &cobra.Command{
@@ -234,6 +238,9 @@ func init() {
 	memoryCandidatesListCmd.Flags().StringVar(&memoryOpts.state, "state", "", "Filter candidates by state")
 	memoryCandidatesListCmd.Flags().StringVar(&memoryOpts.kind, "kind", "", "Filter candidates by memory kind")
 	memoryListCmd.Flags().StringVar(&memoryOpts.kind, "kind", "", "Filter approved memory by kind")
+	memoryListCmd.Flags().BoolVar(&memoryOpts.intelligent, "intelligent", false, "Opt in to trust-aware, supersession-aware context selection (Phase 4D)")
+	memoryListCmd.Flags().BoolVar(&memoryOpts.semantic, "semantic", false, "Opt in to offline hashed-semantic retrieval instead of lexical (Phase 4D)")
+	memoryListCmd.Flags().BoolVar(&memoryOpts.sufficiency, "sufficiency", false, "With --intelligent, also emit an evidence-sufficiency signal and withhold insufficient evidence")
 	memoryCandidatesApproveCmd.Flags().StringVar(&memoryOpts.title, "title", "", "Title for the approved memory (defaults to the candidate title)")
 	memoryCandidatesApproveCmd.Flags().StringVar(&memoryOpts.body, "body", "", "Lesson text for the approved memory (defaults to the candidate body)")
 	memoryCandidatesApproveCmd.Flags().StringVar(&memoryOpts.bodyFile, "body-file", "", "Read the lesson text from a file, or - for stdin")
@@ -270,9 +277,50 @@ func runMemoryList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	query.Kind = memoryOpts.kind
-	memories, err := memoryStore().ListMemories(query)
-	if err != nil {
-		return err
+	var memories []asymptoteobserve.LearningMemoryV1
+	if memoryOpts.semantic {
+		sem := learning.OpenSemantic(learning.PathForRuntimeLog(memoryLogPath()), learning.NewHashedEmbedder())
+		res, err := sem.SearchHybrid(query, learning.HybridOptions{
+			Limit: query.Limit, CandidateK: 50, LexicalWeight: 0, SemanticWeight: 1,
+		})
+		closeErr := sem.Close()
+		if err != nil {
+			return err
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+		for _, r := range res {
+			memories = append(memories, r.Memory)
+		}
+	} else {
+		var err error
+		memories, err = memoryStore().ListMemories(query)
+		if err != nil {
+			return err
+		}
+	}
+	if memoryOpts.intelligent {
+		// Opt-in Phase 4D layer. Default behaviour is unchanged when the flag is
+		// absent, preserving Invariant I (backward compatibility).
+		selected := learning.SelectTrustContext(memories, memoryOpts.query, learning.TrustContextOptions{
+			EnableSupersession:     true,
+			EnableTrust:            true,
+			EnableConflict:         true,
+			EnableInjectionDefense: true,
+			RequireSufficiency:     memoryOpts.sufficiency,
+			WithholdIfInsufficient: memoryOpts.sufficiency,
+		})
+		if memoryOpts.jsonOutput {
+			return json.NewEncoder(cmd.OutOrStdout()).Encode(selected)
+		}
+		for _, memory := range selected.Memories {
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s\n", memory.ID, memory.Kind, memory.Title)
+		}
+		if selected.Signals.Insufficient {
+			fmt.Fprintf(cmd.ErrOrStderr(), "insufficient evidence: %s\n", selected.Signals.SufficiencyNote)
+		}
+		return nil
 	}
 	if memoryOpts.jsonOutput {
 		if memories == nil {

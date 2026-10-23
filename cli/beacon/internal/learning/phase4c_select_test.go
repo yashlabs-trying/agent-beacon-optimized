@@ -93,17 +93,17 @@ func TestPhase4CSelect(t *testing.T) {
 	}
 
 	configs := map[string]TrustContextOptions{
-		"semantic_only":      {},
-		"plus_supersession":  {EnableSupersession: true},
-		"plus_trust":         {EnableTrust: true},
-		"plus_conflict":      {EnableConflict: true},
-		"plus_injection":     {EnableInjectionDefense: true},
-		"plus_all":           {EnableSupersession: true, EnableTrust: true, EnableConflict: true, EnableInjectionDefense: true},
+		"semantic_only":     {},
+		"plus_supersession": {EnableSupersession: true},
+		"plus_trust":        {EnableTrust: true},
+		"plus_conflict":     {EnableConflict: true},
+		"plus_injection":    {EnableInjectionDefense: true},
+		"plus_all":          {EnableSupersession: true, EnableTrust: true, EnableConflict: true, EnableInjectionDefense: true, RequireSufficiency: true, WithholdIfInsufficient: true},
 	}
 
 	type caseOut struct {
-		Retrieved map[string][]string         `json:"retrieved"` // method -> ids
-		Configs   map[string][]string         `json:"configs"`   // config -> selected ids
+		Retrieved map[string][]string            `json:"retrieved"` // method -> ids
+		Configs   map[string][]string            `json:"configs"`   // config -> selected ids
 		Signals   map[string]TrustContextSignals `json:"signals"`
 	}
 	out := map[string]caseOut{}

@@ -578,6 +578,9 @@ func resetMemoryOpts(t *testing.T) {
 		bodyFile     string
 		applies      string
 		tags         []string
+		intelligent  bool
+		sufficiency  bool
+		semantic     bool
 	}{userMode: true, limit: 25, page: 1, costPerTrace: learning.DefaultCostPerTrace}
 	t.Cleanup(func() { memoryOpts = previous })
 }

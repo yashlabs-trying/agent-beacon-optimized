@@ -16,9 +16,9 @@ import (
 func histMem(id, body, ts, source string) asymptoteobserve.LearningMemoryV1 {
 	return asymptoteobserve.LearningMemoryV1{
 		ID: id, Kind: asymptoteobserve.LearningMemoryKindConvention, Title: id, Body: body,
-		Tags:     []string{"source:" + source},
-		Project:  asymptoteobserve.LearningProjectV1{ID: "hist"},
-		Evidence: []asymptoteobserve.LearningEvidenceV1{{TraceID: "t-" + id}},
+		Tags:      []string{"source:" + source},
+		Project:   asymptoteobserve.LearningProjectV1{ID: "hist"},
+		Evidence:  []asymptoteobserve.LearningEvidenceV1{{TraceID: "t-" + id}},
 		UpdatedAt: ts, CreatedAt: ts,
 	}
 }
