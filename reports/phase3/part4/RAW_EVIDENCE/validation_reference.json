@@ -1,0 +1,668 @@
+[
+  {
+    "task": "retry_after",
+    "arm": "none",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [],
+    "retrieval_ms": 0.0,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "retry_after.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 3 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.108,
+    "source_sha256": "d0a141a3a37effe6ef2495f120f8a4264bbfdf8327952caabff8533c3671f3a1",
+    "final_text": "Done."
+  },
+  {
+    "task": "retry_after",
+    "arm": "original",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "retry_after-distractor",
+      "retry_after-current"
+    ],
+    "retrieval_ms": 98.722,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "retry_after.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 3 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.066,
+    "source_sha256": "d0a141a3a37effe6ef2495f120f8a4264bbfdf8327952caabff8533c3671f3a1",
+    "final_text": "Done."
+  },
+  {
+    "task": "retry_after",
+    "arm": "v6",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "retry_after-distractor",
+      "retry_after-current"
+    ],
+    "retrieval_ms": 116.962,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "retry_after.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 3 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.093,
+    "source_sha256": "d0a141a3a37effe6ef2495f120f8a4264bbfdf8327952caabff8533c3671f3a1",
+    "final_text": "Done."
+  },
+  {
+    "task": "stable_cursor",
+    "arm": "none",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [],
+    "retrieval_ms": 0.0,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "cursor.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.053,
+    "source_sha256": "3f1ce436d893efe09566a437b0a1134d1fea4370a9cdd2637bfc96afbbd4082d",
+    "final_text": "Done."
+  },
+  {
+    "task": "stable_cursor",
+    "arm": "original",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "stable_cursor-distractor",
+      "stable_cursor-current"
+    ],
+    "retrieval_ms": 34.731,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "cursor.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.054,
+    "source_sha256": "3f1ce436d893efe09566a437b0a1134d1fea4370a9cdd2637bfc96afbbd4082d",
+    "final_text": "Done."
+  },
+  {
+    "task": "stable_cursor",
+    "arm": "v6",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "stable_cursor-distractor",
+      "stable_cursor-current"
+    ],
+    "retrieval_ms": 56.087,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "cursor.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.053,
+    "source_sha256": "3f1ce436d893efe09566a437b0a1134d1fea4370a9cdd2637bfc96afbbd4082d",
+    "final_text": "Done."
+  },
+  {
+    "task": "event_dedup",
+    "arm": "none",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [],
+    "retrieval_ms": 0.0,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "events.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.052,
+    "source_sha256": "f41147e9637e612bc349b2f51993f1484ed642580cb91b536e9a351017c4c446",
+    "final_text": "Done."
+  },
+  {
+    "task": "event_dedup",
+    "arm": "original",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "event_dedup-distractor",
+      "event_dedup-current"
+    ],
+    "retrieval_ms": 35.514,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "events.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.054,
+    "source_sha256": "f41147e9637e612bc349b2f51993f1484ed642580cb91b536e9a351017c4c446",
+    "final_text": "Done."
+  },
+  {
+    "task": "event_dedup",
+    "arm": "v6",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "event_dedup-distractor",
+      "event_dedup-current"
+    ],
+    "retrieval_ms": 71.649,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "events.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.056,
+    "source_sha256": "f41147e9637e612bc349b2f51993f1484ed642580cb91b536e9a351017c4c446",
+    "final_text": "Done."
+  },
+  {
+    "task": "utc_conversion",
+    "arm": "none",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [],
+    "retrieval_ms": 0.0,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "clock.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.054,
+    "source_sha256": "d7d2ce0576fc0e4a30e85f68bf95d1c841825afa5cb50ada0168dc6ebe7fcc69",
+    "final_text": "Done."
+  },
+  {
+    "task": "utc_conversion",
+    "arm": "original",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "utc_conversion-distractor",
+      "utc_conversion-current"
+    ],
+    "retrieval_ms": 44.392,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "clock.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.056,
+    "source_sha256": "d7d2ce0576fc0e4a30e85f68bf95d1c841825afa5cb50ada0168dc6ebe7fcc69",
+    "final_text": "Done."
+  },
+  {
+    "task": "utc_conversion",
+    "arm": "v6",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "utc_conversion-distractor",
+      "utc_conversion-current"
+    ],
+    "retrieval_ms": 85.223,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "clock.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.094,
+    "source_sha256": "d7d2ce0576fc0e4a30e85f68bf95d1c841825afa5cb50ada0168dc6ebe7fcc69",
+    "final_text": "Done."
+  },
+  {
+    "task": "lease_fence",
+    "arm": "none",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [],
+    "retrieval_ms": 0.0,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "lease.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.078,
+    "source_sha256": "1e8bc0d88555ad9b2658dc97023fe1de8edba591eba4e60a854ef0beb22c1ac5",
+    "final_text": "Done."
+  },
+  {
+    "task": "lease_fence",
+    "arm": "original",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "lease_fence-distractor",
+      "lease_fence-current"
+    ],
+    "retrieval_ms": 46.867,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "lease.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.074,
+    "source_sha256": "1e8bc0d88555ad9b2658dc97023fe1de8edba591eba4e60a854ef0beb22c1ac5",
+    "final_text": "Done."
+  },
+  {
+    "task": "lease_fence",
+    "arm": "v6",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "lease_fence-distractor",
+      "lease_fence-current"
+    ],
+    "retrieval_ms": 84.713,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "lease.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 2 tests in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.061,
+    "source_sha256": "1e8bc0d88555ad9b2658dc97023fe1de8edba591eba4e60a854ef0beb22c1ac5",
+    "final_text": "Done."
+  },
+  {
+    "task": "cache_key",
+    "arm": "none",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+    "retrieved_ids": [],
+    "retrieval_ms": 0.0,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "cache_key.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 1 test in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.078,
+    "source_sha256": "d0a77a7b667106067e18f95783014f5418cb6451e7a4112b1cf251e77fa92bf6",
+    "final_text": "Done."
+  },
+  {
+    "task": "cache_key",
+    "arm": "original",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "cache_key-distractor",
+      "cache_key-current"
+    ],
+    "retrieval_ms": 66.036,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "cache_key.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 1 test in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.064,
+    "source_sha256": "d0a77a7b667106067e18f95783014f5418cb6451e7a4112b1cf251e77fa92bf6",
+    "final_text": "Done."
+  },
+  {
+    "task": "cache_key",
+    "arm": "v6",
+    "backend": "scripted",
+    "script": "reference",
+    "model": "scripted",
+    "success": true,
+    "test_output": "----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+    "retrieved_ids": [
+      "cache_key-distractor",
+      "cache_key-current"
+    ],
+    "retrieval_ms": 88.988,
+    "model_calls": 3,
+    "tool_calls": [
+      {
+        "name": "write_file",
+        "arguments": {
+          "name": "cache_key.py"
+        },
+        "result": "Source file written."
+      },
+      {
+        "name": "run_tests",
+        "arguments": {},
+        "result": "{\"passed\": true, \"output\": \"----------------------------------------------------------------------\\nRan 1 test in 0.000s\\n\\nOK\\n\"}"
+      }
+    ],
+    "call_sources": [
+      "text_json",
+      "text_json"
+    ],
+    "prompt_tokens_processed": 3,
+    "generated_tokens": 3,
+    "agent_seconds": 0.048,
+    "source_sha256": "d0a77a7b667106067e18f95783014f5418cb6451e7a4112b1cf251e77fa92bf6",
+    "final_text": "Done."
+  }
+]

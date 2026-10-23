@@ -1,0 +1,18 @@
+retry_after/none: success=True tools=2 ids=[] seconds=0.108
+retry_after/original: success=True tools=2 ids=['retry_after-distractor', 'retry_after-current'] seconds=0.066
+retry_after/v6: success=True tools=2 ids=['retry_after-distractor', 'retry_after-current'] seconds=0.093
+stable_cursor/none: success=True tools=2 ids=[] seconds=0.053
+stable_cursor/original: success=True tools=2 ids=['stable_cursor-distractor', 'stable_cursor-current'] seconds=0.054
+stable_cursor/v6: success=True tools=2 ids=['stable_cursor-distractor', 'stable_cursor-current'] seconds=0.053
+event_dedup/none: success=True tools=2 ids=[] seconds=0.052
+event_dedup/original: success=True tools=2 ids=['event_dedup-distractor', 'event_dedup-current'] seconds=0.054
+event_dedup/v6: success=True tools=2 ids=['event_dedup-distractor', 'event_dedup-current'] seconds=0.056
+utc_conversion/none: success=True tools=2 ids=[] seconds=0.054
+utc_conversion/original: success=True tools=2 ids=['utc_conversion-distractor', 'utc_conversion-current'] seconds=0.056
+utc_conversion/v6: success=True tools=2 ids=['utc_conversion-distractor', 'utc_conversion-current'] seconds=0.094
+lease_fence/none: success=True tools=2 ids=[] seconds=0.078
+lease_fence/original: success=True tools=2 ids=['lease_fence-distractor', 'lease_fence-current'] seconds=0.074
+lease_fence/v6: success=True tools=2 ids=['lease_fence-distractor', 'lease_fence-current'] seconds=0.061
+cache_key/none: success=True tools=2 ids=[] seconds=0.078
+cache_key/original: success=True tools=2 ids=['cache_key-distractor', 'cache_key-current'] seconds=0.064
+cache_key/v6: success=True tools=2 ids=['cache_key-distractor', 'cache_key-current'] seconds=0.048
