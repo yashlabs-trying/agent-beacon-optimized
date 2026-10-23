@@ -51,9 +51,11 @@ var memoryOpts struct {
 	applies      string
 	tags         []string
 	// Phase 4D opt-in intelligent context selection.
-	intelligent bool
-	sufficiency bool
-	semantic    bool
+	intelligent   bool
+	sufficiency   bool
+	semantic      bool
+	questionAware bool
+	question      string
 }
 
 var memoryCmd = &cobra.Command{
@@ -240,6 +242,8 @@ func init() {
 	memoryListCmd.Flags().StringVar(&memoryOpts.kind, "kind", "", "Filter approved memory by kind")
 	memoryListCmd.Flags().BoolVar(&memoryOpts.intelligent, "intelligent", false, "Opt in to trust-aware, supersession-aware context selection (Phase 4D)")
 	memoryListCmd.Flags().BoolVar(&memoryOpts.semantic, "semantic", false, "Opt in to offline hashed-semantic retrieval instead of lexical (Phase 4D)")
+	memoryListCmd.Flags().BoolVar(&memoryOpts.questionAware, "question-aware", false, "Opt in to lexical-first, question-aware evidence selection (V7)")
+	memoryListCmd.Flags().StringVar(&memoryOpts.question, "question", "", "Full agent question for --question-aware")
 	memoryListCmd.Flags().BoolVar(&memoryOpts.sufficiency, "sufficiency", false, "With --intelligent, also emit an evidence-sufficiency signal and withhold insufficient evidence")
 	memoryCandidatesApproveCmd.Flags().StringVar(&memoryOpts.title, "title", "", "Title for the approved memory (defaults to the candidate title)")
 	memoryCandidatesApproveCmd.Flags().StringVar(&memoryOpts.body, "body", "", "Lesson text for the approved memory (defaults to the candidate body)")
@@ -277,6 +281,33 @@ func runMemoryList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	query.Kind = memoryOpts.kind
+	if memoryOpts.questionAware {
+		var store *learning.Store
+		path := learning.PathForRuntimeLog(memoryLogPath())
+		if memoryOpts.semantic {
+			store = learning.OpenSemantic(path, learning.NewHashedEmbedder())
+		} else {
+			store = learning.Open(path)
+		}
+		result, err := store.SearchQuestion(query, memoryOpts.question, learning.QuestionOptions{MaxItems: query.Limit})
+		closeErr := store.Close()
+		if err != nil {
+			return err
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+		if memoryOpts.jsonOutput {
+			return json.NewEncoder(cmd.OutOrStdout()).Encode(result)
+		}
+		for _, item := range result.Context.Items {
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s\n", item.Memory.ID, item.Memory.Kind, item.Memory.Title)
+		}
+		if result.Signals.Insufficient {
+			fmt.Fprintf(cmd.ErrOrStderr(), "insufficient evidence: %s\n", result.Signals.SufficiencyNote)
+		}
+		return nil
+	}
 	var memories []asymptoteobserve.LearningMemoryV1
 	if memoryOpts.semantic {
 		sem := learning.OpenSemantic(learning.PathForRuntimeLog(memoryLogPath()), learning.NewHashedEmbedder())

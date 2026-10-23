@@ -546,43 +546,95 @@ func resetMemoryOpts(t *testing.T) {
 	t.Helper()
 	previous := memoryOpts
 	memoryOpts = struct {
-		userMode     bool
-		systemMode   bool
-		logPath      string
-		jsonOutput   bool
-		projectPath  string
-		limit        int
-		page         int
-		query        string
-		harness      string
-		traceID      string
-		since        string
-		until        string
-		dryRun       bool
-		evaluator    string
-		jevEndpoint  string
-		jevAPIKey    string
-		jevModel     string
-		costPerTrace float64
-		subqEndpoint string
-		subqAPIKey   string
-		subqModel    string
-		timeout      time.Duration
-		state        string
-		kind         string
-		reason       string
-		replacement  string
-		force        bool
-		title        string
-		body         string
-		bodyFile     string
-		applies      string
-		tags         []string
-		intelligent  bool
-		sufficiency  bool
-		semantic     bool
+		userMode      bool
+		systemMode    bool
+		logPath       string
+		jsonOutput    bool
+		projectPath   string
+		limit         int
+		page          int
+		query         string
+		harness       string
+		traceID       string
+		since         string
+		until         string
+		dryRun        bool
+		evaluator     string
+		jevEndpoint   string
+		jevAPIKey     string
+		jevModel      string
+		costPerTrace  float64
+		subqEndpoint  string
+		subqAPIKey    string
+		subqModel     string
+		timeout       time.Duration
+		state         string
+		kind          string
+		reason        string
+		replacement   string
+		force         bool
+		title         string
+		body          string
+		bodyFile      string
+		applies       string
+		tags          []string
+		intelligent   bool
+		sufficiency   bool
+		semantic      bool
+		questionAware bool
+		question      string
 	}{userMode: true, limit: 25, page: 1, costPerTrace: learning.DefaultCostPerTrace}
 	t.Cleanup(func() { memoryOpts = previous })
+}
+
+func TestMemoryListQuestionAwareUsesFullQuestion(t *testing.T) {
+	logPath, projectPath := writeMemoryCommandFixture(t)
+	project, err := learning.ResolveProject(projectPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := learning.Open(learning.PathForRuntimeLog(logPath))
+	for _, m := range []asymptoteobserve.LearningMemoryV1{
+		{
+			ID: "convention", CandidateID: "candidate-convention", Project: project,
+			Kind: asymptoteobserve.LearningMemoryKindConvention, Title: "Worker convention",
+			Body: "All Rust workers use monotonic identifiers.", Tags: []string{"source:verified"},
+			Evidence: []asymptoteobserve.LearningEvidenceV1{{TraceID: "trace-convention"}},
+		},
+		{
+			ID: "noise", CandidateID: "candidate-noise", Project: project,
+			Kind: asymptoteobserve.LearningMemoryKindConvention, Title: "Shipping note",
+			Body: "The shipping group prefers tabs in config files.", Tags: []string{"source:verified"},
+			Evidence: []asymptoteobserve.LearningEvidenceV1{{TraceID: "trace-noise"}},
+		},
+	} {
+		if err := store.PutMemory(m); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	resetMemoryOpts(t)
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = projectPath
+	memoryOpts.query = "Rust workers"
+	memoryOpts.question = "A Rust worker is being added. Which convention should it follow?"
+	memoryOpts.questionAware = true
+	memoryOpts.jsonOutput = true
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	if err := runMemoryList(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	var result learning.QuestionResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("decode: %v: %s", err, out.String())
+	}
+	if result.Route != "lexical" || !result.Signals.Sufficient || len(result.Context.Items) != 1 || result.Context.Items[0].Memory.ID != "convention" {
+		t.Fatalf("question-aware CLI returned %+v", result)
+	}
 }
 
 func testCommandCandidate(t *testing.T) asymptoteobserve.LearningCandidateV1 {

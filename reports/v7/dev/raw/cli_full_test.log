@@ -1,0 +1,176 @@
+DeepSeek Harness hooks installed: /tmp/TestEndpointHooksInstallAndUninstallDsh2348994604/001/.dsh/beacon-endpoint-hooks.json
+DeepSeek Harness hook bridge mounted in: /tmp/TestEndpointHooksInstallAndUninstallDsh2348994604/001/.dsh/cordis.patch.yml
+Restart dsh (or rely on its config watcher, if your profile enables HMR) for the hooks to take effect.
+DeepSeek Harness endpoint hooks removed
+DeepSeek Harness hooks installed: /tmp/TestEndpointHooksDshLeavesTheUsersPatchRowsAlone2543159268/001/.dsh/beacon-endpoint-hooks.json
+DeepSeek Harness hook bridge mounted in: /tmp/TestEndpointHooksDshLeavesTheUsersPatchRowsAlone2543159268/001/.dsh/cordis.patch.yml
+Restart dsh (or rely on its config watcher, if your profile enables HMR) for the hooks to take effect.
+DeepSeek Harness endpoint hooks removed
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: /tmp/TestEndpointInstallBackfillsAfterTheInstallSucceeds1707089734/002/runtime.jsonl
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: /tmp/TestEndpointInstallBackfillsAfterTheInstallSucceeds1707089734/002/runtime.jsonl
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: /tmp/TestEndpointInstallBackfillsAfterTheInstallSucceeds1707089734/002/runtime.jsonl
+DeepSeek Harness hooks installed: /tmp/TestDshHookCaptureCheckFindsARealInstall1632594523/001/dsh/beacon-endpoint-hooks.json
+DeepSeek Harness hook bridge mounted in: /tmp/TestDshHookCaptureCheckFindsARealInstall1632594523/001/dsh/cordis.patch.yml
+Restart dsh (or rely on its config watcher, if your profile enables HMR) for the hooks to take effect.
+Claude Code endpoint hooks were not present
+Codex CLI endpoint hooks were not present
+VS Code endpoint hooks were not present
+Cursor endpoint hooks were not present
+Factory endpoint hooks were not present
+opencode endpoint hooks were not present
+Cline endpoint hooks were not present
+Pi endpoint hooks were not present
+Oh My Pi endpoint hooks were not present
+Prime Agent endpoint hooks were not present
+Senpi endpoint hooks were not present
+OpenHands endpoint hooks were not present
+DeepSeek Harness endpoint hooks were not present
+Kiro endpoint hooks were not present
+Kimi Code endpoint hooks were not present
+OpenClaw Gateway endpoint hooks were not present
+Grok endpoint hooks were not present
+Qwen Code endpoint hooks were not present
+Muse Code endpoint hooks were not present
+Hermes Agent endpoint hooks were not present
+Antigravity CLI endpoint hooks were not present
+Devin CLI endpoint hooks were not present
+Devin Desktop via Cascade/Windsurf endpoint hooks were not present
+Qwen Code hooks installed: /tmp/TestEndpointHooksInstallAndUninstallQwen1590634714/001/.qwen/settings.json
+Qwen Code endpoint hooks removed
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Oh My Pi extension installed: /tmp/TestEndpointInstallHookOnlyHarnessConfiguresNoOTLPRuntime2697761915/001/.omp/agent/extensions/beacon.ts
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Cursor hooks installed: /tmp/TestEndpointInstallHookOnlyHarnessConfiguresNoOTLPRuntime2697761915/002/.cursor/hooks.json
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Oh My Pi extension installed: /tmp/TestEndpointInstallHookOnlyHarnessConfiguresNoOTLPRuntime2697761915/003/.omp/agent/extensions/beacon.ts
+Cursor hooks installed: /tmp/TestEndpointInstallHookOnlyHarnessConfiguresNoOTLPRuntime2697761915/003/.cursor/hooks.json
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Claude Code hooks installed: /tmp/TestEndpointInstallHookOnlyHarnessConfiguresNoOTLPRuntime2697761915/004/.claude/settings.json
+Endpoint repaired. Manifest: 
+Oh My Pi extension installed: /tmp/TestEndpointRepairHookOnlyHarnessConfiguresNoOTLPRuntime3552070345/001/.omp/agent/extensions/beacon.ts
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Claude Code hooks installed: /tmp/TestEndpointInstallAndRepairCaptureClaudeWebFetchOnlyWhenAsked924325130/001/.claude/settings.json
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Claude Code hooks installed: /tmp/TestEndpointInstallAndRepairCaptureClaudeWebFetchOnlyWhenAsked924325130/002/.claude/settings.json
+Endpoint repaired. Manifest: 
+Claude Code hooks installed: /tmp/TestEndpointInstallAndRepairCaptureClaudeWebFetchOnlyWhenAsked924325130/003/.claude/settings.json
+Endpoint repaired. Manifest: 
+Claude Code hooks installed: /tmp/TestEndpointInstallAndRepairCaptureClaudeWebFetchOnlyWhenAsked924325130/004/.claude/settings.json
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Endpoint repaired. Manifest: 
+Endpoint config written to 
+Collector config written to 
+Service definition written to 
+Install manifest written to 
+Runtime log: 
+Codex CLI endpoint hooks installed: /tmp/TestEndpointInstallAndRepairPassExplicitOTLPSelection4055464448/001/.codex/hooks.json
+Endpoint repaired. Manifest: 
+Codex CLI endpoint hooks installed: /tmp/TestEndpointInstallAndRepairPassExplicitOTLPSelection4055464448/002/.codex/hooks.json
+Scheduled inventory job installed (/fake/plist).
+Beacon endpoint dashboard: http://127.0.0.1:0
+Runtime log: /tmp/TestRunEndpointDashboardPassesRequestedLogPathToHandler2261867503/001/.beacon/endpoint/logs/runtime.jsonl
+--check was set; no package was downloaded or applied.
+Installed via Homebrew. Update with:
+  brew update && brew upgrade beacon
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Beacon: reading traces from the runtime log, which holds about a day or two of activity. Run `beacon endpoint traces reindex` to keep a local history.
+Kimi Code hooks installed: /tmp/TestEndpointHooksInstallAndUninstallKimi1442205960/001/.kimi-code/config.toml
+Start a new Kimi Code session (or run /reload) for the hooks to take effect.
+Kimi Code endpoint hooks removed
+Kimi Code hooks installed: /tmp/TestKimiDiscoveryTracksTheInstall1066439870/001/.kimi-code/config.toml
+Start a new Kimi Code session (or run /reload) for the hooks to take effect.
+Kiro hooks installed: /tmp/TestEndpointHooksInstallAndUninstallKiro195005164/001/.kiro/hooks/beacon-endpoint.json
+Kiro endpoint hooks removed
+Kiro hooks installed: /tmp/TestEndpointHooksInstallKiroAtProjectLevel1398603855/002/.kiro/hooks/beacon-endpoint.json
+Kiro hooks installed: /tmp/TestEndpointHooksKiroLeavesOtherHookFilesAlone3533265374/001/.kiro/hooks/beacon-endpoint.json
+Kiro endpoint hooks removed
+--- FAIL: TestMCPConnectEndToEndOpenCode (2.49s)
+    mcp_connect_e2e_test.go:152: opencode mcp list: <nil>
+        T  MCP Servers
+        [0m
+        |
+        !  No MCP servers configured
+        |
+        —  Add servers with: opencode mcp add
+        
+Beacon MCP doctor
+
+Transport: http
+Muse Code hooks installed: /tmp/TestEndpointHooksInstallAndUninstallMuse4040824582/001/.config/muse/beacon-endpoint-hooks.json
+Muse Code settings updated: /tmp/TestEndpointHooksInstallAndUninstallMuse4040824582/001/.config/muse/settings.json
+Muse Code endpoint hooks removed
+Oh My Pi extension installed: /tmp/TestInstallEndpointHookTargetHandlesOmp142994507/001/.omp/agent/extensions/beacon.ts
+Oh My Pi endpoint hooks removed
+OpenHands hooks installed: /tmp/TestEndpointHooksInstallAndUninstallOpenHands2307224943/001/.openhands/hooks.json
+OpenHands reads a repository's own .openhands/hooks.json in preference to this one, and its agent server (used by the CLI and the GUI) reads only the repository file. Run the install again with --level project inside a repository to cover those.
+OpenHands endpoint hooks removed
+OpenHands hooks installed: /tmp/TestEndpointHooksInstallOpenHandsAtProjectLevel2941720316/002/.openhands/hooks.json
+Prime Agent extension installed: /tmp/TestInstallEndpointHookTargetHandlesPrime3646516930/001/.prime/agent/extensions/beacon.ts
+Prime Agent endpoint hooks removed
+FAIL
+FAIL	github.com/asymptote-labs/agent-beacon/cli/beacon/cmd	113.525s
+FAIL

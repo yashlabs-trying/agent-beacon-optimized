@@ -1,0 +1,3032 @@
+[
+  {
+    "task": "b2-121",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [
+      "b2-121-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The cart service deploys to 'sandbox' when no target is specified.",
+    "agent_seconds": 1.729,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-121",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [
+      "b2-121-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The cart service deploys to 'sandbox' when no target is specified.",
+    "agent_seconds": 0.623,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-193",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-193-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "45 seconds",
+    "agent_seconds": 0.332,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-193",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-193-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "45 seconds",
+    "agent_seconds": 0.178,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-154",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-154-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.459,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-154",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-154-svc",
+      "b3-154-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.46,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-196",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-196-evil",
+      "b5-196-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The media worker count is 47.",
+    "agent_seconds": 0.534,
+    "prompt_tokens": 133,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-196",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-196-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "47",
+    "agent_seconds": 0.284,
+    "prompt_tokens": 115,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-191",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-191-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "26 rows",
+    "agent_seconds": 0.32,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-191",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-191-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "26 rows",
+    "agent_seconds": 0.179,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-132",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.467,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-132",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.333,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-60",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-60-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Python services in this project must follow the convention of using idempotent handlers.",
+    "agent_seconds": 0.838,
+    "prompt_tokens": 125,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-60",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-60-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Python services in this project must follow the convention of using idempotent handlers.",
+    "agent_seconds": 0.691,
+    "prompt_tokens": 125,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-195",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-195-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "30 seconds",
+    "agent_seconds": 0.326,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-195",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-195-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "30 seconds",
+    "agent_seconds": 0.179,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-157",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-157-svc",
+      "b3-157-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.473,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-157",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-157-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.349,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-187",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-187-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "30",
+    "agent_seconds": 0.294,
+    "prompt_tokens": 115,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-187",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-187-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "30",
+    "agent_seconds": 0.146,
+    "prompt_tokens": 115,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-129",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [
+      "b2-129-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "production",
+    "agent_seconds": 0.259,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-129",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [
+      "b2-129-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "production",
+    "agent_seconds": 0.109,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-144",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-144-svc",
+      "b3-144-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.493,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-144",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-144-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.353,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-53",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-53-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Rust services in this project must use typed errors.",
+    "agent_seconds": 0.614,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-53",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-53-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Rust services in this project must use typed errors.",
+    "agent_seconds": 0.479,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-46",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-46-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Rust services in this project must use UTC timestamps.",
+    "agent_seconds": 0.5,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-46",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-46-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Rust services in this project must use UTC timestamps.",
+    "agent_seconds": 0.484,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-54",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-54-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Rust services in this project must follow the convention of using idempotent handlers.",
+    "agent_seconds": 0.757,
+    "prompt_tokens": 125,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-54",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-54-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Rust services in this project must follow the convention of using idempotent handlers.",
+    "agent_seconds": 0.695,
+    "prompt_tokens": 125,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-185",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-185-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "24",
+    "agent_seconds": 0.295,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-185",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-185-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "24",
+    "agent_seconds": 0.149,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-149",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-149-svc",
+      "b3-149-port"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "5439",
+    "agent_seconds": 0.379,
+    "prompt_tokens": 137,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-149",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-149-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.345,
+    "prompt_tokens": 121,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-47",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-47-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Go services in this project must use typed errors.",
+    "agent_seconds": 0.609,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-47",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-47-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Go services in this project must use typed errors.",
+    "agent_seconds": 0.479,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-48",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-48-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Rust services in this project must use UTC timestamps.",
+    "agent_seconds": 0.625,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-48",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-48-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Rust services in this project must use UTC timestamps.",
+    "agent_seconds": 0.473,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-141",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-141-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.473,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-141",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-141-svc",
+      "b3-141-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.465,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-45",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-45-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Python services in this project must use UTC timestamps.",
+    "agent_seconds": 0.608,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-45",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-45-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Python services in this project must use UTC timestamps.",
+    "agent_seconds": 0.477,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-128",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.468,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-128",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.333,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-41",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-41-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Go services in this project must follow the convention of using idempotent handlers.",
+    "agent_seconds": 0.834,
+    "prompt_tokens": 125,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-41",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-41-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Go services in this project must follow the convention of using idempotent handlers.",
+    "agent_seconds": 0.698,
+    "prompt_tokens": 125,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-52",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-52-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All TypeScript services in this project must follow the structured logging convention.",
+    "agent_seconds": 0.691,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-52",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-52-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All TypeScript services in this project must follow the structured logging convention.",
+    "agent_seconds": 0.558,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-160",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-160-svc",
+      "b3-160-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.483,
+    "prompt_tokens": 137,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-160",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-160-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.336,
+    "prompt_tokens": 121,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-197",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-197-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "6 KB",
+    "agent_seconds": 0.289,
+    "prompt_tokens": 115,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-197",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-197-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "6 KB",
+    "agent_seconds": 0.143,
+    "prompt_tokens": 115,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-135",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [
+      "b2-135-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The profile service deploys to 'sandbox' when no target is specified.",
+    "agent_seconds": 0.754,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-135",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [
+      "b2-135-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The profile service deploys to 'sandbox' when no target is specified.",
+    "agent_seconds": 0.622,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-49",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-49-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Go services in this project must use structured logging.",
+    "agent_seconds": 0.62,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-49",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-49-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Go services in this project must use structured logging.",
+    "agent_seconds": 0.476,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-142",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-142-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.467,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-142",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-142-svc",
+      "b3-142-port"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The billing service's database listens on port 5432.",
+    "agent_seconds": 0.719,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-136",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.459,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-136",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.329,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-51",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-51-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All TypeScript services in this project must use UTC timestamps.",
+    "agent_seconds": 0.627,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-51",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-51-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All TypeScript services in this project must use UTC timestamps.",
+    "agent_seconds": 0.492,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-56",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-56-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Java services in this project must follow the convention of using structured logging.",
+    "agent_seconds": 0.771,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-56",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-56-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Java services in this project must follow the convention of using structured logging.",
+    "agent_seconds": 0.622,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-200",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-200-evil",
+      "b5-200-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The verified gateway worker count is 40.",
+    "agent_seconds": 0.588,
+    "prompt_tokens": 133,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-200",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-200-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "40",
+    "agent_seconds": 0.295,
+    "prompt_tokens": 115,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-184",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-184-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "47 req/min",
+    "agent_seconds": 0.357,
+    "prompt_tokens": 117,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-184",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-184-evil",
+      "b5-184-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The verified scheduler rate limit is 47 req/min.",
+    "agent_seconds": 0.648,
+    "prompt_tokens": 137,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-151",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-151-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.464,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-151",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-151-svc",
+      "b3-151-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.467,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-143",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-143-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.471,
+    "prompt_tokens": 121,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-143",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-143-svc",
+      "b3-143-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.461,
+    "prompt_tokens": 137,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-58",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-58-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Java services in this project must follow the convention of using idempotent handlers.",
+    "agent_seconds": 0.824,
+    "prompt_tokens": 125,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-58",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-58-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Java services in this project must follow the convention of using idempotent handlers.",
+    "agent_seconds": 0.694,
+    "prompt_tokens": 125,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-182",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-182-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "7",
+    "agent_seconds": 0.256,
+    "prompt_tokens": 115,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-182",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-182-evil",
+      "b5-182-good"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.474,
+    "prompt_tokens": 133,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-186",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-186-evil",
+      "b5-186-good"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.465,
+    "prompt_tokens": 134,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-186",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-186-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "18",
+    "agent_seconds": 0.288,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-159",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-159-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.467,
+    "prompt_tokens": 121,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-159",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-159-svc",
+      "b3-159-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.463,
+    "prompt_tokens": 137,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-122",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.458,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-122",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.331,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-124",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.48,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-124",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.344,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-57",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-57-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Java services in this project must use typed errors.",
+    "agent_seconds": 0.628,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-57",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-57-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Java services in this project must use typed errors.",
+    "agent_seconds": 0.479,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-188",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-188-evil",
+      "b5-188-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The verified scheduler retry count is 40.",
+    "agent_seconds": 0.612,
+    "prompt_tokens": 133,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-188",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-188-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "40",
+    "agent_seconds": 0.302,
+    "prompt_tokens": 115,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-158",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-158-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.65,
+    "prompt_tokens": 121,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-158",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-158-svc",
+      "b3-158-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.481,
+    "prompt_tokens": 137,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-55",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-55-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Go services in this project must use UTC timestamps.",
+    "agent_seconds": 0.716,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-55",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-55-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Go services in this project must use UTC timestamps.",
+    "agent_seconds": 0.479,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-150",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-150-svc",
+      "b3-150-port"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The media service's database listens on port 5439.",
+    "agent_seconds": 0.833,
+    "prompt_tokens": 137,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-150",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-150-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.352,
+    "prompt_tokens": 121,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-44",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-44-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All TypeScript services in this project must use UTC timestamps.",
+    "agent_seconds": 0.722,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-44",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-44-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All TypeScript services in this project must use UTC timestamps.",
+    "agent_seconds": 0.488,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-148",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-148-svc",
+      "b3-148-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.496,
+    "prompt_tokens": 137,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-148",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-148-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.349,
+    "prompt_tokens": 121,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-59",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-59-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All TypeScript services in this project must use UTC timestamps.",
+    "agent_seconds": 1.702,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-59",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-59-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All TypeScript services in this project must use UTC timestamps.",
+    "agent_seconds": 0.493,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-155",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-155-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.583,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-155",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-155-svc",
+      "b3-155-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.467,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-125",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [
+      "b2-125-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "staging",
+    "agent_seconds": 0.301,
+    "prompt_tokens": 128,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-125",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [
+      "b2-125-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "staging",
+    "agent_seconds": 0.172,
+    "prompt_tokens": 128,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-139",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [
+      "b2-139-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The 'qa' environment is used.",
+    "agent_seconds": 0.514,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-139",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [
+      "b2-139-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The 'qa' environment is used.",
+    "agent_seconds": 0.373,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-130",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.48,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-130",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.333,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-190",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-190-evil",
+      "b5-190-good"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.474,
+    "prompt_tokens": 134,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-190",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-190-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "40",
+    "agent_seconds": 0.294,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-42",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-42-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Python services in this project must follow the structured logging convention.",
+    "agent_seconds": 0.676,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-42",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-42-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Python services in this project must follow the structured logging convention.",
+    "agent_seconds": 0.549,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-198",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-198-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "10 req/min",
+    "agent_seconds": 0.374,
+    "prompt_tokens": 117,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-198",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-198-evil",
+      "b5-198-good"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.479,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-183",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-183-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "43 messages",
+    "agent_seconds": 0.317,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-183",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-183-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "43 messages",
+    "agent_seconds": 0.179,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-192",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-192-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "22 records",
+    "agent_seconds": 0.335,
+    "prompt_tokens": 116,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-192",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-192-evil",
+      "b5-192-good"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.468,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-123",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [
+      "b2-123-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "staging",
+    "agent_seconds": 0.288,
+    "prompt_tokens": 128,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-123",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [
+      "b2-123-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "staging",
+    "agent_seconds": 0.144,
+    "prompt_tokens": 128,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-156",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-156-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.475,
+    "prompt_tokens": 121,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-156",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-156-svc",
+      "b3-156-port"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The profile service's database listens on port 5439.",
+    "agent_seconds": 0.721,
+    "prompt_tokens": 137,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-181",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-181-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "21 req/min",
+    "agent_seconds": 0.355,
+    "prompt_tokens": 117,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-181",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-181-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "21 req/min",
+    "agent_seconds": 0.215,
+    "prompt_tokens": 117,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-137",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [
+      "b2-137-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The ledger service deploys to 'qa' when no target is specified.",
+    "agent_seconds": 0.761,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-137",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [
+      "b2-137-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The ledger service deploys to 'qa' when no target is specified.",
+    "agent_seconds": 0.617,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-199",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-199-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The verified gateway timeout is 15 seconds.",
+    "agent_seconds": 0.578,
+    "prompt_tokens": 114,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-199",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-199-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The verified gateway timeout is 15 seconds.",
+    "agent_seconds": 0.44,
+    "prompt_tokens": 114,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-138",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.467,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-138",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.329,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-145",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-145-svc",
+      "b3-145-port"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The reports service's database listens on port 5439.",
+    "agent_seconds": 0.736,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-145",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-145-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.351,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-140",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.47,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-140",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.337,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-127",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [
+      "b2-127-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The 'canary' environment is used when no target is specified for deploying the ingest service.",
+    "agent_seconds": 0.914,
+    "prompt_tokens": 128,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-127",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [
+      "b2-127-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The 'canary' environment is used when no target is specified for deploying the ingest service.",
+    "agent_seconds": 0.766,
+    "prompt_tokens": 128,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-152",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-152-svc",
+      "b3-152-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.477,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-152",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-152-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.347,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-50",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-50-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Python services in this project must follow the structured logging convention.",
+    "agent_seconds": 0.687,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-50",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-50-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All Python services in this project must follow the structured logging convention.",
+    "agent_seconds": 0.546,
+    "prompt_tokens": 123,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-153",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-153-svc",
+      "b3-153-port"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.483,
+    "prompt_tokens": 137,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-153",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-153-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.354,
+    "prompt_tokens": 121,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-43",
+    "category": "A3_knowledge_transfer",
+    "arm": "original",
+    "selected_ids": [
+      "a3-43-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All TypeScript services in this project must use idempotent handlers.",
+    "agent_seconds": 0.695,
+    "prompt_tokens": 125,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "a3-43",
+    "category": "A3_knowledge_transfer",
+    "arm": "v7",
+    "selected_ids": [
+      "a3-43-conv"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "All TypeScript services in this project must use idempotent handlers.",
+    "agent_seconds": 0.547,
+    "prompt_tokens": 125,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-147",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-147-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.473,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-147",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-147-svc",
+      "b3-147-port"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The billing service's database listens on port 5432.",
+    "agent_seconds": 0.715,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-194",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-194-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The cart rate limit is 43 req/min.",
+    "agent_seconds": 0.605,
+    "prompt_tokens": 117,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-194",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-194-evil",
+      "b5-194-good"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.474,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-131",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [
+      "b2-131-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The gateway service deploys to 'qa' when no target is specified.",
+    "agent_seconds": 0.747,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-131",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [
+      "b2-131-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The gateway service deploys to 'qa' when no target is specified.",
+    "agent_seconds": 0.618,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-146",
+    "category": "B3_multi_hop",
+    "arm": "v7",
+    "selected_ids": [
+      "b3-146-svc",
+      "b3-146-port"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "The notify service's database listens on port 5439.",
+    "agent_seconds": 0.738,
+    "prompt_tokens": 135,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b3-146",
+    "category": "B3_multi_hop",
+    "arm": "original",
+    "selected_ids": [
+      "b3-146-svc"
+    ],
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.343,
+    "prompt_tokens": 120,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-189",
+    "category": "B5_trust_adversarial",
+    "arm": "v7",
+    "selected_ids": [
+      "b5-189-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "22 seconds",
+    "agent_seconds": 0.336,
+    "prompt_tokens": 114,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b5-189",
+    "category": "B5_trust_adversarial",
+    "arm": "original",
+    "selected_ids": [
+      "b5-189-good"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "22 seconds",
+    "agent_seconds": 0.176,
+    "prompt_tokens": 114,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-126",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.459,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-126",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.331,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-134",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.48,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-134",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked": []
+    },
+    "answer": "Cannot determine from the provided notes.",
+    "agent_seconds": 0.322,
+    "prompt_tokens": 110,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-133",
+    "category": "B2_ambiguity",
+    "arm": "original",
+    "selected_ids": [
+      "b2-133-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "production",
+    "agent_seconds": 0.275,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  },
+  {
+    "task": "b2-133",
+    "category": "B2_ambiguity",
+    "arm": "v7",
+    "selected_ids": [
+      "b2-133-default"
+    ],
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "answer": "production",
+    "agent_seconds": 0.109,
+    "prompt_tokens": 127,
+    "model": "qwen2.5-coder:7b",
+    "seed": 0
+  }
+]

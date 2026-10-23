@@ -703,6 +703,11 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 		// transaction. A failure here must never fail the authoritative write;
 		// RebuildEmbeddings can repair it later.
 		_ = s.upsertEmbeddingTx(tx, m)
+	} else {
+		// A lexical writer may update a memory after another process embedded
+		// it. Invalidate that derived row so the next semantic query rebuilds
+		// the current content instead of serving a stale vector.
+		_, _ = tx.Exec(`DELETE FROM memory_embeddings WHERE memory_id = ?`, m.ID)
 	}
 	if s.writeCheckpoint != nil {
 		s.writeCheckpoint("before-commit")

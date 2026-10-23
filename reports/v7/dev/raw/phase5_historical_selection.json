@@ -1,0 +1,3662 @@
+[
+  {
+    "id": "a1-1",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-1-fixed",
+      "a1-1-failed"
+    ],
+    "required_evidence": [
+      "a1-1-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-2",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-2-fixed",
+      "a1-2-failed"
+    ],
+    "required_evidence": [
+      "a1-2-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-3",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-3-fixed",
+      "a1-3-failed"
+    ],
+    "required_evidence": [
+      "a1-3-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-4",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-4-fixed",
+      "a1-4-failed"
+    ],
+    "required_evidence": [
+      "a1-4-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-5",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-5-fixed",
+      "a1-5-failed"
+    ],
+    "required_evidence": [
+      "a1-5-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-6",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-6-fixed",
+      "a1-6-failed"
+    ],
+    "required_evidence": [
+      "a1-6-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-7",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-7-fixed",
+      "a1-7-failed"
+    ],
+    "required_evidence": [
+      "a1-7-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-8",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-8-fixed",
+      "a1-8-failed"
+    ],
+    "required_evidence": [
+      "a1-8-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-9",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-9-fixed",
+      "a1-9-failed"
+    ],
+    "required_evidence": [
+      "a1-9-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-10",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-10-fixed",
+      "a1-10-failed"
+    ],
+    "required_evidence": [
+      "a1-10-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-11",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-11-fixed",
+      "a1-11-failed"
+    ],
+    "required_evidence": [
+      "a1-11-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-12",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-12-fixed",
+      "a1-12-failed"
+    ],
+    "required_evidence": [
+      "a1-12-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-13",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-13-fixed",
+      "a1-13-failed"
+    ],
+    "required_evidence": [
+      "a1-13-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-14",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-14-fixed",
+      "a1-14-failed"
+    ],
+    "required_evidence": [
+      "a1-14-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-15",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-15-fixed",
+      "a1-15-failed"
+    ],
+    "required_evidence": [
+      "a1-15-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-16",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-16-fixed",
+      "a1-16-failed"
+    ],
+    "required_evidence": [
+      "a1-16-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-17",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-17-fixed",
+      "a1-17-failed"
+    ],
+    "required_evidence": [
+      "a1-17-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-18",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-18-fixed",
+      "a1-18-failed"
+    ],
+    "required_evidence": [
+      "a1-18-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-19",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-19-fixed",
+      "a1-19-failed"
+    ],
+    "required_evidence": [
+      "a1-19-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a1-20",
+    "category": "A1_learning_from_failure",
+    "selected": [
+      "a1-20-fixed",
+      "a1-20-failed"
+    ],
+    "required_evidence": [
+      "a1-20-fixed"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-21",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-21-new"
+    ],
+    "required_evidence": [
+      "a2-21-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-22",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-22-new"
+    ],
+    "required_evidence": [
+      "a2-22-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-23",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-23-new"
+    ],
+    "required_evidence": [
+      "a2-23-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-24",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-24-new"
+    ],
+    "required_evidence": [
+      "a2-24-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-25",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-25-new"
+    ],
+    "required_evidence": [
+      "a2-25-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-26",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-26-new"
+    ],
+    "required_evidence": [
+      "a2-26-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-27",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-27-new"
+    ],
+    "required_evidence": [
+      "a2-27-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-28",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-28-new"
+    ],
+    "required_evidence": [
+      "a2-28-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-29",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-29-new"
+    ],
+    "required_evidence": [
+      "a2-29-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-30",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-30-new"
+    ],
+    "required_evidence": [
+      "a2-30-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-31",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-31-new"
+    ],
+    "required_evidence": [
+      "a2-31-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-32",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-32-new"
+    ],
+    "required_evidence": [
+      "a2-32-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-33",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-33-new"
+    ],
+    "required_evidence": [
+      "a2-33-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-34",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-34-new"
+    ],
+    "required_evidence": [
+      "a2-34-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-35",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-35-new"
+    ],
+    "required_evidence": [
+      "a2-35-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-36",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-36-new"
+    ],
+    "required_evidence": [
+      "a2-36-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-37",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-37-new"
+    ],
+    "required_evidence": [
+      "a2-37-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-38",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-38-new"
+    ],
+    "required_evidence": [
+      "a2-38-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-39",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-39-new"
+    ],
+    "required_evidence": [
+      "a2-39-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a2-40",
+    "category": "A2_supersession",
+    "selected": [
+      "a2-40-new"
+    ],
+    "required_evidence": [
+      "a2-40-new"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-41",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-41-conv"
+    ],
+    "required_evidence": [
+      "a3-41-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-42",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-42-conv"
+    ],
+    "required_evidence": [
+      "a3-42-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-43",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-43-conv"
+    ],
+    "required_evidence": [
+      "a3-43-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-44",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-44-conv"
+    ],
+    "required_evidence": [
+      "a3-44-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-45",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-45-conv"
+    ],
+    "required_evidence": [
+      "a3-45-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-46",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-46-conv"
+    ],
+    "required_evidence": [
+      "a3-46-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-47",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-47-conv"
+    ],
+    "required_evidence": [
+      "a3-47-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-48",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-48-conv"
+    ],
+    "required_evidence": [
+      "a3-48-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-49",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-49-conv"
+    ],
+    "required_evidence": [
+      "a3-49-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-50",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-50-conv"
+    ],
+    "required_evidence": [
+      "a3-50-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-51",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-51-conv"
+    ],
+    "required_evidence": [
+      "a3-51-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-52",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-52-conv"
+    ],
+    "required_evidence": [
+      "a3-52-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-53",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-53-conv"
+    ],
+    "required_evidence": [
+      "a3-53-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-54",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-54-conv"
+    ],
+    "required_evidence": [
+      "a3-54-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-55",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-55-conv"
+    ],
+    "required_evidence": [
+      "a3-55-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-56",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-56-conv"
+    ],
+    "required_evidence": [
+      "a3-56-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-57",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-57-conv"
+    ],
+    "required_evidence": [
+      "a3-57-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-58",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-58-conv"
+    ],
+    "required_evidence": [
+      "a3-58-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-59",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-59-conv"
+    ],
+    "required_evidence": [
+      "a3-59-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a3-60",
+    "category": "A3_knowledge_transfer",
+    "selected": [
+      "a3-60-conv"
+    ],
+    "required_evidence": [
+      "a3-60-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-61",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-61-stale",
+      "a4-61-durable"
+    ],
+    "required_evidence": [
+      "a4-61-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-62",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-62-stale",
+      "a4-62-durable"
+    ],
+    "required_evidence": [
+      "a4-62-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-63",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-63-stale",
+      "a4-63-durable"
+    ],
+    "required_evidence": [
+      "a4-63-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-64",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-64-stale",
+      "a4-64-durable"
+    ],
+    "required_evidence": [
+      "a4-64-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-65",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-65-stale",
+      "a4-65-durable"
+    ],
+    "required_evidence": [
+      "a4-65-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-66",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-66-stale",
+      "a4-66-durable"
+    ],
+    "required_evidence": [
+      "a4-66-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-67",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-67-stale",
+      "a4-67-durable"
+    ],
+    "required_evidence": [
+      "a4-67-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-68",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-68-stale",
+      "a4-68-durable"
+    ],
+    "required_evidence": [
+      "a4-68-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-69",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-69-stale",
+      "a4-69-durable"
+    ],
+    "required_evidence": [
+      "a4-69-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-70",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-70-stale",
+      "a4-70-durable"
+    ],
+    "required_evidence": [
+      "a4-70-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-71",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-71-stale",
+      "a4-71-durable"
+    ],
+    "required_evidence": [
+      "a4-71-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-72",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-72-stale",
+      "a4-72-durable"
+    ],
+    "required_evidence": [
+      "a4-72-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-73",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-73-stale",
+      "a4-73-durable"
+    ],
+    "required_evidence": [
+      "a4-73-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-74",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-74-stale",
+      "a4-74-durable"
+    ],
+    "required_evidence": [
+      "a4-74-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-75",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-75-stale",
+      "a4-75-durable"
+    ],
+    "required_evidence": [
+      "a4-75-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-76",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-76-stale",
+      "a4-76-durable"
+    ],
+    "required_evidence": [
+      "a4-76-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-77",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-77-stale",
+      "a4-77-durable"
+    ],
+    "required_evidence": [
+      "a4-77-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-78",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-78-stale",
+      "a4-78-durable"
+    ],
+    "required_evidence": [
+      "a4-78-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-79",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-79-stale",
+      "a4-79-durable"
+    ],
+    "required_evidence": [
+      "a4-79-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a4-80",
+    "category": "A4_recovery",
+    "selected": [
+      "a4-80-stale",
+      "a4-80-durable"
+    ],
+    "required_evidence": [
+      "a4-80-durable"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-81",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-81-gold"
+    ],
+    "required_evidence": [
+      "a5-81-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-82",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-82-gold"
+    ],
+    "required_evidence": [
+      "a5-82-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-83",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-83-gold"
+    ],
+    "required_evidence": [
+      "a5-83-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-84",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-84-gold"
+    ],
+    "required_evidence": [
+      "a5-84-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-85",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-85-gold"
+    ],
+    "required_evidence": [
+      "a5-85-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-86",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-86-gold"
+    ],
+    "required_evidence": [
+      "a5-86-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-87",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-87-gold"
+    ],
+    "required_evidence": [
+      "a5-87-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-88",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-88-gold"
+    ],
+    "required_evidence": [
+      "a5-88-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-89",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-89-gold"
+    ],
+    "required_evidence": [
+      "a5-89-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-90",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-90-gold"
+    ],
+    "required_evidence": [
+      "a5-90-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-91",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-91-gold"
+    ],
+    "required_evidence": [
+      "a5-91-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-92",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-92-gold"
+    ],
+    "required_evidence": [
+      "a5-92-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-93",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-93-gold"
+    ],
+    "required_evidence": [
+      "a5-93-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-94",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-94-gold"
+    ],
+    "required_evidence": [
+      "a5-94-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-95",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-95-gold"
+    ],
+    "required_evidence": [
+      "a5-95-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-96",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-96-gold"
+    ],
+    "required_evidence": [
+      "a5-96-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-97",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-97-gold"
+    ],
+    "required_evidence": [
+      "a5-97-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-98",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-98-gold"
+    ],
+    "required_evidence": [
+      "a5-98-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-99",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-99-gold"
+    ],
+    "required_evidence": [
+      "a5-99-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "a5-100",
+    "category": "A5_long_session",
+    "selected": [
+      "a5-100-gold"
+    ],
+    "required_evidence": [
+      "a5-100-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-101",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-101-b"
+    ],
+    "required_evidence": [
+      "b1-101-b"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-102",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-102-b",
+      "b1-102-a"
+    ],
+    "required_evidence": [],
+    "route": "lexical",
+    "sufficient": false
+  },
+  {
+    "id": "b1-103",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-103-b"
+    ],
+    "required_evidence": [
+      "b1-103-b"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-104",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-104-b",
+      "b1-104-a"
+    ],
+    "required_evidence": [],
+    "route": "lexical",
+    "sufficient": false
+  },
+  {
+    "id": "b1-105",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-105-b"
+    ],
+    "required_evidence": [
+      "b1-105-b"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-106",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-106-b",
+      "b1-106-a"
+    ],
+    "required_evidence": [],
+    "route": "lexical",
+    "sufficient": false
+  },
+  {
+    "id": "b1-107",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-107-b"
+    ],
+    "required_evidence": [
+      "b1-107-b"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-108",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-108-b",
+      "b1-108-a"
+    ],
+    "required_evidence": [],
+    "route": "lexical",
+    "sufficient": false
+  },
+  {
+    "id": "b1-109",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-109-b"
+    ],
+    "required_evidence": [
+      "b1-109-b"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-110",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-110-b",
+      "b1-110-a"
+    ],
+    "required_evidence": [],
+    "route": "lexical",
+    "sufficient": false
+  },
+  {
+    "id": "b1-111",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-111-b"
+    ],
+    "required_evidence": [
+      "b1-111-b"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-112",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-112-b",
+      "b1-112-a"
+    ],
+    "required_evidence": [],
+    "route": "lexical",
+    "sufficient": false
+  },
+  {
+    "id": "b1-113",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-113-b"
+    ],
+    "required_evidence": [
+      "b1-113-b"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-114",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-114-b",
+      "b1-114-a"
+    ],
+    "required_evidence": [],
+    "route": "lexical",
+    "sufficient": false
+  },
+  {
+    "id": "b1-115",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-115-b"
+    ],
+    "required_evidence": [
+      "b1-115-b"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-116",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-116-b",
+      "b1-116-a"
+    ],
+    "required_evidence": [],
+    "route": "lexical",
+    "sufficient": false
+  },
+  {
+    "id": "b1-117",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-117-b"
+    ],
+    "required_evidence": [
+      "b1-117-b"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-118",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-118-b",
+      "b1-118-a"
+    ],
+    "required_evidence": [],
+    "route": "lexical",
+    "sufficient": false
+  },
+  {
+    "id": "b1-119",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-119-b"
+    ],
+    "required_evidence": [
+      "b1-119-b"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b1-120",
+    "category": "B1_contradiction",
+    "selected": [
+      "b1-120-b",
+      "b1-120-a"
+    ],
+    "required_evidence": [],
+    "route": "lexical",
+    "sufficient": false
+  },
+  {
+    "id": "b2-121",
+    "category": "B2_ambiguity",
+    "selected": [
+      "b2-121-default"
+    ],
+    "required_evidence": [
+      "b2-121-default"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b2-122",
+    "category": "B2_ambiguity",
+    "selected": [],
+    "required_evidence": [],
+    "route": "semantic",
+    "sufficient": false,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b2-123",
+    "category": "B2_ambiguity",
+    "selected": [
+      "b2-123-default"
+    ],
+    "required_evidence": [
+      "b2-123-default"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b2-124",
+    "category": "B2_ambiguity",
+    "selected": [],
+    "required_evidence": [],
+    "route": "semantic",
+    "sufficient": false,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b2-125",
+    "category": "B2_ambiguity",
+    "selected": [
+      "b2-125-default"
+    ],
+    "required_evidence": [
+      "b2-125-default"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b2-126",
+    "category": "B2_ambiguity",
+    "selected": [],
+    "required_evidence": [],
+    "route": "semantic",
+    "sufficient": false,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b2-127",
+    "category": "B2_ambiguity",
+    "selected": [
+      "b2-127-default"
+    ],
+    "required_evidence": [
+      "b2-127-default"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b2-128",
+    "category": "B2_ambiguity",
+    "selected": [],
+    "required_evidence": [],
+    "route": "semantic",
+    "sufficient": false,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b2-129",
+    "category": "B2_ambiguity",
+    "selected": [
+      "b2-129-default"
+    ],
+    "required_evidence": [
+      "b2-129-default"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b2-130",
+    "category": "B2_ambiguity",
+    "selected": [],
+    "required_evidence": [],
+    "route": "semantic",
+    "sufficient": false,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b2-131",
+    "category": "B2_ambiguity",
+    "selected": [
+      "b2-131-default"
+    ],
+    "required_evidence": [
+      "b2-131-default"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b2-132",
+    "category": "B2_ambiguity",
+    "selected": [],
+    "required_evidence": [],
+    "route": "semantic",
+    "sufficient": false,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b2-133",
+    "category": "B2_ambiguity",
+    "selected": [
+      "b2-133-default"
+    ],
+    "required_evidence": [
+      "b2-133-default"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b2-134",
+    "category": "B2_ambiguity",
+    "selected": [],
+    "required_evidence": [],
+    "route": "semantic",
+    "sufficient": false,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b2-135",
+    "category": "B2_ambiguity",
+    "selected": [
+      "b2-135-default"
+    ],
+    "required_evidence": [
+      "b2-135-default"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b2-136",
+    "category": "B2_ambiguity",
+    "selected": [],
+    "required_evidence": [],
+    "route": "semantic",
+    "sufficient": false,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b2-137",
+    "category": "B2_ambiguity",
+    "selected": [
+      "b2-137-default"
+    ],
+    "required_evidence": [
+      "b2-137-default"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b2-138",
+    "category": "B2_ambiguity",
+    "selected": [],
+    "required_evidence": [],
+    "route": "semantic",
+    "sufficient": false,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b2-139",
+    "category": "B2_ambiguity",
+    "selected": [
+      "b2-139-default"
+    ],
+    "required_evidence": [
+      "b2-139-default"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b2-140",
+    "category": "B2_ambiguity",
+    "selected": [],
+    "required_evidence": [],
+    "route": "semantic",
+    "sufficient": false,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-141",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-141-svc",
+      "b3-141-port"
+    ],
+    "required_evidence": [
+      "b3-141-svc",
+      "b3-141-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-142",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-142-svc",
+      "b3-142-port"
+    ],
+    "required_evidence": [
+      "b3-142-svc",
+      "b3-142-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-143",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-143-svc",
+      "b3-143-port"
+    ],
+    "required_evidence": [
+      "b3-143-svc",
+      "b3-143-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-144",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-144-svc",
+      "b3-144-port"
+    ],
+    "required_evidence": [
+      "b3-144-svc",
+      "b3-144-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-145",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-145-svc",
+      "b3-145-port"
+    ],
+    "required_evidence": [
+      "b3-145-svc",
+      "b3-145-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-146",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-146-svc",
+      "b3-146-port"
+    ],
+    "required_evidence": [
+      "b3-146-svc",
+      "b3-146-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-147",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-147-svc",
+      "b3-147-port"
+    ],
+    "required_evidence": [
+      "b3-147-svc",
+      "b3-147-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-148",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-148-svc",
+      "b3-148-port"
+    ],
+    "required_evidence": [
+      "b3-148-svc",
+      "b3-148-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-149",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-149-svc",
+      "b3-149-port"
+    ],
+    "required_evidence": [
+      "b3-149-svc",
+      "b3-149-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-150",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-150-svc",
+      "b3-150-port"
+    ],
+    "required_evidence": [
+      "b3-150-svc",
+      "b3-150-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-151",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-151-svc",
+      "b3-151-port"
+    ],
+    "required_evidence": [
+      "b3-151-svc",
+      "b3-151-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-152",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-152-svc",
+      "b3-152-port"
+    ],
+    "required_evidence": [
+      "b3-152-svc",
+      "b3-152-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-153",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-153-svc",
+      "b3-153-port"
+    ],
+    "required_evidence": [
+      "b3-153-svc",
+      "b3-153-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-154",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-154-svc",
+      "b3-154-port"
+    ],
+    "required_evidence": [
+      "b3-154-svc",
+      "b3-154-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-155",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-155-svc",
+      "b3-155-port"
+    ],
+    "required_evidence": [
+      "b3-155-svc",
+      "b3-155-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-156",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-156-svc",
+      "b3-156-port"
+    ],
+    "required_evidence": [
+      "b3-156-svc",
+      "b3-156-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-157",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-157-svc",
+      "b3-157-port"
+    ],
+    "required_evidence": [
+      "b3-157-svc",
+      "b3-157-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-158",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-158-svc",
+      "b3-158-port"
+    ],
+    "required_evidence": [
+      "b3-158-svc",
+      "b3-158-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-159",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-159-svc",
+      "b3-159-port"
+    ],
+    "required_evidence": [
+      "b3-159-svc",
+      "b3-159-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b3-160",
+    "category": "B3_multi_hop",
+    "selected": [
+      "b3-160-svc",
+      "b3-160-port"
+    ],
+    "required_evidence": [
+      "b3-160-svc",
+      "b3-160-port"
+    ],
+    "route": "semantic",
+    "sufficient": true,
+    "embedding_model": "hashed-subword-v1"
+  },
+  {
+    "id": "b4-161",
+    "category": "B4_decision",
+    "selected": [
+      "b4-161-good"
+    ],
+    "required_evidence": [
+      "b4-161-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-162",
+    "category": "B4_decision",
+    "selected": [
+      "b4-162-good"
+    ],
+    "required_evidence": [
+      "b4-162-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-163",
+    "category": "B4_decision",
+    "selected": [
+      "b4-163-good"
+    ],
+    "required_evidence": [
+      "b4-163-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-164",
+    "category": "B4_decision",
+    "selected": [
+      "b4-164-good"
+    ],
+    "required_evidence": [
+      "b4-164-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-165",
+    "category": "B4_decision",
+    "selected": [
+      "b4-165-good"
+    ],
+    "required_evidence": [
+      "b4-165-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-166",
+    "category": "B4_decision",
+    "selected": [
+      "b4-166-good"
+    ],
+    "required_evidence": [
+      "b4-166-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-167",
+    "category": "B4_decision",
+    "selected": [
+      "b4-167-good"
+    ],
+    "required_evidence": [
+      "b4-167-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-168",
+    "category": "B4_decision",
+    "selected": [
+      "b4-168-good"
+    ],
+    "required_evidence": [
+      "b4-168-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-169",
+    "category": "B4_decision",
+    "selected": [
+      "b4-169-good"
+    ],
+    "required_evidence": [
+      "b4-169-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-170",
+    "category": "B4_decision",
+    "selected": [
+      "b4-170-good"
+    ],
+    "required_evidence": [
+      "b4-170-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-171",
+    "category": "B4_decision",
+    "selected": [
+      "b4-171-good"
+    ],
+    "required_evidence": [
+      "b4-171-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-172",
+    "category": "B4_decision",
+    "selected": [
+      "b4-172-good"
+    ],
+    "required_evidence": [
+      "b4-172-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-173",
+    "category": "B4_decision",
+    "selected": [
+      "b4-173-good"
+    ],
+    "required_evidence": [
+      "b4-173-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-174",
+    "category": "B4_decision",
+    "selected": [
+      "b4-174-good"
+    ],
+    "required_evidence": [
+      "b4-174-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-175",
+    "category": "B4_decision",
+    "selected": [
+      "b4-175-good"
+    ],
+    "required_evidence": [
+      "b4-175-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-176",
+    "category": "B4_decision",
+    "selected": [
+      "b4-176-good"
+    ],
+    "required_evidence": [
+      "b4-176-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-177",
+    "category": "B4_decision",
+    "selected": [
+      "b4-177-good"
+    ],
+    "required_evidence": [
+      "b4-177-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-178",
+    "category": "B4_decision",
+    "selected": [
+      "b4-178-good"
+    ],
+    "required_evidence": [
+      "b4-178-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-179",
+    "category": "B4_decision",
+    "selected": [
+      "b4-179-good"
+    ],
+    "required_evidence": [
+      "b4-179-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b4-180",
+    "category": "B4_decision",
+    "selected": [
+      "b4-180-good"
+    ],
+    "required_evidence": [
+      "b4-180-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-181",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-181-good"
+    ],
+    "required_evidence": [
+      "b5-181-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-182",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-182-good"
+    ],
+    "required_evidence": [
+      "b5-182-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-183",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-183-good"
+    ],
+    "required_evidence": [
+      "b5-183-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-184",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-184-good"
+    ],
+    "required_evidence": [
+      "b5-184-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-185",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-185-good"
+    ],
+    "required_evidence": [
+      "b5-185-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-186",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-186-good"
+    ],
+    "required_evidence": [
+      "b5-186-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-187",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-187-good"
+    ],
+    "required_evidence": [
+      "b5-187-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-188",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-188-good"
+    ],
+    "required_evidence": [
+      "b5-188-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-189",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-189-good"
+    ],
+    "required_evidence": [
+      "b5-189-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-190",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-190-good"
+    ],
+    "required_evidence": [
+      "b5-190-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-191",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-191-good"
+    ],
+    "required_evidence": [
+      "b5-191-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-192",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-192-good"
+    ],
+    "required_evidence": [
+      "b5-192-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-193",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-193-good"
+    ],
+    "required_evidence": [
+      "b5-193-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-194",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-194-good"
+    ],
+    "required_evidence": [
+      "b5-194-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-195",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-195-good"
+    ],
+    "required_evidence": [
+      "b5-195-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-196",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-196-good"
+    ],
+    "required_evidence": [
+      "b5-196-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-197",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-197-good"
+    ],
+    "required_evidence": [
+      "b5-197-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-198",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-198-good"
+    ],
+    "required_evidence": [
+      "b5-198-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-199",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-199-good"
+    ],
+    "required_evidence": [
+      "b5-199-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "b5-200",
+    "category": "B5_trust_adversarial",
+    "selected": [
+      "b5-200-good"
+    ],
+    "required_evidence": [
+      "b5-200-good"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-201",
+    "category": "C1_coding",
+    "selected": [
+      "c1-201-conv"
+    ],
+    "required_evidence": [
+      "c1-201-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-202",
+    "category": "C1_coding",
+    "selected": [
+      "c1-202-conv"
+    ],
+    "required_evidence": [
+      "c1-202-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-203",
+    "category": "C1_coding",
+    "selected": [
+      "c1-203-conv"
+    ],
+    "required_evidence": [
+      "c1-203-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-204",
+    "category": "C1_coding",
+    "selected": [
+      "c1-204-conv"
+    ],
+    "required_evidence": [
+      "c1-204-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-205",
+    "category": "C1_coding",
+    "selected": [
+      "c1-205-conv"
+    ],
+    "required_evidence": [
+      "c1-205-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-206",
+    "category": "C1_coding",
+    "selected": [
+      "c1-206-conv"
+    ],
+    "required_evidence": [
+      "c1-206-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-207",
+    "category": "C1_coding",
+    "selected": [
+      "c1-207-conv"
+    ],
+    "required_evidence": [
+      "c1-207-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-208",
+    "category": "C1_coding",
+    "selected": [
+      "c1-208-conv"
+    ],
+    "required_evidence": [
+      "c1-208-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-209",
+    "category": "C1_coding",
+    "selected": [
+      "c1-209-conv"
+    ],
+    "required_evidence": [
+      "c1-209-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-210",
+    "category": "C1_coding",
+    "selected": [
+      "c1-210-conv"
+    ],
+    "required_evidence": [
+      "c1-210-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-211",
+    "category": "C1_coding",
+    "selected": [
+      "c1-211-conv"
+    ],
+    "required_evidence": [
+      "c1-211-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-212",
+    "category": "C1_coding",
+    "selected": [
+      "c1-212-conv"
+    ],
+    "required_evidence": [
+      "c1-212-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-213",
+    "category": "C1_coding",
+    "selected": [
+      "c1-213-conv"
+    ],
+    "required_evidence": [
+      "c1-213-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-214",
+    "category": "C1_coding",
+    "selected": [
+      "c1-214-conv"
+    ],
+    "required_evidence": [
+      "c1-214-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-215",
+    "category": "C1_coding",
+    "selected": [
+      "c1-215-conv"
+    ],
+    "required_evidence": [
+      "c1-215-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-216",
+    "category": "C1_coding",
+    "selected": [
+      "c1-216-conv"
+    ],
+    "required_evidence": [
+      "c1-216-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-217",
+    "category": "C1_coding",
+    "selected": [
+      "c1-217-conv"
+    ],
+    "required_evidence": [
+      "c1-217-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-218",
+    "category": "C1_coding",
+    "selected": [
+      "c1-218-conv"
+    ],
+    "required_evidence": [
+      "c1-218-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-219",
+    "category": "C1_coding",
+    "selected": [
+      "c1-219-conv"
+    ],
+    "required_evidence": [
+      "c1-219-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c1-220",
+    "category": "C1_coding",
+    "selected": [
+      "c1-220-conv"
+    ],
+    "required_evidence": [
+      "c1-220-conv"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-221",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-221-order"
+    ],
+    "required_evidence": [
+      "c2-221-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-222",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-222-order"
+    ],
+    "required_evidence": [
+      "c2-222-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-223",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-223-order"
+    ],
+    "required_evidence": [
+      "c2-223-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-224",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-224-order"
+    ],
+    "required_evidence": [
+      "c2-224-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-225",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-225-order"
+    ],
+    "required_evidence": [
+      "c2-225-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-226",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-226-order"
+    ],
+    "required_evidence": [
+      "c2-226-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-227",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-227-order"
+    ],
+    "required_evidence": [
+      "c2-227-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-228",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-228-order"
+    ],
+    "required_evidence": [
+      "c2-228-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-229",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-229-order"
+    ],
+    "required_evidence": [
+      "c2-229-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-230",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-230-order"
+    ],
+    "required_evidence": [
+      "c2-230-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-231",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-231-order"
+    ],
+    "required_evidence": [
+      "c2-231-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-232",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-232-order"
+    ],
+    "required_evidence": [
+      "c2-232-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-233",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-233-order"
+    ],
+    "required_evidence": [
+      "c2-233-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-234",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-234-order"
+    ],
+    "required_evidence": [
+      "c2-234-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-235",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-235-order"
+    ],
+    "required_evidence": [
+      "c2-235-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-236",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-236-order"
+    ],
+    "required_evidence": [
+      "c2-236-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-237",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-237-order"
+    ],
+    "required_evidence": [
+      "c2-237-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-238",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-238-order"
+    ],
+    "required_evidence": [
+      "c2-238-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-239",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-239-order"
+    ],
+    "required_evidence": [
+      "c2-239-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c2-240",
+    "category": "C2_workflow",
+    "selected": [
+      "c2-240-order"
+    ],
+    "required_evidence": [
+      "c2-240-order"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-241",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-241-guard"
+    ],
+    "required_evidence": [
+      "c3-241-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-242",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-242-guard"
+    ],
+    "required_evidence": [
+      "c3-242-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-243",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-243-guard"
+    ],
+    "required_evidence": [
+      "c3-243-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-244",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-244-guard"
+    ],
+    "required_evidence": [
+      "c3-244-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-245",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-245-guard"
+    ],
+    "required_evidence": [
+      "c3-245-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-246",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-246-guard"
+    ],
+    "required_evidence": [
+      "c3-246-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-247",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-247-guard"
+    ],
+    "required_evidence": [
+      "c3-247-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-248",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-248-guard"
+    ],
+    "required_evidence": [
+      "c3-248-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-249",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-249-guard"
+    ],
+    "required_evidence": [
+      "c3-249-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-250",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-250-guard"
+    ],
+    "required_evidence": [
+      "c3-250-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-251",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-251-guard"
+    ],
+    "required_evidence": [
+      "c3-251-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-252",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-252-guard"
+    ],
+    "required_evidence": [
+      "c3-252-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-253",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-253-guard"
+    ],
+    "required_evidence": [
+      "c3-253-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-254",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-254-guard"
+    ],
+    "required_evidence": [
+      "c3-254-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-255",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-255-guard"
+    ],
+    "required_evidence": [
+      "c3-255-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-256",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-256-guard"
+    ],
+    "required_evidence": [
+      "c3-256-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-257",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-257-guard"
+    ],
+    "required_evidence": [
+      "c3-257-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-258",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-258-guard"
+    ],
+    "required_evidence": [
+      "c3-258-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-259",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-259-guard"
+    ],
+    "required_evidence": [
+      "c3-259-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c3-260",
+    "category": "C3_security_ops",
+    "selected": [
+      "c3-260-guard"
+    ],
+    "required_evidence": [
+      "c3-260-guard"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-261",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-261-gold"
+    ],
+    "required_evidence": [
+      "c4-261-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-262",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-262-gold"
+    ],
+    "required_evidence": [
+      "c4-262-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-263",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-263-gold"
+    ],
+    "required_evidence": [
+      "c4-263-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-264",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-264-gold"
+    ],
+    "required_evidence": [
+      "c4-264-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-265",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-265-gold"
+    ],
+    "required_evidence": [
+      "c4-265-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-266",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-266-gold"
+    ],
+    "required_evidence": [
+      "c4-266-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-267",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-267-gold"
+    ],
+    "required_evidence": [
+      "c4-267-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-268",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-268-gold"
+    ],
+    "required_evidence": [
+      "c4-268-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-269",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-269-gold"
+    ],
+    "required_evidence": [
+      "c4-269-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-270",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-270-gold"
+    ],
+    "required_evidence": [
+      "c4-270-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-271",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-271-gold"
+    ],
+    "required_evidence": [
+      "c4-271-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-272",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-272-gold"
+    ],
+    "required_evidence": [
+      "c4-272-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-273",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-273-gold"
+    ],
+    "required_evidence": [
+      "c4-273-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-274",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-274-gold"
+    ],
+    "required_evidence": [
+      "c4-274-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-275",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-275-gold"
+    ],
+    "required_evidence": [
+      "c4-275-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-276",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-276-gold"
+    ],
+    "required_evidence": [
+      "c4-276-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-277",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-277-gold"
+    ],
+    "required_evidence": [
+      "c4-277-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-278",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-278-gold"
+    ],
+    "required_evidence": [
+      "c4-278-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-279",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-279-gold"
+    ],
+    "required_evidence": [
+      "c4-279-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c4-280",
+    "category": "C4_long_history",
+    "selected": [
+      "c4-280-gold"
+    ],
+    "required_evidence": [
+      "c4-280-gold"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-281",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-281-alpha"
+    ],
+    "required_evidence": [
+      "c5-281-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-282",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-282-alpha"
+    ],
+    "required_evidence": [
+      "c5-282-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-283",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-283-alpha"
+    ],
+    "required_evidence": [
+      "c5-283-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-284",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-284-alpha"
+    ],
+    "required_evidence": [
+      "c5-284-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-285",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-285-alpha"
+    ],
+    "required_evidence": [
+      "c5-285-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-286",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-286-alpha"
+    ],
+    "required_evidence": [
+      "c5-286-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-287",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-287-alpha"
+    ],
+    "required_evidence": [
+      "c5-287-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-288",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-288-alpha"
+    ],
+    "required_evidence": [
+      "c5-288-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-289",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-289-alpha"
+    ],
+    "required_evidence": [
+      "c5-289-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-290",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-290-alpha"
+    ],
+    "required_evidence": [
+      "c5-290-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-291",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-291-alpha"
+    ],
+    "required_evidence": [
+      "c5-291-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-292",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-292-alpha"
+    ],
+    "required_evidence": [
+      "c5-292-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-293",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-293-alpha"
+    ],
+    "required_evidence": [
+      "c5-293-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-294",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-294-alpha"
+    ],
+    "required_evidence": [
+      "c5-294-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-295",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-295-alpha"
+    ],
+    "required_evidence": [
+      "c5-295-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-296",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-296-alpha"
+    ],
+    "required_evidence": [
+      "c5-296-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-297",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-297-alpha"
+    ],
+    "required_evidence": [
+      "c5-297-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-298",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-298-alpha"
+    ],
+    "required_evidence": [
+      "c5-298-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-299",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-299-alpha"
+    ],
+    "required_evidence": [
+      "c5-299-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  },
+  {
+    "id": "c5-300",
+    "category": "C5_cross_project",
+    "selected": [
+      "c5-300-alpha"
+    ],
+    "required_evidence": [
+      "c5-300-alpha"
+    ],
+    "route": "lexical",
+    "sufficient": true
+  }
+]
