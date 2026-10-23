@@ -1,0 +1,27 @@
+{
+  "task": "c4-273",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-273-gold"
+  ],
+  "required_evidence": [
+    "c4-273-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The notify retry count is 64.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 14.667,
+  "agent_seconds": 1.106,
+  "prompt_tokens": 120,
+  "gen_tokens": 10
+}

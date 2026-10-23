@@ -1,0 +1,28 @@
+{
+  "task": "b4-168",
+  "suite": "B",
+  "category": "B4_decision",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "b4-168-good",
+    "b4-168-bad"
+  ],
+  "required_evidence": [
+    "b4-168-good"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The recommended approach for the new export change is structured logging.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.399,
+  "prompt_tokens": 136,
+  "gen_tokens": 13
+}

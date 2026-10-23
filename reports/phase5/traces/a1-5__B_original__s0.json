@@ -1,0 +1,28 @@
+{
+  "task": "a1-5",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-5-fixed",
+    "a1-5-failed"
+  ],
+  "required_evidence": [
+    "a1-5-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the auth queue depth problem in the new environment, you should guard the code with a mutex.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 13.415,
+  "agent_seconds": 1.226,
+  "prompt_tokens": 153,
+  "gen_tokens": 22
+}

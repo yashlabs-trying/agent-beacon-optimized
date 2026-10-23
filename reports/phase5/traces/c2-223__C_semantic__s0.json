@@ -1,0 +1,27 @@
+{
+  "task": "c2-223",
+  "suite": "C",
+  "category": "C2_workflow",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "c2-223-order"
+  ],
+  "required_evidence": [
+    "c2-223-order"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The second step in the cart runbook order is migrate.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.931,
+  "prompt_tokens": 127,
+  "gen_tokens": 13
+}

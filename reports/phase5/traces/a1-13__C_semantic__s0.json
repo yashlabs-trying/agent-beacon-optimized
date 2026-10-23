@@ -1,0 +1,29 @@
+{
+  "task": "a1-13",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-13-fixed",
+    "a1-13-failed",
+    "a1-13-noise"
+  ],
+  "required_evidence": [
+    "a1-13-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Guard the ingest worker count with a mutex.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.636,
+  "prompt_tokens": 164,
+  "gen_tokens": 10
+}

@@ -1,0 +1,111 @@
+{
+  "runs": 1500,
+  "tasks": 300,
+  "arms": {
+    "A_none": {
+      "correct": 30,
+      "n": 300,
+      "acc": 0.1,
+      "ci": [
+        0.07094746564722294,
+        0.1391672783509656
+      ],
+      "evidence_recall": 0.06666666666666667
+    },
+    "B_original": {
+      "correct": 229,
+      "n": 300,
+      "acc": 0.7633333333333333,
+      "ci": [
+        0.7120957448699481,
+        0.8079120486645778
+      ],
+      "evidence_recall": 0.9666666666666667
+    },
+    "C_semantic": {
+      "correct": 209,
+      "n": 300,
+      "acc": 0.6966666666666667,
+      "ci": [
+        0.6424305301606225,
+        0.7459297207069348
+      ],
+      "evidence_recall": 1.0
+    },
+    "D_intelligent": {
+      "correct": 224,
+      "n": 300,
+      "acc": 0.7466666666666667,
+      "ci": [
+        0.6945448785767366,
+        0.7925510292910471
+      ],
+      "evidence_recall": 1.0
+    },
+    "E_oracle": {
+      "correct": 246,
+      "n": 300,
+      "acc": 0.82,
+      "ci": [
+        0.7725658602716683,
+        0.8593423445297808
+      ],
+      "evidence_recall": 1.0
+    }
+  },
+  "paired": {
+    "D_intelligent_vs_B_original": {
+      "a": 17,
+      "b": 22,
+      "ties": 261,
+      "p": 0.5223973804968409
+    },
+    "D_intelligent_vs_C_semantic": {
+      "a": 15,
+      "b": 0,
+      "ties": 285,
+      "p": 6.103515625e-05
+    },
+    "C_semantic_vs_B_original": {
+      "a": 11,
+      "b": 31,
+      "ties": 258,
+      "p": 0.002887247974285856
+    },
+    "D_intelligent_vs_A_none": {
+      "a": 198,
+      "b": 4,
+      "ties": 98,
+      "p": 1.113431885952988e-12
+    },
+    "D_intelligent_vs_E_oracle": {
+      "a": 6,
+      "b": 28,
+      "ties": 266,
+      "p": 0.00019512558355927467
+    },
+    "B_original_vs_A_none": {
+      "a": 199,
+      "b": 0,
+      "ties": 101,
+      "p": 1.2629572305307215e-12
+    }
+  },
+  "categories": [
+    "A1_learning_from_failure",
+    "A2_supersession",
+    "A3_knowledge_transfer",
+    "A4_recovery",
+    "A5_long_session",
+    "B1_contradiction",
+    "B2_ambiguity",
+    "B3_multi_hop",
+    "B4_decision",
+    "B5_trust_adversarial",
+    "C1_coding",
+    "C2_workflow",
+    "C3_security_ops",
+    "C4_long_history",
+    "C5_cross_project"
+  ]
+}

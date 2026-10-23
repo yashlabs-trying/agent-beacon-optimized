@@ -1,0 +1,29 @@
+{
+  "task": "a1-18",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-18-fixed",
+    "a1-18-failed",
+    "a1-18-noise"
+  ],
+  "required_evidence": [
+    "a1-18-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the ledger batch size problem in the new environment, you should use a mutex to guard the batch processing. This approach has been verified as effective in previous instances of the issue.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 2.805,
+  "prompt_tokens": 164,
+  "gen_tokens": 38
+}

@@ -1,0 +1,27 @@
+{
+  "task": "c1-207",
+  "suite": "C",
+  "category": "C1_coding",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c1-207-conv"
+  ],
+  "required_evidence": [
+    "c1-207-conv"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 7.908,
+  "agent_seconds": 1.181,
+  "prompt_tokens": 161,
+  "gen_tokens": 17
+}

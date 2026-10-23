@@ -1,0 +1,32 @@
+{
+  "task": "a2-34",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-34-new",
+    "a2-34-decoy"
+  ],
+  "required_evidence": [
+    "a2-34-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The current notify buffer size is 43 KB.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": [
+      "3"
+    ]
+  },
+  "forbidden_leaked": [
+    "3"
+  ],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.112,
+  "prompt_tokens": 136,
+  "gen_tokens": 12
+}

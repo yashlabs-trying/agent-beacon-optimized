@@ -1,0 +1,25 @@
+{
+  "task": "c3-257",
+  "suite": "C",
+  "category": "C3_security_ops",
+  "difficulty": "extreme",
+  "arm": "A_none",
+  "seed": 0,
+  "retrieved_ids": [],
+  "required_evidence": [
+    "c3-257-guard"
+  ],
+  "evidence_recall": 0.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 1.108,
+  "prompt_tokens": 118,
+  "gen_tokens": 8
+}

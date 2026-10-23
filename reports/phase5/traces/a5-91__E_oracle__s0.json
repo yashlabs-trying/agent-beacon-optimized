@@ -1,0 +1,27 @@
+{
+  "task": "a5-91",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-91-gold"
+  ],
+  "required_evidence": [
+    "a5-91-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "63",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.351,
+  "prompt_tokens": 119,
+  "gen_tokens": 3
+}

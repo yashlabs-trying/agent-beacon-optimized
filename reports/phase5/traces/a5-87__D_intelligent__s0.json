@@ -1,0 +1,33 @@
+{
+  "task": "a5-87",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-87-gold",
+    "a5-87-n0",
+    "a5-87-n1",
+    "a5-87-n2",
+    "a5-87-n5",
+    "a5-87-n4",
+    "a5-87-n3"
+  ],
+  "required_evidence": [
+    "a5-87-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The auth worker count is 49.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.612,
+  "prompt_tokens": 209,
+  "gen_tokens": 10
+}

@@ -1,0 +1,28 @@
+{
+  "task": "c5-281",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-281-alpha",
+    "c5-281-beta"
+  ],
+  "required_evidence": [
+    "c5-281-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's media timeout is 46.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.581,
+  "prompt_tokens": 129,
+  "gen_tokens": 11
+}

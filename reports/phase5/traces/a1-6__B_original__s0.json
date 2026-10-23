@@ -1,0 +1,28 @@
+{
+  "task": "a1-6",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-6-fixed",
+    "a1-6-failed"
+  ],
+  "required_evidence": [
+    "a1-6-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the export batch size problem in the new environment, you should use a mutex to guard the export process. This approach ensures that only one thread can access the export resources at a time, preventing race conditions and ensuring data integrity.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 9.332,
+  "agent_seconds": 2.513,
+  "prompt_tokens": 154,
+  "gen_tokens": 48
+}

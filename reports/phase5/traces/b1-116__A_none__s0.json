@@ -1,0 +1,27 @@
+{
+  "task": "b1-116",
+  "suite": "B",
+  "category": "B1_contradiction",
+  "difficulty": "extreme",
+  "arm": "A_none",
+  "seed": 0,
+  "retrieved_ids": [],
+  "required_evidence": [],
+  "evidence_recall": 1.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": [
+      "no"
+    ]
+  },
+  "forbidden_leaked": [
+    "no"
+  ],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 1.05,
+  "prompt_tokens": 117,
+  "gen_tokens": 8
+}

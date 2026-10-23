@@ -1,0 +1,27 @@
+{
+  "task": "a2-27",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-27-new"
+  ],
+  "required_evidence": [
+    "a2-27-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "32",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.401,
+  "prompt_tokens": 118,
+  "gen_tokens": 3
+}

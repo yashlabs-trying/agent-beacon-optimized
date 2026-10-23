@@ -1,0 +1,29 @@
+{
+  "task": "b3-142",
+  "suite": "B",
+  "category": "B3_multi_hop",
+  "difficulty": "extreme",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "b3-142-svc",
+    "b3-142-port"
+  ],
+  "required_evidence": [
+    "b3-142-svc",
+    "b3-142-port"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The billing service's database listens on port 5432.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 1.513,
+  "prompt_tokens": 135,
+  "gen_tokens": 15
+}

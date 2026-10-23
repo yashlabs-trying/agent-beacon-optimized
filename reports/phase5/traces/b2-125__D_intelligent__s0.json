@@ -1,0 +1,27 @@
+{
+  "task": "b2-125",
+  "suite": "B",
+  "category": "B2_ambiguity",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "b2-125-default"
+  ],
+  "required_evidence": [
+    "b2-125-default"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "staging",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.204,
+  "prompt_tokens": 128,
+  "gen_tokens": 3
+}

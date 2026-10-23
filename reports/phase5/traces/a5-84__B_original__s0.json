@@ -1,0 +1,27 @@
+{
+  "task": "a5-84",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-84-gold"
+  ],
+  "required_evidence": [
+    "a5-84-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The auth timeout is 78 seconds.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 51.287,
+  "agent_seconds": 1.178,
+  "prompt_tokens": 118,
+  "gen_tokens": 10
+}

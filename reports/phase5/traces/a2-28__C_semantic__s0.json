@@ -1,0 +1,29 @@
+{
+  "task": "a2-28",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-28-new",
+    "a2-28-old",
+    "a2-28-decoy"
+  ],
+  "required_evidence": [
+    "a2-28-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The current export cache TTL is 44 seconds.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.086,
+  "prompt_tokens": 150,
+  "gen_tokens": 12
+}

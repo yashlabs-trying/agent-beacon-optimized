@@ -1,0 +1,28 @@
+{
+  "task": "a1-16",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-16-fixed",
+    "a1-16-failed"
+  ],
+  "required_evidence": [
+    "a1-16-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the ledger pool size problem in the new environment, you should use a connection pool.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 11.707,
+  "agent_seconds": 1.576,
+  "prompt_tokens": 154,
+  "gen_tokens": 20
+}

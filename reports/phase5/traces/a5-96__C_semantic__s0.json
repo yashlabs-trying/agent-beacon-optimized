@@ -1,0 +1,33 @@
+{
+  "task": "a5-96",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-96-gold",
+    "a5-96-n1",
+    "a5-96-n0",
+    "a5-96-n2",
+    "a5-96-n5",
+    "a5-96-n3",
+    "a5-96-n4"
+  ],
+  "required_evidence": [
+    "a5-96-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The cart worker count is 80.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.013,
+  "prompt_tokens": 209,
+  "gen_tokens": 10
+}

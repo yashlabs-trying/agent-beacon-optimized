@@ -1,0 +1,28 @@
+{
+  "task": "b1-105",
+  "suite": "B",
+  "category": "B1_contradiction",
+  "difficulty": "extreme",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "b1-105-b",
+    "b1-105-a"
+  ],
+  "required_evidence": [
+    "b1-105-b"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The currently applicable value is 29 connections, as per Source B (correction).",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.805,
+  "prompt_tokens": 143,
+  "gen_tokens": 19
+}

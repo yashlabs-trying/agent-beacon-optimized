@@ -1,0 +1,34 @@
+{
+  "task": "c4-266",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-266-gold",
+    "c4-266-d3",
+    "c4-266-d0",
+    "c4-266-d5",
+    "c4-266-d4",
+    "c4-266-d2",
+    "c4-266-d7",
+    "c4-266-d1"
+  ],
+  "required_evidence": [
+    "c4-266-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "22 seconds",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.489,
+  "prompt_tokens": 232,
+  "gen_tokens": 4
+}

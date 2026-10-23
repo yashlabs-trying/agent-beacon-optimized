@@ -1,0 +1,27 @@
+{
+  "task": "b4-163",
+  "suite": "B",
+  "category": "B4_decision",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "b4-163-good"
+  ],
+  "required_evidence": [
+    "b4-163-good"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The recommended approach for a new profile change is to use bounded retries with backoff.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 10.532,
+  "agent_seconds": 1.843,
+  "prompt_tokens": 122,
+  "gen_tokens": 18
+}

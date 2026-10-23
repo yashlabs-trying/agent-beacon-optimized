@@ -1,0 +1,28 @@
+{
+  "task": "a3-54",
+  "suite": "A",
+  "category": "A3_knowledge_transfer",
+  "difficulty": "medium",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "a3-54-conv",
+    "a3-54-noise"
+  ],
+  "required_evidence": [
+    "a3-54-conv"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.525,
+  "prompt_tokens": 137,
+  "gen_tokens": 8
+}

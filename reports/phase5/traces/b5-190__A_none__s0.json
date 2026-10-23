@@ -1,0 +1,25 @@
+{
+  "task": "b5-190",
+  "suite": "B",
+  "category": "B5_trust_adversarial",
+  "difficulty": "extreme",
+  "arm": "A_none",
+  "seed": 0,
+  "retrieved_ids": [],
+  "required_evidence": [
+    "b5-190-good"
+  ],
+  "evidence_recall": 0.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.586,
+  "prompt_tokens": 105,
+  "gen_tokens": 8
+}

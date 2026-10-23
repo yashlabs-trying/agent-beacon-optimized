@@ -1,0 +1,29 @@
+{
+  "task": "a1-2",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-2-fixed",
+    "a1-2-failed",
+    "a1-2-noise"
+  ],
+  "required_evidence": [
+    "a1-2-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The notify cache TTL problem should be fixed by using a connection pool.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.785,
+  "prompt_tokens": 164,
+  "gen_tokens": 15
+}

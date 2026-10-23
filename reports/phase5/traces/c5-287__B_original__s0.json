@@ -1,0 +1,27 @@
+{
+  "task": "c5-287",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-287-alpha"
+  ],
+  "required_evidence": [
+    "c5-287-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's cart queue depth is 32.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 17.372,
+  "agent_seconds": 0.948,
+  "prompt_tokens": 118,
+  "gen_tokens": 12
+}

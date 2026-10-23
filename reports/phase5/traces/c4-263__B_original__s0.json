@@ -1,0 +1,27 @@
+{
+  "task": "c4-263",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-263-gold"
+  ],
+  "required_evidence": [
+    "c4-263-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "13 KB",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 20.516,
+  "agent_seconds": 0.865,
+  "prompt_tokens": 121,
+  "gen_tokens": 4
+}

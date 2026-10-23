@@ -1,0 +1,27 @@
+{
+  "task": "a3-41",
+  "suite": "A",
+  "category": "A3_knowledge_transfer",
+  "difficulty": "medium",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a3-41-conv"
+  ],
+  "required_evidence": [
+    "a3-41-conv"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "All Go services in this project must follow the convention of using idempotent handlers.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 13.031,
+  "agent_seconds": 1.525,
+  "prompt_tokens": 125,
+  "gen_tokens": 18
+}

@@ -1,0 +1,30 @@
+{
+  "task": "b3-156",
+  "suite": "B",
+  "category": "B3_multi_hop",
+  "difficulty": "extreme",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "b3-156-svc",
+    "b3-156-decoy",
+    "b3-156-port"
+  ],
+  "required_evidence": [
+    "b3-156-svc",
+    "b3-156-port"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The profile service's database listens on port 5439.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.286,
+  "prompt_tokens": 153,
+  "gen_tokens": 15
+}

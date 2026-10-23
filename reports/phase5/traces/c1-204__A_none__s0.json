@@ -1,0 +1,25 @@
+{
+  "task": "c1-204",
+  "suite": "C",
+  "category": "C1_coding",
+  "difficulty": "hard",
+  "arm": "A_none",
+  "seed": 0,
+  "retrieved_ids": [],
+  "required_evidence": [
+    "c1-204-conv"
+  ],
+  "evidence_recall": 0.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.799,
+  "prompt_tokens": 149,
+  "gen_tokens": 8
+}

@@ -1,0 +1,27 @@
+{
+  "task": "b5-199",
+  "suite": "B",
+  "category": "B5_trust_adversarial",
+  "difficulty": "extreme",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "b5-199-good"
+  ],
+  "required_evidence": [
+    "b5-199-good"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The verified gateway timeout is 15 seconds.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.795,
+  "prompt_tokens": 114,
+  "gen_tokens": 11
+}

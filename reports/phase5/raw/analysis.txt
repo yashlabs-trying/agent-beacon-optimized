@@ -1,0 +1,64 @@
+runs=1500 tasks=300
+
+PER-ARM ACCURACY (task-level, any-seed)
+  A_none          30/300  acc=0.100  CI=[0.071,0.139]
+  B_original     229/300  acc=0.763  CI=[0.712,0.808]
+  C_semantic     209/300  acc=0.697  CI=[0.642,0.746]
+  D_intelligent  224/300  acc=0.747  CI=[0.695,0.793]
+  E_oracle       246/300  acc=0.820  CI=[0.773,0.859]
+
+PER-SUITE ACCURACY
+  arm                    A         B         C
+  A_none             0/100    10/100    20/100
+  B_original        75/100    62/100    92/100
+  C_semantic        60/100    57/100    92/100
+  D_intelligent     60/100    72/100    92/100
+  E_oracle          79/100    75/100    92/100
+
+PER-CATEGORY ACCURACY
+  arm               A1    A2    A3    A4    A5    B1    B2    B3    B4    B5    C1    C2    C3    C4    C5
+  A_none          0/20  0/20  0/20  0/20  0/20  0/20 10/20  0/20  0/20  0/20  0/20  0/20 20/20  0/20  0/20
+  B_original      2/20 19/20 20/20 14/20 20/20  8/20 20/20  0/20 20/20 14/20 13/20 20/20 20/20 20/20 19/20
+  C_semantic      5/20 19/20  2/20 14/20 20/20  8/20 16/20  8/20 20/20  5/20 13/20 20/20 20/20 20/20 19/20
+  D_intelligent   5/20 19/20  2/20 14/20 20/20  8/20 16/20  8/20 20/20 20/20 13/20 20/20 20/20 20/20 19/20
+  E_oracle        0/20 19/20 20/20 20/20 20/20  8/20 20/20  7/20 20/20 20/20 13/20 20/20 20/20 20/20 19/20
+
+PAIRED (task-level; A/B/ties, exact McNemar p)
+  D_intelligent  vs B_original    : 17 / 22 / 261  p=0.5224
+  D_intelligent  vs C_semantic    : 15 / 0 / 285  p=0.0001
+  C_semantic     vs B_original    : 11 / 31 / 258  p=0.0029
+  D_intelligent  vs A_none        : 198 / 4 / 98  p=0.0000
+  D_intelligent  vs E_oracle      : 6 / 28 / 266  p=0.0002
+  B_original     vs A_none        : 199 / 0 / 101  p=0.0000
+
+EVIDENCE RECALL (mean required-evidence recall@K)
+  A_none         0.067
+  B_original     0.967
+  C_semantic     1.000
+  D_intelligent  1.000
+  E_oracle       1.000
+
+LATENCY / TOKENS (mean per run)
+  A_none         agent_s=0.89 prompt_tok=113
+  B_original     agent_s=1.18 prompt_tok=131
+  C_semantic     agent_s=1.13 prompt_tok=151
+  D_intelligent  agent_s=0.92 prompt_tok=149
+  E_oracle       agent_s=0.90 prompt_tok=126
+
+FAILURE TAXONOMY (D_intelligent failures by category)
+  A1_learning_from_failure     15
+  A2_supersession              1
+  A3_knowledge_transfer        18
+  A4_recovery                  6
+  B1_contradiction             12
+  B2_ambiguity                 4
+  B3_multi_hop                 12
+  C1_coding                    7
+  C5_cross_project             1
+
+SECURITY: forbidden-token leaks by arm (B5 + C3)
+  A_none         leaks=0/40
+  B_original     leaks=0/40
+  C_semantic     leaks=0/40
+  D_intelligent  leaks=0/40
+  E_oracle       leaks=0/40

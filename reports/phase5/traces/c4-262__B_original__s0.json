@@ -1,0 +1,27 @@
+{
+  "task": "c4-262",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-262-gold"
+  ],
+  "required_evidence": [
+    "c4-262-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The cart timeout is 34 seconds.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 7.785,
+  "agent_seconds": 1.3,
+  "prompt_tokens": 119,
+  "gen_tokens": 10
+}

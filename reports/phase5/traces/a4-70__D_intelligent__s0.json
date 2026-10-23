@@ -1,0 +1,28 @@
+{
+  "task": "a4-70",
+  "suite": "A",
+  "category": "A4_recovery",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "a4-70-stale",
+    "a4-70-durable"
+  ],
+  "required_evidence": [
+    "a4-70-durable"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "After a restart, the auth timeout is 4 seconds.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.957,
+  "prompt_tokens": 141,
+  "gen_tokens": 13
+}

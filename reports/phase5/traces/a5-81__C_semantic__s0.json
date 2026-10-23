@@ -1,0 +1,33 @@
+{
+  "task": "a5-81",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-81-gold",
+    "a5-81-n0",
+    "a5-81-n5",
+    "a5-81-n3",
+    "a5-81-n1",
+    "a5-81-n2",
+    "a5-81-n4"
+  ],
+  "required_evidence": [
+    "a5-81-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "27 KB",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.635,
+  "prompt_tokens": 210,
+  "gen_tokens": 4
+}

@@ -1,0 +1,5 @@
+    phase4d_scaling_test.go:77: n=20 naive_detect=0.19ms indexed_detect=0.17ms speedup=1.1x select_all=0.28ms conflicts=0 kept=20
+    phase4d_scaling_test.go:77: n=100 naive_detect=1.33ms indexed_detect=0.69ms speedup=1.9x select_all=1.43ms conflicts=0 kept=100
+    phase4d_scaling_test.go:77: n=500 naive_detect=52.94ms indexed_detect=12.20ms speedup=4.3x select_all=5.59ms conflicts=0 kept=500
+    phase4d_scaling_test.go:77: n=1000 naive_detect=114.71ms indexed_detect=3.17ms speedup=36.2x select_all=5.72ms conflicts=0 kept=1000
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.208s

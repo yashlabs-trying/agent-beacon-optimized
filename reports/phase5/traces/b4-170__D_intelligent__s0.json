@@ -1,0 +1,28 @@
+{
+  "task": "b4-170",
+  "suite": "B",
+  "category": "B4_decision",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "b4-170-good",
+    "b4-170-bad"
+  ],
+  "required_evidence": [
+    "b4-170-good"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The recommended approach for media change is prepared statements.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.921,
+  "prompt_tokens": 132,
+  "gen_tokens": 11
+}

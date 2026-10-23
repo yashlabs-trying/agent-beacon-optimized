@@ -1,0 +1,28 @@
+{
+  "task": "a1-14",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-14-fixed",
+    "a1-14-failed"
+  ],
+  "required_evidence": [
+    "a1-14-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the ingest queue depth problem in the new environment, you should use a connection pool.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 11.76,
+  "agent_seconds": 1.407,
+  "prompt_tokens": 154,
+  "gen_tokens": 20
+}

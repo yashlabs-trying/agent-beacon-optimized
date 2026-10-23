@@ -1,0 +1,28 @@
+{
+  "task": "b1-107",
+  "suite": "B",
+  "category": "B1_contradiction",
+  "difficulty": "extreme",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "b1-107-b",
+    "b1-107-a"
+  ],
+  "required_evidence": [
+    "b1-107-b"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The currently applicable value is 48, as per Source B (correction).",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.332,
+  "prompt_tokens": 141,
+  "gen_tokens": 18
+}

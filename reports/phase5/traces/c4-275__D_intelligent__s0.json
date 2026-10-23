@@ -1,0 +1,34 @@
+{
+  "task": "c4-275",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-275-gold",
+    "c4-275-d0",
+    "c4-275-d5",
+    "c4-275-d6",
+    "c4-275-d2",
+    "c4-275-d4",
+    "c4-275-d7",
+    "c4-275-d3"
+  ],
+  "required_evidence": [
+    "c4-275-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The billing rate limit is 1 req/min.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.126,
+  "prompt_tokens": 231,
+  "gen_tokens": 11
+}

@@ -1,0 +1,28 @@
+{
+  "task": "b4-166",
+  "suite": "B",
+  "category": "B4_decision",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "b4-166-good",
+    "b4-166-bad"
+  ],
+  "required_evidence": [
+    "b4-166-good"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The recommended approach for the new billing change is additive migrations.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.964,
+  "prompt_tokens": 135,
+  "gen_tokens": 13
+}

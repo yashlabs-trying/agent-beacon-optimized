@@ -1,0 +1,28 @@
+{
+  "task": "b1-109",
+  "suite": "B",
+  "category": "B1_contradiction",
+  "difficulty": "extreme",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "b1-109-b",
+    "b1-109-a"
+  ],
+  "required_evidence": [
+    "b1-109-b"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The currently applicable value for the notify pool size is 46 connections, as per Source B's correction.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 14.2,
+  "agent_seconds": 1.975,
+  "prompt_tokens": 143,
+  "gen_tokens": 23
+}

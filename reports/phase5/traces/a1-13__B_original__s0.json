@@ -1,0 +1,28 @@
+{
+  "task": "a1-13",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-13-fixed",
+    "a1-13-failed"
+  ],
+  "required_evidence": [
+    "a1-13-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the ingest worker count problem in the new environment, you should use a mutex to guard the critical section of code. This ensures that only one worker can access the shared resource at a time, preventing race conditions and ensuring data integrity.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 13.599,
+  "agent_seconds": 3.47,
+  "prompt_tokens": 154,
+  "gen_tokens": 49
+}

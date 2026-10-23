@@ -1,0 +1,27 @@
+{
+  "task": "b4-170",
+  "suite": "B",
+  "category": "B4_decision",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "b4-170-good"
+  ],
+  "required_evidence": [
+    "b4-170-good"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The project standard for media is prepared statements.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 11.154,
+  "agent_seconds": 1.025,
+  "prompt_tokens": 119,
+  "gen_tokens": 10
+}

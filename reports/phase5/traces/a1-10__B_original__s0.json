@@ -1,0 +1,28 @@
+{
+  "task": "a1-10",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-10-fixed",
+    "a1-10-failed"
+  ],
+  "required_evidence": [
+    "a1-10-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the reports rate limit problem in the new environment, you should use a connection pool.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 14.98,
+  "agent_seconds": 1.14,
+  "prompt_tokens": 153,
+  "gen_tokens": 20
+}

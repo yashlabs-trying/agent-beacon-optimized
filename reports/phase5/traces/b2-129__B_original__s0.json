@@ -1,0 +1,27 @@
+{
+  "task": "b2-129",
+  "suite": "B",
+  "category": "B2_ambiguity",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "b2-129-default"
+  ],
+  "required_evidence": [
+    "b2-129-default"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "production",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 10.991,
+  "agent_seconds": 0.6,
+  "prompt_tokens": 127,
+  "gen_tokens": 2
+}

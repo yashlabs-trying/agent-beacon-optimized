@@ -1,0 +1,28 @@
+{
+  "task": "c5-299",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-299-alpha",
+    "c5-299-beta"
+  ],
+  "required_evidence": [
+    "c5-299-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's ledger queue depth is 35.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.088,
+  "prompt_tokens": 132,
+  "gen_tokens": 12
+}

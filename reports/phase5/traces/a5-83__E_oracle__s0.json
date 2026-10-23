@@ -1,0 +1,27 @@
+{
+  "task": "a5-83",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-83-gold"
+  ],
+  "required_evidence": [
+    "a5-83-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The media pool size is 16 connections.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.836,
+  "prompt_tokens": 120,
+  "gen_tokens": 11
+}

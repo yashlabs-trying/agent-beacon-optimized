@@ -1,0 +1,27 @@
+{
+  "task": "b2-127",
+  "suite": "B",
+  "category": "B2_ambiguity",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "b2-127-default"
+  ],
+  "required_evidence": [
+    "b2-127-default"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The 'canary' environment is used when no target is specified for deploying the ingest service.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.945,
+  "prompt_tokens": 128,
+  "gen_tokens": 20
+}

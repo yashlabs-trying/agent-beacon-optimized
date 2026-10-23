@@ -1,0 +1,29 @@
+{
+  "task": "a2-22",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-22-new",
+    "a2-22-old",
+    "a2-22-decoy"
+  ],
+  "required_evidence": [
+    "a2-22-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The current notify pool size is 21 connections.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.263,
+  "prompt_tokens": 151,
+  "gen_tokens": 12
+}

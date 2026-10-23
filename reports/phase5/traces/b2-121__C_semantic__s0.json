@@ -1,0 +1,27 @@
+{
+  "task": "b2-121",
+  "suite": "B",
+  "category": "B2_ambiguity",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "b2-121-default"
+  ],
+  "required_evidence": [
+    "b2-121-default"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The cart service deploys to 'sandbox' when no target is specified.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.495,
+  "prompt_tokens": 127,
+  "gen_tokens": 16
+}

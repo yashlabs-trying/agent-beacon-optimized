@@ -1,0 +1,27 @@
+{
+  "task": "c5-284",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-284-alpha"
+  ],
+  "required_evidence": [
+    "c5-284-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "8",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 9.197,
+  "agent_seconds": 0.617,
+  "prompt_tokens": 117,
+  "gen_tokens": 2
+}

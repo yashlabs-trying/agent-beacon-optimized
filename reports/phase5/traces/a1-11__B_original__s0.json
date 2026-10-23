@@ -1,0 +1,28 @@
+{
+  "task": "a1-11",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-11-fixed",
+    "a1-11-failed"
+  ],
+  "required_evidence": [
+    "a1-11-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the ingest batch size problem in the new environment, you should use a mutex to guard the batch processing. This approach ensures that only one thread can access the batch processing code at a time, preventing race conditions and ensuring data integrity.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 12.967,
+  "agent_seconds": 3.281,
+  "prompt_tokens": 154,
+  "gen_tokens": 49
+}

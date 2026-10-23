@@ -1,0 +1,29 @@
+{
+  "task": "a2-37",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-37-new",
+    "a2-37-old",
+    "a2-37-decoy"
+  ],
+  "required_evidence": [
+    "a2-37-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The current auth rate limit is 59 req/min.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.302,
+  "prompt_tokens": 154,
+  "gen_tokens": 13
+}

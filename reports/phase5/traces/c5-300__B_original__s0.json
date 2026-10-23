@@ -1,0 +1,27 @@
+{
+  "task": "c5-300",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-300-alpha"
+  ],
+  "required_evidence": [
+    "c5-300-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's reports retry count is 22.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 17.267,
+  "agent_seconds": 1.291,
+  "prompt_tokens": 118,
+  "gen_tokens": 12
+}

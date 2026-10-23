@@ -1,0 +1,29 @@
+{
+  "task": "a1-19",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-19-fixed",
+    "a1-19-failed",
+    "a1-19-noise"
+  ],
+  "required_evidence": [
+    "a1-19-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the ingest page size problem in the new environment, you should add a bounded backoff.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.593,
+  "prompt_tokens": 165,
+  "gen_tokens": 21
+}

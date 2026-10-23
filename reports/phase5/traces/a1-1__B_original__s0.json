@@ -1,0 +1,28 @@
+{
+  "task": "a1-1",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-1-fixed",
+    "a1-1-failed"
+  ],
+  "required_evidence": [
+    "a1-1-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the auth pool size problem in the new environment, you should guard the operation with a mutex. This ensures that only one thread can access the critical section at a time, preventing race conditions and ensuring that the auth pool size is managed correctly.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 10.066,
+  "agent_seconds": 2.66,
+  "prompt_tokens": 154,
+  "gen_tokens": 51
+}

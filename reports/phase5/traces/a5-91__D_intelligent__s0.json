@@ -1,0 +1,33 @@
+{
+  "task": "a5-91",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-91-gold",
+    "a5-91-n0",
+    "a5-91-n2",
+    "a5-91-n1",
+    "a5-91-n4",
+    "a5-91-n5",
+    "a5-91-n3"
+  ],
+  "required_evidence": [
+    "a5-91-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The checkout worker count is 63.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.769,
+  "prompt_tokens": 209,
+  "gen_tokens": 10
+}

@@ -1,0 +1,27 @@
+{
+  "task": "b1-117",
+  "suite": "B",
+  "category": "B1_contradiction",
+  "difficulty": "extreme",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "b1-117-b"
+  ],
+  "required_evidence": [
+    "b1-117-b"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "20 seconds",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.266,
+  "prompt_tokens": 127,
+  "gen_tokens": 4
+}

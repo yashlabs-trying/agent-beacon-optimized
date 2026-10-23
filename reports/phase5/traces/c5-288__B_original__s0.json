@@ -1,0 +1,27 @@
+{
+  "task": "c5-288",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-288-alpha"
+  ],
+  "required_evidence": [
+    "c5-288-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "18",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 9.416,
+  "agent_seconds": 0.879,
+  "prompt_tokens": 118,
+  "gen_tokens": 3
+}

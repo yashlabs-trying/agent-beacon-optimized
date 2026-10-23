@@ -1,0 +1,28 @@
+{
+  "task": "c5-292",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-292-alpha",
+    "c5-292-beta"
+  ],
+  "required_evidence": [
+    "c5-292-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's media pool size is 31.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.229,
+  "prompt_tokens": 132,
+  "gen_tokens": 12
+}

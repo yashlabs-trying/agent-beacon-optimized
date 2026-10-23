@@ -1,0 +1,28 @@
+{
+  "task": "a4-75",
+  "suite": "A",
+  "category": "A4_recovery",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a4-75-stale",
+    "a4-75-durable"
+  ],
+  "required_evidence": [
+    "a4-75-durable"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 14.384,
+  "agent_seconds": 1.023,
+  "prompt_tokens": 146,
+  "gen_tokens": 8
+}

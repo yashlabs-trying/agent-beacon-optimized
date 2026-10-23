@@ -1,0 +1,27 @@
+{
+  "task": "c5-293",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-293-alpha"
+  ],
+  "required_evidence": [
+    "c5-293-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's notify pool size is 6.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 16.033,
+  "agent_seconds": 1.182,
+  "prompt_tokens": 117,
+  "gen_tokens": 11
+}

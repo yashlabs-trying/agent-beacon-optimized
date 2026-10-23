@@ -1,0 +1,28 @@
+{
+  "task": "a4-79",
+  "suite": "A",
+  "category": "A4_recovery",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a4-79-stale",
+    "a4-79-durable"
+  ],
+  "required_evidence": [
+    "a4-79-durable"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The billing timeout after a restart is 39 seconds.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.21,
+  "prompt_tokens": 143,
+  "gen_tokens": 13
+}

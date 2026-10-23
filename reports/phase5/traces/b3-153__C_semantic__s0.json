@@ -1,0 +1,30 @@
+{
+  "task": "b3-153",
+  "suite": "B",
+  "category": "B3_multi_hop",
+  "difficulty": "extreme",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "b3-153-svc",
+    "b3-153-port",
+    "b3-153-decoy"
+  ],
+  "required_evidence": [
+    "b3-153-svc",
+    "b3-153-port"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.021,
+  "prompt_tokens": 153,
+  "gen_tokens": 8
+}

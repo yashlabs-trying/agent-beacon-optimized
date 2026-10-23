@@ -1,0 +1,27 @@
+{
+  "task": "a5-98",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-98-gold"
+  ],
+  "required_evidence": [
+    "a5-98-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "28",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 14.78,
+  "agent_seconds": 0.718,
+  "prompt_tokens": 120,
+  "gen_tokens": 3
+}

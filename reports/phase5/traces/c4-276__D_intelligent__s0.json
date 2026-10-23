@@ -1,0 +1,34 @@
+{
+  "task": "c4-276",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-276-gold",
+    "c4-276-d2",
+    "c4-276-d1",
+    "c4-276-d3",
+    "c4-276-d0",
+    "c4-276-d6",
+    "c4-276-d4",
+    "c4-276-d7"
+  ],
+  "required_evidence": [
+    "c4-276-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The ingest retry count is 12.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.766,
+  "prompt_tokens": 231,
+  "gen_tokens": 10
+}
