@@ -1,0 +1,31 @@
+=== RUN   TestPhase3AContradictionLocked
+    phase3a_contradiction_test.go:79: set BEACON_PHASE3_CONTRADICTION=1 to run the locked contradiction evaluation
+--- SKIP: TestPhase3AContradictionLocked (0.00s)
+=== RUN   TestPhase3BContradictionDev
+P3B_DEV cases=23
+P3B_DEV mode=default category=marker_conflict tp=2 fp=0 fn=0 tn=0
+P3B_DEV mode=default category=antonym_conflict tp=5 fp=0 fn=0 tn=0
+P3B_DEV mode=default category=negation_conflict tp=3 fp=0 fn=0 tn=0
+P3B_DEV mode=default category=cross_kind_conflict tp=0 fp=0 fn=3 tn=0
+P3B_DEV mode=default category=distinct_version tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=default category=cross_project tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=default category=same_polarity tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=default category=unrelated tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=default category=insufficient_overlap tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=default total tp=10 fp=0 fn=3 tn=10 precision=1.0000 recall=0.7692
+P3B_DEV mode=cross_kind category=marker_conflict tp=2 fp=0 fn=0 tn=0
+P3B_DEV mode=cross_kind category=antonym_conflict tp=5 fp=0 fn=0 tn=0
+P3B_DEV mode=cross_kind category=negation_conflict tp=3 fp=0 fn=0 tn=0
+P3B_DEV mode=cross_kind category=cross_kind_conflict tp=3 fp=0 fn=0 tn=0
+P3B_DEV mode=cross_kind category=distinct_version tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=cross_kind category=cross_project tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=cross_kind category=same_polarity tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=cross_kind category=unrelated tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=cross_kind category=insufficient_overlap tp=0 fp=0 fn=0 tn=2
+P3B_DEV mode=cross_kind total tp=13 fp=0 fn=0 tn=10 precision=1.0000 recall=1.0000
+--- PASS: TestPhase3BContradictionDev (0.00s)
+=== RUN   TestPhase3BLockedContradictionRegression
+    phase3b_contradiction_test.go:202: set BEACON_PHASE3_CONTRADICTION=1
+--- SKIP: TestPhase3BLockedContradictionRegression (0.00s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.015s

@@ -1,0 +1,33 @@
+=== RUN   TestPhase3ARetrievalLexical
+P3A_RETRIEVAL_FIXTURE dataset=beacon-v6-phase3-retrieval-context-v1 topics=12 queries=48
+P3A_RETRIEVAL method=lexical category=ALL n=48 R@1=0.1667 R@5=0.1667 MRR=0.1667 NDCG@5=0.1344 p50_us=448 p95_us=2476
+P3A_RETRIEVAL method=lexical category=identifier n=12 R@1=0.6667 R@5=0.6667 MRR=0.6667 NDCG@5=0.5377 p50_us=344 p95_us=5954
+P3A_RETRIEVAL method=lexical category=paraphrase n=12 R@1=0.0000 R@5=0.0000 MRR=0.0000 NDCG@5=0.0000 p50_us=476 p95_us=1481
+P3A_RETRIEVAL method=lexical category=synonym n=12 R@1=0.0000 R@5=0.0000 MRR=0.0000 NDCG@5=0.0000 p50_us=425 p95_us=2569
+P3A_RETRIEVAL method=lexical category=hard_negative n=12 R@1=0.0000 R@5=0.0000 MRR=0.0000 NDCG@5=0.0000 p50_us=448 p95_us=2476
+--- PASS: TestPhase3ARetrievalLexical (0.07s)
+=== RUN   TestPhase3ARetrievalSemantic
+P3A_RETRIEVAL method=semantic_hashed category=ALL n=48 R@1=0.6875 R@5=0.8750 MRR=0.7635 NDCG@5=0.7156 p50_us=1076 p95_us=4057
+P3A_RETRIEVAL method=semantic_hashed category=identifier n=12 R@1=1.0000 R@5=1.0000 MRR=1.0000 NDCG@5=0.9611 p50_us=947 p95_us=9124
+P3A_RETRIEVAL method=semantic_hashed category=paraphrase n=12 R@1=0.5000 R@5=0.7500 MRR=0.5792 NDCG@5=0.5182 p50_us=1065 p95_us=2626
+P3A_RETRIEVAL method=semantic_hashed category=synonym n=12 R@1=0.6667 R@5=0.7500 MRR=0.7083 NDCG@5=0.6753 p50_us=1052 p95_us=4057
+P3A_RETRIEVAL method=semantic_hashed category=hard_negative n=12 R@1=0.5833 R@5=1.0000 MRR=0.7667 NDCG@5=0.7077 p50_us=1176 p95_us=4918
+P3A_RETRIEVAL method=hybrid_rrf category=ALL n=48 R@1=0.6875 R@5=0.8750 MRR=0.7635 NDCG@5=0.7156 p50_us=985 p95_us=2648
+P3A_RETRIEVAL method=hybrid_rrf category=identifier n=12 R@1=1.0000 R@5=1.0000 MRR=1.0000 NDCG@5=0.9611 p50_us=891 p95_us=1839
+P3A_RETRIEVAL method=hybrid_rrf category=paraphrase n=12 R@1=0.5000 R@5=0.7500 MRR=0.5792 NDCG@5=0.5182 p50_us=1240 p95_us=1614
+P3A_RETRIEVAL method=hybrid_rrf category=synonym n=12 R@1=0.6667 R@5=0.7500 MRR=0.7083 NDCG@5=0.6753 p50_us=1104 p95_us=4170
+P3A_RETRIEVAL method=hybrid_rrf category=hard_negative n=12 R@1=0.5833 R@5=1.0000 MRR=0.7667 NDCG@5=0.7077 p50_us=939 p95_us=2400
+P3A_RETRIEVAL method=hybrid_ann category=ALL n=48 R@1=0.6875 R@5=0.8750 MRR=0.7635 NDCG@5=0.7156 p50_us=818 p95_us=1733
+P3A_RETRIEVAL method=hybrid_ann category=identifier n=12 R@1=1.0000 R@5=1.0000 MRR=1.0000 NDCG@5=0.9611 p50_us=752 p95_us=3428
+P3A_RETRIEVAL method=hybrid_ann category=paraphrase n=12 R@1=0.5000 R@5=0.7500 MRR=0.5792 NDCG@5=0.5182 p50_us=931 p95_us=1680
+P3A_RETRIEVAL method=hybrid_ann category=synonym n=12 R@1=0.6667 R@5=0.7500 MRR=0.7083 NDCG@5=0.6753 p50_us=797 p95_us=1300
+P3A_RETRIEVAL method=hybrid_ann category=hard_negative n=12 R@1=0.5833 R@5=1.0000 MRR=0.7667 NDCG@5=0.7077 p50_us=787 p95_us=1733
+P3A_RETRIEVAL method=neural status=RUN model=BAAI/bge-small-en-v1.5 dim=384
+P3A_RETRIEVAL method=neural_bge category=ALL n=48 R@1=0.6458 R@5=0.9792 MRR=0.7847 NDCG@5=0.7891 p50_us=43640 p95_us=133010
+P3A_RETRIEVAL method=neural_bge category=identifier n=12 R@1=1.0000 R@5=1.0000 MRR=1.0000 NDCG@5=0.9575 p50_us=42325 p95_us=7947841
+P3A_RETRIEVAL method=neural_bge category=paraphrase n=12 R@1=0.5833 R@5=1.0000 MRR=0.7569 NDCG@5=0.7158 p50_us=44315 p95_us=133010
+P3A_RETRIEVAL method=neural_bge category=synonym n=12 R@1=0.5833 R@5=0.9167 MRR=0.7292 NDCG@5=0.7288 p50_us=42173 p95_us=175762
+P3A_RETRIEVAL method=neural_bge category=hard_negative n=12 R@1=0.4167 R@5=1.0000 MRR=0.6528 NDCG@5=0.7544 p50_us=43434 p95_us=104860
+--- PASS: TestPhase3ARetrievalSemantic (14.26s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	14.341s

@@ -129,6 +129,30 @@ class ScriptedBackend:
         return {"message": {"content": "Done."}, "prompt_eval_count": 1, "eval_count": 1}
 
 
+def _extract_json_objects(text):
+    """Yield every JSON object in a blob of text (handles fenced blocks and
+    several objects emitted on separate lines by JSON-in-content fallbacks)."""
+    dec = json.JSONDecoder()
+    objs = []
+    i, n = 0, len(text)
+    while i < n:
+        while i < n and text[i] in " \t\r\n`":
+            i += 1
+        if i >= n:
+            break
+        try:
+            obj, end = dec.raw_decode(text, i)
+        except json.JSONDecodeError:
+            nl = text.find("\n", i)
+            if nl == -1:
+                break
+            i = nl + 1
+            continue
+        objs.append(obj)
+        i = end
+    return objs
+
+
 def normalize_calls(message):
     calls = message.get("tool_calls") or []
     if calls:
@@ -136,15 +160,14 @@ def normalize_calls(message):
     content = (message.get("content") or "").strip()
     if content.startswith("```"):
         content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-    try:
-        call = json.loads(content)
-    except (json.JSONDecodeError, TypeError):
-        return [], "none"
-    if not isinstance(call, dict) or call.get("name") not in {"read_file", "write_file", "run_tests"}:
-        return [], "none"
-    if not isinstance(call.get("arguments"), dict):
-        return [], "none"
-    return [{"function": call}], "text_json"
+    parsed = []
+    for obj in _extract_json_objects(content):
+        if (isinstance(obj, dict) and obj.get("name") in {"read_file", "write_file", "run_tests"}
+                and isinstance(obj.get("arguments"), dict)):
+            parsed.append({"function": obj})
+    if parsed:
+        return parsed, "text_json"
+    return [], "none"
 
 
 def run_tests(evaluator_dir):
@@ -207,7 +230,7 @@ def one_run(base, task, arm, args):
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": task["request"] + "\n\nRetrieved project notes:\n" + (memory_text or "(none)")},
     ]
-    backend = ScriptedBackend(args.script, task) if args.backend == "scripted" else OllamaBackend(args.model)
+    backend = ScriptedBackend(args.script, task) if args.backend == "scripted" else OllamaBackend(args.model, args.ollama_url)
     started = time.perf_counter()
     tool_calls, call_sources = [], []
     prompt_tokens = generated_tokens = model_calls = 0
@@ -267,6 +290,8 @@ def main():
     p.add_argument("--backend", choices=["ollama", "scripted"], default="ollama")
     p.add_argument("--script", choices=["noop", "reference"], default="reference")
     p.add_argument("--model", default="qwen2.5-coder:7b")
+    p.add_argument("--ollama-url", default="http://127.0.0.1:11434/api/chat",
+                   help="Ollama /api/chat endpoint (override to reach a LAN host).")
     p.add_argument("--arms", default="none,original,v6")
     args = p.parse_args()
     run_root = Path(args.run_root).expanduser().resolve()

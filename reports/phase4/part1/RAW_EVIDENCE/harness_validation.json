@@ -1,0 +1,88 @@
+{
+  "total": 16,
+  "passed": 16,
+  "failed": 0,
+  "all_pass": true,
+  "checks": [
+    {
+      "check": "condition1_correct_relevant_success",
+      "pass": true,
+      "detail": "success=True ids=['inc-current']"
+    },
+    {
+      "check": "condition2_irrelevant_memory_neutral",
+      "pass": true,
+      "detail": "success=True ids=['unrelated']"
+    },
+    {
+      "check": "condition3_incorrect_memory_fails",
+      "pass": true,
+      "detail": "success=False"
+    },
+    {
+      "check": "condition4_stale_superseded_distinguished",
+      "pass": true,
+      "detail": "new=True old=False"
+    },
+    {
+      "check": "condition5_conflict_resolution_distinguished",
+      "pass": true,
+      "detail": "resolved_ok=True resolved_wrong=False"
+    },
+    {
+      "check": "condition6_no_memory_baseline",
+      "pass": true,
+      "detail": "success=True ids=[]"
+    },
+    {
+      "check": "condition7_malicious_memory_scored_functionally",
+      "pass": true,
+      "detail": "success=False"
+    },
+    {
+      "check": "condition8_memory_neutral_task",
+      "pass": true,
+      "detail": "success=True"
+    },
+    {
+      "check": "property_score_independent_of_retrieval_identity",
+      "pass": true,
+      "detail": "successA=True successB=True idsA=['idA'] idsB=['idB']"
+    },
+    {
+      "check": "property_citation_not_rewarded",
+      "pass": true,
+      "detail": "success=False"
+    },
+    {
+      "check": "property_plausible_wrong_fails",
+      "pass": true,
+      "detail": "success=False"
+    },
+    {
+      "check": "property_failed_tool_call_detected",
+      "pass": true,
+      "detail": "denied=True success=False"
+    },
+    {
+      "check": "property_isolation_tests_outside_workspace",
+      "pass": true,
+      "detail": "workspace=['inc.py'] evaluator=['test_solution.py']"
+    },
+    {
+      "check": "property_no_cross_run_leakage",
+      "pass": true,
+      "detail": "fresh_source=True success=False"
+    },
+    {
+      "check": "property_deterministic",
+      "pass": true,
+      "detail": "sha1=65f761f456c6 sha2=65f761f456c6"
+    },
+    {
+      "check": "negative_control_corrupted_scorer_detected",
+      "pass": true,
+      "detail": "real_scorer_noop=False corrupted_scorer_noop=True"
+    }
+  ]
+}
