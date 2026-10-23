@@ -102,7 +102,7 @@ func TestPhase2ConcurrencyStress(t *testing.T) {
 
 	var (
 		reads, writes, supersedes, errorsCount, busyCount, staleCount atomic.Int64
-		readLat, writeLat                                           latencyRecorder
+		readLat, writeLat                                             latencyRecorder
 	)
 	deadline := time.Now().Add(time.Duration(seconds) * time.Second)
 	goroutinesBefore := runtime.NumGoroutine()

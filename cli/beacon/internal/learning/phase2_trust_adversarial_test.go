@@ -128,8 +128,8 @@ func advMemory(id, kind, body string) asymptoteobserve.LearningMemoryV1 {
 func TestPhase2AdversarialContradictionMatrix(t *testing.T) {
 	pairs := buildAdversarialPairs()
 	var memories []asymptoteobserve.LearningMemoryV1
-	label := map[string]bool{}       // pairKey -> wantConflict
-	category := map[string]string{}  // pairKey -> category
+	label := map[string]bool{}      // pairKey -> wantConflict
+	category := map[string]string{} // pairKey -> category
 	key := func(a, b string) string { return a + "|" + b }
 	for _, p := range pairs {
 		aid, bid := p.id+"-a", p.id+"-b"

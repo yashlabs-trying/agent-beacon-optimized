@@ -1,0 +1,13 @@
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/cmd	6.558s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard	8.212s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard/e2eserver	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/harness	0.089s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks	0.217s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/cline	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/omo	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/omp	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/openclaw	0.003s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/opencode	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/pi	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/prime	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/inventory	0.082s

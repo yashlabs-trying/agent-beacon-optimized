@@ -1,0 +1,6 @@
+=== RUN   TestPhase2ANNLifecycleAcrossGenerations
+--- PASS: TestPhase2ANNLifecycleAcrossGenerations (0.03s)
+=== RUN   TestPhase2EmbeddingModelVersionIsolation
+--- PASS: TestPhase2EmbeddingModelVersionIsolation (0.00s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.036s
