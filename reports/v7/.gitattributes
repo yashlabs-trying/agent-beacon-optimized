@@ -1,0 +1,4 @@
+# Keep evidence and the locked fixture byte-for-byte across Windows/WSL checkouts.
+validation/holdout_v1.json -text
+validation/raw/* -text
+dev/raw/* -text
