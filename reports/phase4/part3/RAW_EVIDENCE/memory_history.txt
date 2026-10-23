@@ -1,0 +1,8 @@
+=== RUN   TestPhase4CMemoryHistory
+    phase4c_history_test.go:44: HISTORY n=10 kept=fact-9 superseded=9 elapsed=882.84µs
+    phase4c_history_test.go:44: HISTORY n=50 kept=fact-49 superseded=49 elapsed=15.319859ms
+    phase4c_history_test.go:44: HISTORY n=100 kept=fact-99 superseded=99 elapsed=44.743304ms
+    phase4c_history_test.go:56: HISTORY untrusted-correction kept=v
+--- PASS: TestPhase4CMemoryHistory (0.06s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.067s

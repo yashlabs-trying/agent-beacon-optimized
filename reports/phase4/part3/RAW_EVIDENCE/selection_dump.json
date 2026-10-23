@@ -1,0 +1,3001 @@
+{
+  "cases": {
+    "adv_fake_developer": {
+      "retrieved": {
+        "semantic": [
+          "dev-good",
+          "dev-evil"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "dev-good"
+        ],
+        "plus_conflict": [
+          "dev-good",
+          "dev-evil"
+        ],
+        "plus_injection": [
+          "dev-good"
+        ],
+        "plus_supersession": [
+          "dev-good",
+          "dev-evil"
+        ],
+        "plus_trust": [
+          "dev-good"
+        ],
+        "semantic_only": [
+          "dev-good",
+          "dev-evil"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dev-evil"
+          ],
+          "injection_ids": [
+            "dev-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dev-evil"
+          ],
+          "injection_ids": [
+            "dev-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dev-evil"
+          ],
+          "injection_ids": [
+            "dev-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dev-evil"
+          ],
+          "injection_ids": [
+            "dev-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dev-evil"
+          ],
+          "injection_ids": [
+            "dev-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dev-evil"
+          ],
+          "injection_ids": [
+            "dev-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "adv_fake_system": {
+      "retrieved": {
+        "semantic": [
+          "sys-good",
+          "sys-evil"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "sys-good"
+        ],
+        "plus_conflict": [
+          "sys-good",
+          "sys-evil"
+        ],
+        "plus_injection": [
+          "sys-good"
+        ],
+        "plus_supersession": [
+          "sys-good",
+          "sys-evil"
+        ],
+        "plus_trust": [
+          "sys-good"
+        ],
+        "semantic_only": [
+          "sys-good",
+          "sys-evil"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sys-evil"
+          ],
+          "injection_ids": [
+            "sys-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sys-evil"
+          ],
+          "injection_ids": [
+            "sys-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sys-evil"
+          ],
+          "injection_ids": [
+            "sys-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sys-evil"
+          ],
+          "injection_ids": [
+            "sys-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sys-evil"
+          ],
+          "injection_ids": [
+            "sys-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sys-evil"
+          ],
+          "injection_ids": [
+            "sys-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "adv_mixed": {
+      "retrieved": {
+        "semantic": [
+          "mix-gold"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "mix-gold"
+        ],
+        "plus_conflict": [
+          "mix-gold"
+        ],
+        "plus_injection": [
+          "mix-gold"
+        ],
+        "plus_supersession": [
+          "mix-gold"
+        ],
+        "plus_trust": null,
+        "semantic_only": [
+          "mix-gold"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "mix-gold"
+          ],
+          "injection_ids": [
+            "mix-gold"
+          ],
+          "sanitized_ids": [
+            "mix-gold"
+          ],
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "mix-gold"
+          ],
+          "injection_ids": [
+            "mix-gold"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "mix-gold"
+          ],
+          "injection_ids": [
+            "mix-gold"
+          ],
+          "sanitized_ids": [
+            "mix-gold"
+          ],
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "mix-gold"
+          ],
+          "injection_ids": [
+            "mix-gold"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "mix-gold"
+          ],
+          "injection_ids": [
+            "mix-gold"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "mix-gold"
+          ],
+          "injection_ids": [
+            "mix-gold"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "adv_secret": {
+      "retrieved": {
+        "semantic": [
+          "sec-good",
+          "sec-evil"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "sec-good"
+        ],
+        "plus_conflict": [
+          "sec-good",
+          "sec-evil"
+        ],
+        "plus_injection": [
+          "sec-good"
+        ],
+        "plus_supersession": [
+          "sec-good",
+          "sec-evil"
+        ],
+        "plus_trust": [
+          "sec-good"
+        ],
+        "semantic_only": [
+          "sec-good",
+          "sec-evil"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sec-evil"
+          ],
+          "injection_ids": [
+            "sec-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sec-evil"
+          ],
+          "injection_ids": [
+            "sec-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sec-evil"
+          ],
+          "injection_ids": [
+            "sec-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sec-evil"
+          ],
+          "injection_ids": [
+            "sec-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sec-evil"
+          ],
+          "injection_ids": [
+            "sec-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "sec-evil"
+          ],
+          "injection_ids": [
+            "sec-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "adv_tool_output": {
+      "retrieved": {
+        "semantic": [
+          "tool-good",
+          "tool-evil"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "tool-good"
+        ],
+        "plus_conflict": [
+          "tool-good",
+          "tool-evil"
+        ],
+        "plus_injection": [
+          "tool-good"
+        ],
+        "plus_supersession": [
+          "tool-good",
+          "tool-evil"
+        ],
+        "plus_trust": [
+          "tool-good"
+        ],
+        "semantic_only": [
+          "tool-good",
+          "tool-evil"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "tool-evil"
+          ],
+          "injection_ids": [
+            "tool-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "tool-evil"
+          ],
+          "injection_ids": [
+            "tool-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "tool-evil"
+          ],
+          "injection_ids": [
+            "tool-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "tool-evil"
+          ],
+          "injection_ids": [
+            "tool-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "tool-evil"
+          ],
+          "injection_ids": [
+            "tool-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "tool-evil"
+          ],
+          "injection_ids": [
+            "tool-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "adv_unrelated_files": {
+      "retrieved": {
+        "semantic": [
+          "file-good",
+          "file-evil"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "file-good"
+        ],
+        "plus_conflict": [
+          "file-good",
+          "file-evil"
+        ],
+        "plus_injection": [
+          "file-good"
+        ],
+        "plus_supersession": [
+          "file-good",
+          "file-evil"
+        ],
+        "plus_trust": [
+          "file-good"
+        ],
+        "semantic_only": [
+          "file-good",
+          "file-evil"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "file-evil"
+          ],
+          "injection_ids": [
+            "file-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "file-evil"
+          ],
+          "injection_ids": [
+            "file-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "file-evil"
+          ],
+          "injection_ids": [
+            "file-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "file-evil"
+          ],
+          "injection_ids": [
+            "file-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "file-evil"
+          ],
+          "injection_ids": [
+            "file-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "file-evil"
+          ],
+          "injection_ids": [
+            "file-evil"
+          ],
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "am_competing_conventions": {
+      "retrieved": {
+        "semantic": [
+          "name-b",
+          "name-a"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "name-b",
+          "name-a"
+        ],
+        "plus_conflict": [
+          "name-b",
+          "name-a"
+        ],
+        "plus_injection": [
+          "name-b",
+          "name-a"
+        ],
+        "plus_supersession": [
+          "name-b",
+          "name-a"
+        ],
+        "plus_trust": [
+          "name-b",
+          "name-a"
+        ],
+        "semantic_only": [
+          "name-b",
+          "name-a"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "am_high_risk": {
+      "retrieved": {
+        "semantic": [
+          "risk-guard"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "risk-guard"
+        ],
+        "plus_conflict": [
+          "risk-guard"
+        ],
+        "plus_injection": [
+          "risk-guard"
+        ],
+        "plus_supersession": [
+          "risk-guard"
+        ],
+        "plus_trust": [
+          "risk-guard"
+        ],
+        "semantic_only": [
+          "risk-guard"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "am_implicit": {
+      "retrieved": {
+        "semantic": [
+          "imp-constraint"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "imp-constraint"
+        ],
+        "plus_conflict": [
+          "imp-constraint"
+        ],
+        "plus_injection": [
+          "imp-constraint"
+        ],
+        "plus_supersession": [
+          "imp-constraint"
+        ],
+        "plus_trust": [
+          "imp-constraint"
+        ],
+        "semantic_only": [
+          "imp-constraint"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "am_intent": {
+      "retrieved": {
+        "semantic": [
+          "int-scope"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "int-scope"
+        ],
+        "plus_conflict": [
+          "int-scope"
+        ],
+        "plus_injection": [
+          "int-scope"
+        ],
+        "plus_supersession": [
+          "int-scope"
+        ],
+        "plus_trust": [
+          "int-scope"
+        ],
+        "semantic_only": [
+          "int-scope"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "am_misleading": {
+      "retrieved": {
+        "semantic": [
+          "mis-cur",
+          "mis-old"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "mis-cur"
+        ],
+        "plus_conflict": [
+          "mis-cur",
+          "mis-old"
+        ],
+        "plus_injection": [
+          "mis-cur",
+          "mis-old"
+        ],
+        "plus_supersession": [
+          "mis-cur"
+        ],
+        "plus_trust": [
+          "mis-cur",
+          "mis-old"
+        ],
+        "semantic_only": [
+          "mis-cur",
+          "mis-old"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": [
+            "mis-old"
+          ],
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": [
+            "mis-old"
+          ],
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "am_resolvable": {
+      "retrieved": {
+        "semantic": [
+          "amb-default"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "amb-default"
+        ],
+        "plus_conflict": [
+          "amb-default"
+        ],
+        "plus_injection": [
+          "amb-default"
+        ],
+        "plus_supersession": [
+          "amb-default"
+        ],
+        "plus_trust": [
+          "amb-default"
+        ],
+        "semantic_only": [
+          "amb-default"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "am_should_not_abstain": {
+      "retrieved": {
+        "semantic": [
+          "flag-default"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "flag-default"
+        ],
+        "plus_conflict": [
+          "flag-default"
+        ],
+        "plus_injection": [
+          "flag-default"
+        ],
+        "plus_supersession": [
+          "flag-default"
+        ],
+        "plus_trust": [
+          "flag-default"
+        ],
+        "semantic_only": [
+          "flag-default"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "am_unresolvable": {
+      "retrieved": {
+        "semantic": [
+          "amb-hint"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "amb-hint"
+        ],
+        "plus_conflict": [
+          "amb-hint"
+        ],
+        "plus_injection": [
+          "amb-hint"
+        ],
+        "plus_supersession": [
+          "amb-hint"
+        ],
+        "plus_trust": [
+          "amb-hint"
+        ],
+        "semantic_only": [
+          "amb-hint"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "ctl_count": {
+      "retrieved": {
+        "semantic": []
+      },
+      "configs": {
+        "plus_all": null,
+        "plus_conflict": null,
+        "plus_injection": null,
+        "plus_supersession": null,
+        "plus_trust": null,
+        "semantic_only": null
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "ctl_logic": {
+      "retrieved": {
+        "semantic": []
+      },
+      "configs": {
+        "plus_all": null,
+        "plus_conflict": null,
+        "plus_injection": null,
+        "plus_supersession": null,
+        "plus_trust": null,
+        "semantic_only": null
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "ctl_math": {
+      "retrieved": {
+        "semantic": []
+      },
+      "configs": {
+        "plus_all": null,
+        "plus_conflict": null,
+        "plus_injection": null,
+        "plus_supersession": null,
+        "plus_trust": null,
+        "semantic_only": null
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "ctl_reverse": {
+      "retrieved": {
+        "semantic": []
+      },
+      "configs": {
+        "plus_all": null,
+        "plus_conflict": null,
+        "plus_injection": null,
+        "plus_supersession": null,
+        "plus_trust": null,
+        "semantic_only": null
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_adversarial_correction": {
+      "retrieved": {
+        "semantic": [
+          "dep-fake",
+          "dep-canon"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "dep-canon"
+        ],
+        "plus_conflict": [
+          "dep-fake",
+          "dep-canon"
+        ],
+        "plus_injection": [
+          "dep-fake",
+          "dep-canon"
+        ],
+        "plus_supersession": [
+          "dep-fake",
+          "dep-canon"
+        ],
+        "plus_trust": [
+          "dep-canon"
+        ],
+        "semantic_only": [
+          "dep-fake",
+          "dep-canon"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dep-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dep-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dep-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dep-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dep-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "dep-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_cross_kind": {
+      "retrieved": {
+        "semantic": [
+          "ck-conv",
+          "ck-gotcha"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "ck-conv",
+          "ck-gotcha"
+        ],
+        "plus_conflict": [
+          "ck-conv",
+          "ck-gotcha"
+        ],
+        "plus_injection": [
+          "ck-conv",
+          "ck-gotcha"
+        ],
+        "plus_supersession": [
+          "ck-conv",
+          "ck-gotcha"
+        ],
+        "plus_trust": [
+          "ck-conv",
+          "ck-gotcha"
+        ],
+        "semantic_only": [
+          "ck-conv",
+          "ck-gotcha"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": [
+            [
+              "ck-conv",
+              "ck-gotcha"
+            ]
+          ],
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": true
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": [
+            [
+              "ck-conv",
+              "ck-gotcha"
+            ]
+          ],
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": true
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_direct_correction": {
+      "retrieved": {
+        "semantic": [
+          "to-old",
+          "to-new"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "to-new"
+        ],
+        "plus_conflict": [
+          "to-old",
+          "to-new"
+        ],
+        "plus_injection": [
+          "to-old",
+          "to-new"
+        ],
+        "plus_supersession": [
+          "to-new"
+        ],
+        "plus_trust": [
+          "to-old",
+          "to-new"
+        ],
+        "semantic_only": [
+          "to-old",
+          "to-new"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": [
+            "to-old"
+          ],
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": [
+            "to-old"
+          ],
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_false_newer": {
+      "retrieved": {
+        "semantic": [
+          "to2-fake",
+          "to2-verified"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "to2-verified"
+        ],
+        "plus_conflict": [
+          "to2-fake",
+          "to2-verified"
+        ],
+        "plus_injection": [
+          "to2-fake",
+          "to2-verified"
+        ],
+        "plus_supersession": [
+          "to2-fake",
+          "to2-verified"
+        ],
+        "plus_trust": [
+          "to2-verified"
+        ],
+        "semantic_only": [
+          "to2-fake",
+          "to2-verified"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "to2-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "to2-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "to2-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "to2-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "to2-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "to2-fake"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_false_positive_control": {
+      "retrieved": {
+        "semantic": [
+          "cache-ttl",
+          "session-ttl"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "cache-ttl",
+          "session-ttl"
+        ],
+        "plus_conflict": [
+          "cache-ttl",
+          "session-ttl"
+        ],
+        "plus_injection": [
+          "cache-ttl",
+          "session-ttl"
+        ],
+        "plus_supersession": [
+          "cache-ttl",
+          "session-ttl"
+        ],
+        "plus_trust": [
+          "cache-ttl",
+          "session-ttl"
+        ],
+        "semantic_only": [
+          "cache-ttl",
+          "session-ttl"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_multihop": {
+      "retrieved": {
+        "semantic": [
+          "svc-db",
+          "db-new",
+          "db-old"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "svc-db",
+          "db-new"
+        ],
+        "plus_conflict": [
+          "svc-db",
+          "db-new",
+          "db-old"
+        ],
+        "plus_injection": [
+          "svc-db",
+          "db-new",
+          "db-old"
+        ],
+        "plus_supersession": [
+          "svc-db",
+          "db-new"
+        ],
+        "plus_trust": [
+          "svc-db",
+          "db-new",
+          "db-old"
+        ],
+        "semantic_only": [
+          "svc-db",
+          "db-new",
+          "db-old"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": [
+            "db-old"
+          ],
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": [
+            "db-old"
+          ],
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_negation": {
+      "retrieved": {
+        "semantic": [
+          "rl-allow",
+          "rl-deny"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "rl-allow",
+          "rl-deny"
+        ],
+        "plus_conflict": [
+          "rl-allow",
+          "rl-deny"
+        ],
+        "plus_injection": [
+          "rl-allow",
+          "rl-deny"
+        ],
+        "plus_supersession": [
+          "rl-allow",
+          "rl-deny"
+        ],
+        "plus_trust": [
+          "rl-allow",
+          "rl-deny"
+        ],
+        "semantic_only": [
+          "rl-allow",
+          "rl-deny"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": [
+            [
+              "rl-allow",
+              "rl-deny"
+            ]
+          ],
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": true
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": [
+            [
+              "rl-allow",
+              "rl-deny"
+            ]
+          ],
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": true
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_project_specific": {
+      "retrieved": {
+        "semantic": [
+          "alpha-to",
+          "beta-to"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "alpha-to",
+          "beta-to"
+        ],
+        "plus_conflict": [
+          "alpha-to",
+          "beta-to"
+        ],
+        "plus_injection": [
+          "alpha-to",
+          "beta-to"
+        ],
+        "plus_supersession": [
+          "alpha-to",
+          "beta-to"
+        ],
+        "plus_trust": [
+          "alpha-to",
+          "beta-to"
+        ],
+        "semantic_only": [
+          "alpha-to",
+          "beta-to"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_temporal_obsolete": {
+      "retrieved": {
+        "semantic": [
+          "bug-fixed",
+          "bug-workaround"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "bug-fixed"
+        ],
+        "plus_conflict": [
+          "bug-fixed",
+          "bug-workaround"
+        ],
+        "plus_injection": [
+          "bug-fixed",
+          "bug-workaround"
+        ],
+        "plus_supersession": [
+          "bug-fixed"
+        ],
+        "plus_trust": [
+          "bug-fixed",
+          "bug-workaround"
+        ],
+        "semantic_only": [
+          "bug-fixed",
+          "bug-workaround"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": [
+            "bug-workaround"
+          ],
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": [
+            "bug-workaround"
+          ],
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_unresolvable": {
+      "retrieved": {
+        "semantic": [
+          "col-b",
+          "col-a"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "col-b",
+          "col-a"
+        ],
+        "plus_conflict": [
+          "col-b",
+          "col-a"
+        ],
+        "plus_injection": [
+          "col-b",
+          "col-a"
+        ],
+        "plus_supersession": [
+          "col-b",
+          "col-a"
+        ],
+        "plus_trust": [
+          "col-b",
+          "col-a"
+        ],
+        "semantic_only": [
+          "col-b",
+          "col-a"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "cx_version_specific": {
+      "retrieved": {
+        "semantic": [
+          "ver2",
+          "ver1"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "ver2",
+          "ver1"
+        ],
+        "plus_conflict": [
+          "ver2",
+          "ver1"
+        ],
+        "plus_injection": [
+          "ver2",
+          "ver1"
+        ],
+        "plus_supersession": [
+          "ver2",
+          "ver1"
+        ],
+        "plus_trust": [
+          "ver2",
+          "ver1"
+        ],
+        "semantic_only": [
+          "ver2",
+          "ver1"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": [
+            [
+              "ver2",
+              "ver1"
+            ]
+          ],
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": true
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": [
+            [
+              "ver2",
+              "ver1"
+            ]
+          ],
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": true
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "dec_api_version": {
+      "retrieved": {
+        "semantic": [
+          "api-v2",
+          "api-v1"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "api-v2",
+          "api-v1"
+        ],
+        "plus_conflict": [
+          "api-v2",
+          "api-v1"
+        ],
+        "plus_injection": [
+          "api-v2",
+          "api-v1"
+        ],
+        "plus_supersession": [
+          "api-v2",
+          "api-v1"
+        ],
+        "plus_trust": [
+          "api-v2",
+          "api-v1"
+        ],
+        "semantic_only": [
+          "api-v2",
+          "api-v1"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "dec_architecture": {
+      "retrieved": {
+        "semantic": [
+          "arch-a",
+          "arch-b"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "arch-a",
+          "arch-b"
+        ],
+        "plus_conflict": [
+          "arch-a",
+          "arch-b"
+        ],
+        "plus_injection": [
+          "arch-a",
+          "arch-b"
+        ],
+        "plus_supersession": [
+          "arch-a",
+          "arch-b"
+        ],
+        "plus_trust": [
+          "arch-a",
+          "arch-b"
+        ],
+        "semantic_only": [
+          "arch-a",
+          "arch-b"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "dec_attractive_wrong": {
+      "retrieved": {
+        "semantic": [
+          "tempt-bad",
+          "tempt-good"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "tempt-bad",
+          "tempt-good"
+        ],
+        "plus_conflict": [
+          "tempt-bad",
+          "tempt-good"
+        ],
+        "plus_injection": [
+          "tempt-bad",
+          "tempt-good"
+        ],
+        "plus_supersession": [
+          "tempt-bad",
+          "tempt-good"
+        ],
+        "plus_trust": [
+          "tempt-bad",
+          "tempt-good"
+        ],
+        "semantic_only": [
+          "tempt-bad",
+          "tempt-good"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "dec_missing_info": {
+      "retrieved": {
+        "semantic": [
+          "missing-hint"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "missing-hint"
+        ],
+        "plus_conflict": [
+          "missing-hint"
+        ],
+        "plus_injection": [
+          "missing-hint"
+        ],
+        "plus_supersession": [
+          "missing-hint"
+        ],
+        "plus_trust": [
+          "missing-hint"
+        ],
+        "semantic_only": [
+          "missing-hint"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "dec_reject_obsolete": {
+      "retrieved": {
+        "semantic": [
+          "ob-workaround",
+          "ob-old"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "ob-workaround",
+          "ob-old"
+        ],
+        "plus_conflict": [
+          "ob-workaround",
+          "ob-old"
+        ],
+        "plus_injection": [
+          "ob-workaround",
+          "ob-old"
+        ],
+        "plus_supersession": [
+          "ob-workaround",
+          "ob-old"
+        ],
+        "plus_trust": [
+          "ob-workaround",
+          "ob-old"
+        ],
+        "semantic_only": [
+          "ob-workaround",
+          "ob-old"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    },
+    "dec_reuse_fix": {
+      "retrieved": {
+        "semantic": [
+          "fix-worked",
+          "fix-failed"
+        ]
+      },
+      "configs": {
+        "plus_all": [
+          "fix-worked",
+          "fix-failed"
+        ],
+        "plus_conflict": [
+          "fix-worked",
+          "fix-failed"
+        ],
+        "plus_injection": [
+          "fix-worked",
+          "fix-failed"
+        ],
+        "plus_supersession": [
+          "fix-worked",
+          "fix-failed"
+        ],
+        "plus_trust": [
+          "fix-worked",
+          "fix-failed"
+        ],
+        "semantic_only": [
+          "fix-worked",
+          "fix-failed"
+        ]
+      },
+      "signals": {
+        "plus_all": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_conflict": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_injection": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_supersession": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "plus_trust": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        },
+        "semantic_only": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false
+        }
+      }
+    }
+  },
+  "k": 8
+}

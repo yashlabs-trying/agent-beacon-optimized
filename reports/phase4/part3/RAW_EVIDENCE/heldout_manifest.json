@@ -1,0 +1,15 @@
+{
+  "dataset_id": "beacon-phase4c-intelligent-heldout-v1",
+  "split": "heldout",
+  "file": "phase4c_heldout_v1.json",
+  "sha256": "6461AF90959E16F01CDF96B13D5902B0C8CD1D16E0ED6D9268DAB414B764E325",
+  "cases": 18,
+  "hash_rule": "SHA-256 of file bytes after CRLF-to-LF normalization",
+  "by_category": {
+    "contradiction": 5,
+    "ambiguity": 4,
+    "adversarial": 4,
+    "decision": 3,
+    "control": 2
+  }
+}

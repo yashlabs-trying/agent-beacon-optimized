@@ -1,0 +1,44 @@
+cases=18 arms=5 runs=90
+
+PER-ARM ACCURACY (Wilson 95% CI)
+  none              2/18  acc=0.111  CI=[0.031,0.328]
+  original          2/18  acc=0.111  CI=[0.031,0.328]
+  v6_semantic      10/18  acc=0.556  CI=[0.337,0.754]
+  v6_intelligent   14/18  acc=0.778  CI=[0.548,0.910]
+  oracle           15/18  acc=0.833  CI=[0.608,0.942]
+
+PER-CATEGORY ACCURACY
+  arm              contradi ambiguit adversar decision  control
+  none                  1/5      1/4      0/4      0/3      0/2
+  original              1/5      1/4      0/4      0/3      0/2
+  v6_semantic           2/5      4/4      1/4      3/3      0/2
+  v6_intelligent        3/5      4/4      4/4      3/3      0/2
+  oracle                4/5      4/4      4/4      3/3      0/2
+
+PAIRED COMPARISONS (A vs B: A / B / ties, exact McNemar p)
+  v6_intelligent   vs v6_semantic     : 4 / 0 / 14  p=0.1250
+  v6_intelligent   vs original        : 13 / 1 / 4  p=0.0018
+  v6_intelligent   vs none            : 13 / 1 / 4  p=0.0018
+  v6_intelligent   vs oracle          : 0 / 1 / 17  p=1.0000
+  v6_semantic      vs original        : 9 / 1 / 8  p=0.0215
+
+ABLATION DELTAS vs v6_semantic (paired)
+  ab_supersession  vs v6_semantic : +0 / -0 / =0  p=1.0000
+  ab_trust         vs v6_semantic : +0 / -0 / =0  p=1.0000
+  ab_conflict      vs v6_semantic : +0 / -0 / =0  p=1.0000
+  ab_injection     vs v6_semantic : +0 / -0 / =0  p=1.0000
+  v6_intelligent   vs v6_semantic : +4 / -0 / =14  p=0.1250
+
+MEAN REQUIRED-EVIDENCE RECALL
+  none             0.222
+  original         0.222
+  v6_semantic      1.000
+  v6_intelligent   1.000
+  oracle           1.000
+
+MEAN LATENCY / TOKENS
+  none             agent_s=0.49 prompt_tok=74
+  original         agent_s=0.33 prompt_tok=74
+  v6_semantic      agent_s=0.39 prompt_tok=96
+  v6_intelligent   agent_s=0.21 prompt_tok=91
+  oracle           agent_s=0.22 prompt_tok=85
