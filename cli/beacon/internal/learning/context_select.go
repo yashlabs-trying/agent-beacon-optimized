@@ -176,10 +176,28 @@ func SelectTrustContext(memories []asymptoteobserve.LearningMemoryV1, query stri
 // candidatePairs returns index pairs sharing >=2 significant terms, computed with an
 // inverted index rather than an O(n^2) scan. Sorted for determinism.
 func candidatePairs(memories []asymptoteobserve.LearningMemoryV1) [][2]int {
-	idx := map[string][]int{}
+	terms := make([]map[string]bool, len(memories))
 	for i, m := range memories {
-		for t := range significantTerms(m.Body) {
-			idx[t] = append(idx[t], i)
+		terms[i] = significantTerms(m.Body)
+	}
+	// Retrieval candidate sets are small (tens). For those a direct pairwise
+	// scan is cheaper than building inverted-index maps and allocates far less,
+	// while producing the identical set of pairs (shared >=2 significant terms).
+	if len(memories) <= 64 {
+		var out [][2]int
+		for i := 0; i < len(memories); i++ {
+			for j := i + 1; j < len(memories); j++ {
+				if sharedAtLeast(terms[i], terms[j], 2) {
+					out = append(out, [2]int{i, j})
+				}
+			}
+		}
+		return out
+	}
+	idx := map[string][]int{}
+	for i, t := range terms {
+		for term := range t {
+			idx[term] = append(idx[term], i)
 		}
 	}
 	type key struct{ a, b int }
@@ -208,6 +226,25 @@ func candidatePairs(memories []asymptoteobserve.LearningMemoryV1) [][2]int {
 		return out[i][1] < out[j][1]
 	})
 	return out
+}
+
+// sharedAtLeast reports whether two term sets share at least n terms, exiting
+// early once the threshold is reached.
+func sharedAtLeast(a, b map[string]bool, n int) bool {
+	// Iterate the smaller set for fewer comparisons.
+	if len(b) < len(a) {
+		a, b = b, a
+	}
+	count := 0
+	for term := range a {
+		if b[term] {
+			count++
+			if count >= n {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // detectContradictionsIndexed mirrors detectContradictions exactly but only visits
@@ -272,11 +309,20 @@ func resolveSupersessions(memories []asymptoteobserve.LearningMemoryV1, untruste
 		}
 	}
 
+	// Precompute significant terms once; the pairwise loop previously recomputed
+	// them up to four times per candidate pair.
+	terms := make([]map[string]bool, len(memories))
+	for i, m := range memories {
+		terms[i] = significantTerms(m.Body)
+	}
+
 	// Lexical corrections over candidate pairs.
 	for _, p := range candidatePairs(memories) {
 		older, newer := memories[p[0]], memories[p[1]]
+		olderTerms, newerTerms := terms[p[0]], terms[p[1]]
 		if memoryTime(newer).Before(memoryTime(older)) {
 			older, newer = newer, older
+			olderTerms, newerTerms = newerTerms, olderTerms
 		}
 		if older.Project.ID != newer.Project.ID {
 			continue
@@ -293,11 +339,11 @@ func resolveSupersessions(memories []asymptoteobserve.LearningMemoryV1, untruste
 		if untrusted[newer.ID] {
 			continue
 		}
-		shared := intersectTerms(significantTerms(older.Body), significantTerms(newer.Body))
+		shared := intersectTerms(olderTerms, newerTerms)
 		if len(shared) < 2 {
 			continue
 		}
-		minTerms := min(len(significantTerms(older.Body)), len(significantTerms(newer.Body)))
+		minTerms := min(len(olderTerms), len(newerTerms))
 		if minTerms > 0 && len(shared)*2 < minTerms {
 			continue
 		}

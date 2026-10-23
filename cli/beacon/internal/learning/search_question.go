@@ -207,6 +207,12 @@ type questionIntent struct {
 	primary        string
 	terms          map[string]bool
 	allowUncertain bool
+	// cache deduplicates tokenization within one SearchQuestion call. The same
+	// memory's terms are needed by direct/slotMatch/primaryMatch/linked, and the
+	// definitive check runs in both the lexical and semantic passes. Without the
+	// cache this is recomputed several times per candidate.
+	termCache map[string]map[string]bool
+	defCache  map[string]bool
 }
 
 var questionNoise = map[string]bool{
@@ -250,7 +256,11 @@ var genericAnswerWords = map[string]bool{
 
 func analyzeQuestion(question, retrievalQuery string) questionIntent {
 	words := embedWords(strings.ToLower(question))
-	intent := questionIntent{terms: map[string]bool{}}
+	intent := questionIntent{
+		terms:     map[string]bool{},
+		termCache: map[string]map[string]bool{},
+		defCache:  map[string]bool{},
+	}
 	for _, word := range words {
 		if uncertaintyWords[word] {
 			intent.allowUncertain = true
@@ -294,6 +304,14 @@ func analyzeQuestion(question, retrievalQuery string) questionIntent {
 }
 
 func (q questionIntent) memoryTerms(m asymptoteobserve.LearningMemoryV1) map[string]bool {
+	if q.termCache != nil {
+		if t, ok := q.termCache[m.ID]; ok {
+			return t
+		}
+		t := significantTerms(m.Title + " " + m.Body + " " + m.Applicability)
+		q.termCache[m.ID] = t
+		return t
+	}
 	return significantTerms(m.Title + " " + m.Body + " " + m.Applicability)
 }
 
@@ -325,12 +343,22 @@ func (q questionIntent) definitive(m asymptoteobserve.LearningMemoryV1) bool {
 	if q.allowUncertain {
 		return true
 	}
-	for _, word := range embedWords(strings.ToLower(m.Body)) {
-		if uncertaintyWords[word] {
-			return false
+	if q.defCache != nil {
+		if d, ok := q.defCache[m.ID]; ok {
+			return d
 		}
 	}
-	return true
+	def := true
+	for _, word := range embedWords(strings.ToLower(m.Body)) {
+		if uncertaintyWords[word] {
+			def = false
+			break
+		}
+	}
+	if q.defCache != nil {
+		q.defCache[m.ID] = def
+	}
+	return def
 }
 
 var uncertaintyWords = map[string]bool{
