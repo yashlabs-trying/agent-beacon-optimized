@@ -1,0 +1,120 @@
+{
+  "source_commit": "7b605aa84f0f570ba265fbda17fe6d99e927b10e",
+  "fixture_sha256": "0c55552721e1ae0dedb979bd9eabdced6e03eeb440ca38e7bb7209d7013ad044",
+  "rows": [
+    {
+      "task": "chain-01",
+      "category": "chain",
+      "stages_ns": {
+        "db_open_schema": 2831927,
+        "scope": 412522,
+        "fts_ready": 22933655,
+        "lexical": 823729,
+        "embedding_backfill": 9839504,
+        "exact_vector": 473924,
+        "question_warm": 848340,
+        "json_encode": 183571
+      },
+      "route": "semantic",
+      "lexical_candidates": 1,
+      "semantic_candidates": 3,
+      "go_test_stdout": "=== RUN   TestProfileV7Stages\n    phase_a_stages_test.go:24: STAGE db_open_schema 2831927\n    phase_a_stages_test.go:27: STAGE scope 412522\n    phase_a_stages_test.go:28: STAGE fts_ready 22933655\n    phase_a_stages_test.go:29: STAGE lexical 823729\n    phase_a_stages_test.go:31: STAGE embedding_backfill 9839504\n    phase_a_stages_test.go:32: STAGE exact_vector 473924\n    phase_a_stages_test.go:39: STAGE question_warm 848340\n    phase_a_stages_test.go:40: STAGE json_encode 183571\n    phase_a_stages_test.go:41: ROUTE semantic 1 3\n--- PASS: TestProfileV7Stages (0.05s)\nPASS\nok  \tgithub.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning\t0.067s\n"
+    },
+    {
+      "task": "conflict-01",
+      "category": "conflict",
+      "stages_ns": {
+        "db_open_schema": 1851929,
+        "scope": 373738,
+        "fts_ready": 18947592,
+        "lexical": 913988,
+        "question_warm": 334600,
+        "json_encode": 183455
+      },
+      "route": "lexical",
+      "lexical_candidates": 2,
+      "semantic_candidates": 0,
+      "go_test_stdout": "=== RUN   TestProfileV7Stages\n    phase_a_stages_test.go:24: STAGE db_open_schema 1851929\n    phase_a_stages_test.go:27: STAGE scope 373738\n    phase_a_stages_test.go:28: STAGE fts_ready 18947592\n    phase_a_stages_test.go:29: STAGE lexical 913988\n    phase_a_stages_test.go:39: STAGE question_warm 334600\n    phase_a_stages_test.go:40: STAGE json_encode 183455\n    phase_a_stages_test.go:41: ROUTE lexical 2 0\n--- PASS: TestProfileV7Stages (0.03s)\nPASS\nok  \tgithub.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning\t0.037s\n"
+    },
+    {
+      "task": "direct-01",
+      "category": "direct",
+      "stages_ns": {
+        "db_open_schema": 2039987,
+        "scope": 245488,
+        "fts_ready": 18284506,
+        "lexical": 591029,
+        "question_warm": 191058,
+        "json_encode": 147616
+      },
+      "route": "lexical",
+      "lexical_candidates": 1,
+      "semantic_candidates": 0,
+      "go_test_stdout": "=== RUN   TestProfileV7Stages\n    phase_a_stages_test.go:24: STAGE db_open_schema 2039987\n    phase_a_stages_test.go:27: STAGE scope 245488\n    phase_a_stages_test.go:28: STAGE fts_ready 18284506\n    phase_a_stages_test.go:29: STAGE lexical 591029\n    phase_a_stages_test.go:39: STAGE question_warm 191058\n    phase_a_stages_test.go:40: STAGE json_encode 147616\n    phase_a_stages_test.go:41: ROUTE lexical 1 0\n--- PASS: TestProfileV7Stages (0.03s)\nPASS\nok  \tgithub.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning\t0.039s\n"
+    },
+    {
+      "task": "temporal-01",
+      "category": "temporal",
+      "stages_ns": {
+        "db_open_schema": 1489124,
+        "scope": 173348,
+        "fts_ready": 44418289,
+        "lexical": 1556730,
+        "question_warm": 350410,
+        "json_encode": 367861
+      },
+      "route": "lexical",
+      "lexical_candidates": 2,
+      "semantic_candidates": 0,
+      "go_test_stdout": "=== RUN   TestProfileV7Stages\n    phase_a_stages_test.go:24: STAGE db_open_schema 1489124\n    phase_a_stages_test.go:27: STAGE scope 173348\n    phase_a_stages_test.go:28: STAGE fts_ready 44418289\n    phase_a_stages_test.go:29: STAGE lexical 1556730\n    phase_a_stages_test.go:39: STAGE question_warm 350410\n    phase_a_stages_test.go:40: STAGE json_encode 367861\n    phase_a_stages_test.go:41: ROUTE lexical 2 0\n--- PASS: TestProfileV7Stages (0.06s)\nPASS\nok  \tgithub.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning\t0.062s\n"
+    },
+    {
+      "task": "trust-01",
+      "category": "trust",
+      "stages_ns": {
+        "db_open_schema": 1375242,
+        "scope": 179148,
+        "fts_ready": 18314701,
+        "lexical": 542549,
+        "question_warm": 176585,
+        "json_encode": 115795
+      },
+      "route": "lexical",
+      "lexical_candidates": 2,
+      "semantic_candidates": 0,
+      "go_test_stdout": "=== RUN   TestProfileV7Stages\n    phase_a_stages_test.go:24: STAGE db_open_schema 1375242\n    phase_a_stages_test.go:27: STAGE scope 179148\n    phase_a_stages_test.go:28: STAGE fts_ready 18314701\n    phase_a_stages_test.go:29: STAGE lexical 542549\n    phase_a_stages_test.go:39: STAGE question_warm 176585\n    phase_a_stages_test.go:40: STAGE json_encode 115795\n    phase_a_stages_test.go:41: ROUTE lexical 2 0\n--- PASS: TestProfileV7Stages (0.03s)\nPASS\nok  \tgithub.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning\t0.034s\n"
+    },
+    {
+      "task": "uncertain-01",
+      "category": "uncertain",
+      "stages_ns": {
+        "db_open_schema": 1361153,
+        "scope": 189610,
+        "fts_ready": 17479406,
+        "lexical": 599646,
+        "question_warm": 8411943,
+        "json_encode": 153332
+      },
+      "route": "semantic",
+      "lexical_candidates": 1,
+      "semantic_candidates": 1,
+      "go_test_stdout": "=== RUN   TestProfileV7Stages\n    phase_a_stages_test.go:24: STAGE db_open_schema 1361153\n    phase_a_stages_test.go:27: STAGE scope 189610\n    phase_a_stages_test.go:28: STAGE fts_ready 17479406\n    phase_a_stages_test.go:29: STAGE lexical 599646\n    phase_a_stages_test.go:39: STAGE question_warm 8411943\n    phase_a_stages_test.go:40: STAGE json_encode 153332\n    phase_a_stages_test.go:41: ROUTE semantic 1 1\n--- PASS: TestProfileV7Stages (0.04s)\nPASS\nok  \tgithub.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning\t0.042s\n"
+    },
+    {
+      "task": "workflow-01",
+      "category": "workflow",
+      "stages_ns": {
+        "db_open_schema": 1307716,
+        "scope": 157404,
+        "fts_ready": 17014691,
+        "lexical": 578392,
+        "question_warm": 230209,
+        "json_encode": 125589
+      },
+      "route": "lexical",
+      "lexical_candidates": 2,
+      "semantic_candidates": 0,
+      "go_test_stdout": "=== RUN   TestProfileV7Stages\n    phase_a_stages_test.go:24: STAGE db_open_schema 1307716\n    phase_a_stages_test.go:27: STAGE scope 157404\n    phase_a_stages_test.go:28: STAGE fts_ready 17014691\n    phase_a_stages_test.go:29: STAGE lexical 578392\n    phase_a_stages_test.go:39: STAGE question_warm 230209\n    phase_a_stages_test.go:40: STAGE json_encode 125589\n    phase_a_stages_test.go:41: ROUTE lexical 2 0\n--- PASS: TestProfileV7Stages (0.03s)\nPASS\nok  \tgithub.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning\t0.032s\n"
+    }
+  ]
+}

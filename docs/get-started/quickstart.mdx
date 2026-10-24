@@ -1,0 +1,114 @@
+---
+title: "Quickstart"
+description: "Install Beacon, choose where your data lives, and capture your first agent session"
+---
+
+## 1. Install Beacon
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    brew update
+    brew trust asymptote-labs/tap
+    brew install asymptote-labs/tap/beacon
+    ```
+  </Tab>
+  <Tab title="Windows">
+    Download `BeaconEndpointAgent-<version>-x64.msi` from the [latest release](https://github.com/asymptote-labs/agent-beacon/releases/latest), then run PowerShell as an administrator:
+
+    ```powershell
+    msiexec /i BeaconEndpointAgent-<version>-x64.msi
+    ```
+
+    See the [Windows install guide](/platforms/windows) for more options.
+  </Tab>
+  <Tab title="Linux">
+    Install the latest `.deb` or `.rpm` for your distribution and architecture:
+
+    ```bash
+    curl -fsSL https://github.com/asymptote-labs/agent-beacon/releases/latest/download/install.sh | bash
+    ```
+
+    The installer verifies the package against the release checksums before installing it. See the [Linux install guide](/platforms/linux) for manual package, tarball, and rootless installs.
+  </Tab>
+</Tabs>
+
+Then configure the agents you use:
+
+```bash
+beacon endpoint install --harness claude,codex,cursor
+```
+
+## 2. Choose where your data lives
+
+Beacon supports two modes.
+
+### Local
+
+Keep your agent history on your machine.
+
+Beacon writes telemetry locally and gives you a local dashboard. Nothing is forwarded unless you explicitly configure it.
+
+### Beacon Cloud
+
+Send your Beacon telemetry to the hosted service for:
+
+- unlimited retention
+- search across past sessions
+- cross-harness history
+- analytics
+- access from anywhere
+
+Interactive installation signs in, preselects Beacon Cloud, and asks you to review the
+privacy choice. Confirming installs Beacon and connects this endpoint in the same
+command, using the signed-in CLI account to authorize a separate device ingest key
+with no second browser approval.
+
+If you chose Local during setup, or enrollment did not succeed, connect later with:
+
+```bash
+beacon endpoint connect
+```
+
+Use `--privacy-mode metadata-only` to override Standard.
+
+## 3. Run an agent
+
+Start a session in a runtime you configured. The default endpoint install
+configures Claude Code and Codex CLI. Cursor and other supported runtimes require
+their documented hook, plugin, OTLP, or session-sync setup; see [Agent
+harnesses](/runtimes).
+
+Once that runtime surface is configured, Beacon captures the telemetry the
+runtime exposes through it.
+
+## 4. View your sessions
+
+For the local dashboard:
+
+```bash
+beacon endpoint dashboard --open
+```
+
+If you're using Beacon Cloud, your sessions will also appear in the hosted dashboard,
+which the install opens when setup finishes, at
+[beacon.sh/dashboard](https://beacon.sh/dashboard).
+
+## Check your setup
+
+```bash
+beacon endpoint status
+```
+
+This shows which harnesses are connected, whether the collector is running, and whether Beacon Cloud is enabled.
+
+## Useful commands
+
+| Task | Command |
+| --- | --- |
+| Check status | `beacon endpoint status` |
+| Open local dashboard | `beacon endpoint dashboard --open` |
+| Connect to Beacon Cloud | `beacon endpoint connect` |
+| Disconnect from Beacon Cloud | `beacon endpoint disconnect` |
+| Upgrade | `brew update && brew upgrade beacon` |
+| Uninstall | `beacon endpoint uninstall --keep-logs` |

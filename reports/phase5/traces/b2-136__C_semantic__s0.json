@@ -1,0 +1,29 @@
+{
+  "task": "b2-136",
+  "suite": "B",
+  "category": "B2_ambiguity",
+  "difficulty": "extreme",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "b2-136-hint"
+  ],
+  "required_evidence": [],
+  "evidence_recall": 1.0,
+  "answer": "Canary",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": [
+      "canary"
+    ]
+  },
+  "forbidden_leaked": [
+    "canary"
+  ],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.511,
+  "prompt_tokens": 118,
+  "gen_tokens": 3
+}

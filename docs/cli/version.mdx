@@ -1,0 +1,91 @@
+---
+title: "beacon version"
+description: "Display the Agent Beacon CLI version and check for updates"
+---
+
+## Command overview
+
+Display the version number, git commit, and build date of the Agent Beacon CLI, or check whether a newer released version is available.
+
+```bash title="Command syntax"
+beacon version
+```
+
+Running `beacon` by itself in an interactive terminal also tells you when a newer
+release is out. When one is available, an orange notice shows the installed and latest
+versions, links to the [CLI changelog](/changelog/cli), and prints how to update for the
+detected installation: `brew update && brew upgrade beacon` for Homebrew,
+`sudo beacon endpoint update --apply` for the system package, and the release download
+for every other install (tarball, `install.sh`, `go install`, the Windows MSI, or a
+source build).
+
+The check works like the update notices in Codex and Claude Code: it never makes
+`beacon` wait on the network. The notice comes from a cached answer in
+`~/.beacon/endpoint/update-check.json`. When that answer is more than a day old,
+`beacon` starts a background lookup of the latest GitHub release, which updates the
+cache for the next run and writes nothing to the terminal. A failed lookup is also
+retried at most once a day. `beacon version check` looks up the release right away and
+refreshes the same cache.
+
+The notice and the background lookup are skipped in pipes, redirects, scripts, other
+commands, CI (`CI` set), and development builds. Set `BEACON_UPDATE_CHECK=0` to turn
+them off; `beacon version check` still works.
+
+<Accordion title="Example output">
+```bash title="Example output"
+$ beacon version
+
+beacon version 0.0.95 (fc83f7d) built on 2026-07-10T06:07:46Z
+```
+</Accordion>
+
+## beacon version check
+
+Check GitHub releases for the latest published Beacon CLI version:
+
+```bash title="Check GitHub releases for the latest published Beacon CLI version"
+beacon version check
+```
+
+When an update is available, Beacon prints the latest version, the installed version, Homebrew upgrade guidance, and a release download URL.
+
+<Accordion title="Example output">
+```bash title="Example output"
+$ beacon version check
+
+Beacon v0.0.95 is available. Current version: v0.0.94
+If installed with Homebrew: brew update && brew upgrade beacon
+Download: https://github.com/asymptote-labs/agent-beacon/releases/tag/v0.0.95
+```
+</Accordion>
+
+For development builds or versions that cannot be compared with published releases, Beacon prints an informational message and exits successfully.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `-h, --help` | Help for version |
+| `-v, --version` | Also available as `beacon -v` at the top level |
+
+## Upgrade
+
+Use `beacon version check` before upgrading to confirm whether a newer release is available:
+
+```bash title="Use beacon version check before upgrading to confirm whether a newer release is available"
+beacon version check
+brew update
+brew trust asymptote-labs/tap
+brew upgrade beacon
+```
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Endpoint agent" icon="desktop" href="/cli/endpoint">
+    Install, repair, and inspect the endpoint agent.
+  </Card>
+  <Card title="Upgrade Beacon" icon="arrow-up" href="/cli/upgrade">
+    Check for updates and upgrade the Beacon CLI.
+  </Card>
+</Columns>

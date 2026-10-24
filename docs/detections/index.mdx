@@ -1,0 +1,237 @@
+---
+title: "Detections"
+description: "How Beacon detections turn agent runtime telemetry into security findings"
+---
+
+## Overview
+
+Beacon detections are threat rules for AI-agent telemetry. They read normalized [endpoint events](/telemetry-schema/event-schema), evaluate rule conditions over those events, and emit findings that explain which rule fired, why it fired, and which events were involved.
+
+Use detections when you want to review local agent activity for risky commands, sensitive file access, suspicious tool use, policy bypass attempts, prompt-injection patterns, or multi-step behavior such as a secret read followed by outbound network access.
+
+The detection format is open and lives in the Agent Beacon repository. Rules are YAML documents with CEL match expressions, metadata, and embedded test fixtures. The detection engine ships with the Beacon CLI, while rule packs are external data that can be installed, updated, and linted separately from the binary.
+
+<Note>
+  Local scanning is read-only and offline. `beacon scan` does not fetch rule packs, send telemetry to Beacon, mutate endpoint configuration, or change the runtime log.
+</Note>
+
+## Quickstart
+
+Run active detections over the default per-user endpoint log:
+
+```bash title="Scan local endpoint telemetry"
+beacon scan
+```
+
+Print machine-readable findings for automation or downstream tooling:
+
+```bash title="JSON findings"
+beacon scan --json
+```
+
+Install the full maintained rule pack from a Beacon release:
+
+```bash title="Install the full threat-rule pack"
+beacon rules pull https://github.com/asymptote-labs/agent-beacon/releases/download/v0.0.95/threat-rules.tar.gz
+```
+
+List the active rules Beacon will use:
+
+```bash title="List active detections"
+beacon rules list
+```
+
+Run a high-severity gate, useful in local validation or CI-like checks:
+
+```bash title="Fail on high or critical findings"
+beacon scan --fail-on high
+```
+
+## What detections look for
+
+Detections focus on risky agent behavior that is hard to understand from one raw log line alone:
+
+- **Credential access:** reads of `.env`, SSH keys, cloud credentials, browser session stores, shell history, process tables, Kubernetes kubeconfigs and service-account tokens, GPG private keyrings, or password-manager vaults (KeePass, 1Password, Bitwarden, LastPass, pass).
+- **Context exfiltration:** network commands, paste and transfer services, DNS tunneling, Git bundles, outbound MCP calls, secret-bearing request bodies, SSH reverse-tunnel or SOCKS-proxy invocations, or archive-then-upload pipelines.
+- **Risky commands:** destructive shell operations, persistence installation (crontab, systemd timers, kernel modules), shell escapes, privileged container runs, curl-to-shell patterns, sudoers edits, root-equivalent changes, or history-rewriting git operations (filter-branch, filter-repo, rebase -i, force-push to protected branches).
+- **Sensitive edits:** changes to CI pipelines, dependency manifests, shell startup files, authorization code, autostart units, agent instruction files, SSH authorized_keys or sshd_config, /etc/hosts or hosts.allow/deny, container or IaC files (Dockerfile, Terraform, Kubernetes manifests, Helm values), or other control surfaces.
+- **Prompt injection:** instructions that try to override roles, ignore prior instructions, exfiltrate context, hide with invisible characters, or decode and execute hidden payloads.
+- **Approval and policy abuse:** denied actions that still execute, high-risk approvals without a reason, attempts to spawn around runtime permission controls (agent CLIs launched with permission-elevating env vars, sandbox-escape primitives like nsenter / unshare / chroot / pivot_root), or re-invocations of denied commands through a renamed binary or temp-path shim.
+- **Agent runtime control:** spawns of known agent CLIs (Claude Code, Codex, Cursor Agent, Aider, Goose, OpenCode, Gemini) that arrive with permission-elevating env vars or attempt to hand off credentials or context to a second agent.
+- **Resource consumption:** unusually expensive single calls when token and cost telemetry are available, fork-bomb patterns (`:(){ :|:& };:`, `while true; do ... & done`), or disk-fill primitives (dd of /dev/zero to large targets, fallocate, yes-piped-to-file).
+
+Because rules run over the shared Beacon event model, the same rule vocabulary can apply across supported harnesses when those harnesses emit the required fields.
+
+[Inventory](/guides/inventory) helps explain which harnesses, local config, MCP servers, and skills are present and observable on an endpoint. Detection coverage depends on the telemetry fields emitted by those supported harnesses and visible local configuration.
+
+## Detection coverage
+
+Beacon ships with a small built-in baseline so `beacon scan` works before any rule store is installed, and it stays active once you install rules. The broader rule pack is distributed as a release asset and includes categories like these:
+
+| Category | Example behaviors |
+| --- | --- |
+| `credential-access` | Credential-file reads, browser session store reads, shell history scans, SSH agent enumeration, Kubernetes kubeconfig reads, GPG secret-key exports, password-manager vault reads |
+| `context-exfiltration` | Secret read then egress, credentials in curl data, upload to paste or transfer sites, SSH tunnel egress, archive-then-upload pipelines |
+| `risky-command` | Curl piped to shell, recursive root delete, sudoers tampering, persistence installation, crontab modification, kernel-module load |
+| `sensitive-edit` | CI pipeline edits, dependency manifest edits, shell login file edits, agent control surface edits, SSH authorized_keys edits, /etc/hosts edits, container / IaC file edits |
+| `prompt-injection` | Role override jailbreaks, hidden payloads, markdown-image exfiltration, instruction override markers, injected instructions in files, web pages, or MCP results the agent reads |
+| `external-access` | Cloud metadata endpoint access, link-local target fetches, external MCP tool calls |
+| `approval-abuse` | Permission-bypass execution or high-risk approvals without reviewer context, denied-command re-invocation through renamed binaries |
+| `source-control` | Git hook installation, remote tampering, Git config execution injection, history rewriting (filter-branch / filter-repo / rebase -i), force-push to protected branches |
+| `agent-control` | Agent CLIs spawned with permission-elevating env vars, sandbox-escape primitives, inter-agent credential handoff |
+
+Rules only evaluate events that exist in the runtime log. For example, an MCP detection needs MCP-like activity to be emitted by a supported harness, and a prompt-injection rule needs retained prompt or content fields to be present under the endpoint's local data-retention settings.
+
+## Detection flow
+
+1. A supported agent harness emits runtime telemetry.
+2. Beacon normalizes that telemetry into endpoint events and writes `runtime.jsonl`.
+3. `beacon scan` loads the active rule set from an explicit rules directory, or from the local rule store plus the built-in baseline.
+4. Each rule is decoded, validated, and compiled before it runs.
+5. The scan evaluates rules against the ordered event stream.
+6. Matching rules produce findings with rule metadata, severity, reason, session context, and evidence events.
+
+You can run the same local detection flow from the command line with [`beacon scan`](/cli/scan) or inspect it in the loopback-only [endpoint dashboard](/cli/dashboard). The dashboard Detections view lists active rules, while the Findings view runs those rules over the configured runtime log on demand.
+
+## Rules and findings
+
+A rule is the durable detection definition. It contains an `id`, `title`, `severity`, CEL logic, and test fixtures that prove the expected behavior.
+
+A finding is the runtime result of a rule firing. Findings include the rule identity, severity, emitted reason, matched session when available, and the event evidence that caused the match.
+
+```json title="Finding shape"
+{
+  "rule_id": "secret-read-then-egress",
+  "title": "Secret-file read and network egress in one session",
+  "severity": "high",
+  "posture": "detect",
+  "reason": "Credential file read and network egress within one session window",
+  "session_id": "claude-session-123",
+  "events": [
+    {
+      "event": { "action": "file.read" },
+      "file": { "path": ".env" }
+    },
+    {
+      "event": { "action": "command.executed" },
+      "command": { "command": "curl https://example.com" }
+    }
+  ]
+}
+```
+
+Finding output is intended to be explainable first: analysts should be able to see the rule, the reason, and the evidence events without reconstructing the whole session by hand.
+
+```yaml title="Single-event rule shape"
+id: suspicious-egress-command
+version: 1
+title: Suspicious network egress command
+severity: high
+status: stable
+posture: detect
+match: >
+  e.event.action == "command.executed" &&
+  e.command.command.matches("\\b(curl|wget|nc)\\b")
+emit:
+  reason: "Agent executed a command commonly used for network egress"
+tests:
+  - name: positive_basic
+    verdict: match
+    events:
+      - event: { action: command.executed }
+        command: { command: "curl https://example.com" }
+  - name: unrelated
+    verdict: no_match
+    events:
+      - event: { action: command.executed }
+        command: { command: "ls -la" }
+```
+
+## Rule sources
+
+Beacon can run detections from three sources, resolved in this order:
+
+1. An explicit directory passed to `beacon scan --rules`, which runs alone.
+2. The local endpoint rule store managed by `beacon rules`.
+3. The built-in baseline, alongside the store. A store rule with a baseline rule's id replaces that baseline rule; every other baseline rule stays active.
+
+Use an explicit rule directory when you are developing or testing a rule pack without installing it:
+
+```bash title="Scan with a local rule directory"
+beacon scan --rules ./rules --log-path ./runtime.jsonl
+```
+
+Use the rule store when you want Beacon's normal local scan and dashboard workflows to use the same installed rules:
+
+```bash title="Install local rules into the store"
+beacon rules add ./rules
+```
+
+The per-user store is under the endpoint base directory, commonly `~/.beacon/endpoint/rules`. System-mode installs use the system endpoint base directory.
+
+## Author and validate rules
+
+Threat rules are meant to be reviewed and tested like code. A new rule should start as `experimental`, include a plain-language `emit.reason`, and carry at least one fixture that proves the expected verdict.
+
+Validate a rule file or directory before installing it:
+
+```bash title="Lint rule files"
+beacon rules lint ./rules
+```
+
+Print the event fields available to CEL expressions:
+
+```bash title="List CEL field paths"
+beacon rules fields
+```
+
+Use the [Detection YAML Schema](/detections/yaml-schema) page for the rule document shape, the [Detection Standard](/detections/standard) page for maturity and conformance requirements, and the [Detection Engine](/detections/engine) page for load-time validation and evaluation behavior.
+
+## Operational notes
+
+- `beacon scan --min-severity <level>` filters displayed findings.
+- `beacon scan --fail-on <level>` exits non-zero when any finding at or above the threshold exists.
+- `beacon scan --session <id>` narrows evaluation to events whose session ID contains the supplied value.
+- `beacon scan --log-path <path>` scans a copied or archived `runtime.jsonl` file.
+- `beacon rules pull` is the only rules workflow that reaches the network, and only for the explicit `https://` URL you provide. It refuses redirects that leave `https://`, caps the download size, and with `--sha256` installs nothing unless the download matches the expected digest.
+- The local dashboard mirrors `beacon scan` rule resolution and finding behavior, but stays loopback-only and read-only.
+
+## Beacon Cloud detections
+
+The open-source Beacon flow runs detections locally over endpoint JSONL. [Beacon Cloud](/deployment/managed) builds on the same telemetry foundation with centralized ingest, retention, search, detections, fleet-wide visibility, policy workflows, identity mapping, SSO/RBAC, and investigation workflows.
+
+Use local Beacon detections when you need offline endpoint checks or customer-controlled forwarding. Use Beacon Cloud when you need centralized review across a fleet or organization.
+
+## Read next
+
+<Columns cols={2}>
+  <Card title="YAML Schema" icon="code" href="/detections/yaml-schema">
+    Learn the fields used by Beacon threat-rule YAML files.
+  </Card>
+  <Card title="Detection Standard" icon="shield-halved" href="/detections/standard">
+    Understand the threat-rules/v1 standard, maturity ladder, and conformance model.
+  </Card>
+  <Card title="Detection Engine" icon="gears" href="/detections/engine">
+    See how rules are loaded, compiled, evaluated, and turned into findings.
+  </Card>
+  <Card title="beacon scan" icon="magnifying-glass" href="/cli/scan">
+    Run active rules over local endpoint telemetry.
+  </Card>
+  <Card title="Endpoint dashboard" icon="chart-line" href="/cli/dashboard">
+    Browse active detections and findings in the local dashboard.
+  </Card>
+</Columns>
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Endpoint Event Schema" icon="code" href="/telemetry-schema/event-schema">
+    Review the normalized JSON fields that detections evaluate.
+  </Card>
+  <Card title="Inventory" icon="clipboard-list" href="/guides/inventory">
+    Review local harness, MCP server, skill, and configuration visibility.
+  </Card>
+  <Card title="beacon rules" icon="list-check" href="/cli/rules">
+    Manage, install, lint, and inspect local detection rules.
+  </Card>
+</Columns>

@@ -1,0 +1,16 @@
+=== RUN   TestANNPhase1Matrix
+ANN_MATRIX n=100 M=16 seed=7 recall@1=1.0000 recall@10=0.9547 build_ms=12 p50_us=63 p95_us=105 p99_us=278 heap_mb=3.8 build_alloc_mb=1.7 search_allocs=183.0
+ANN_MATRIX n=100 M=32 seed=7 recall@1=1.0000 recall@10=0.9984 build_ms=21 p50_us=51 p95_us=56 p99_us=61 heap_mb=3.3 build_alloc_mb=2.9 search_allocs=177.0
+ANN_MATRIX n=100 M=64 seed=7 recall@1=1.0000 recall@10=1.0000 build_ms=30 p50_us=54 p95_us=116 p99_us=135 heap_mb=3.2 build_alloc_mb=5.9 search_allocs=189.0
+ANN_MATRIX n=1000 M=16 seed=7 recall@1=0.9375 recall@10=0.8703 build_ms=126 p50_us=39 p95_us=97 p99_us=119 heap_mb=7.3 build_alloc_mb=45.4 search_allocs=260.0
+ANN_MATRIX n=1000 M=32 seed=7 recall@1=0.9844 recall@10=0.9625 build_ms=338 p50_us=70 p95_us=94 p99_us=185 heap_mb=8.2 build_alloc_mb=97.4 search_allocs=212.0
+ANN_MATRIX n=1000 M=64 seed=7 recall@1=1.0000 recall@10=0.9953 build_ms=947 p50_us=123 p95_us=153 p99_us=271 heap_mb=13.0 build_alloc_mb=218.8 search_allocs=233.0
+ANN_MATRIX n=5000 M=16 seed=7 recall@1=0.7656 recall@10=0.7516 build_ms=785 p50_us=33 p95_us=39 p99_us=42 heap_mb=19.2 build_alloc_mb=317.8 search_allocs=208.0
+ANN_MATRIX n=5000 M=32 seed=7 recall@1=0.9844 recall@10=0.9844 build_ms=2436 p50_us=67 p95_us=84 p99_us=94 heap_mb=28.7 build_alloc_mb=811.9 search_allocs=236.0
+ANN_MATRIX n=5000 M=64 seed=7 recall@1=1.0000 recall@10=1.0000 build_ms=7646 p50_us=132 p95_us=159 p99_us=166 heap_mb=45.2 build_alloc_mb=2144.2 search_allocs=265.0
+ANN_MATRIX n=10000 M=16 seed=7 recall@1=0.8125 recall@10=0.8187 build_ms=1731 p50_us=40 p95_us=47 p99_us=51 heap_mb=23.5 build_alloc_mb=695.5 search_allocs=229.0
+ANN_MATRIX n=10000 M=32 seed=7 recall@1=0.9844 recall@10=0.9844 build_ms=5240 p50_us=66 p95_us=75 p99_us=81 heap_mb=52.3 build_alloc_mb=1800.4 search_allocs=242.0
+ANN_MATRIX n=10000 M=64 seed=7 recall@1=1.0000 recall@10=1.0000 build_ms=17177 p50_us=132 p95_us=149 p99_us=155 heap_mb=65.0 build_alloc_mb=5074.4 search_allocs=270.0
+--- PASS: TestANNPhase1Matrix (36.75s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	37.030s

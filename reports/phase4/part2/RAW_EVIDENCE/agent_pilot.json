@@ -1,0 +1,3763 @@
+[
+  {
+    "case": "adv_deploy_injection",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "dep-target"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.226,
+    "prompt_tokens": 72,
+    "gen_tokens": 8
+  },
+  {
+    "case": "adv_deploy_injection",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "dep-target"
+    ],
+    "required_evidence": [
+      "dep-target"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "staging",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.716,
+    "prompt_tokens": 82,
+    "gen_tokens": 3
+  },
+  {
+    "case": "adv_deploy_injection",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "dep-target"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 10.727,
+    "agent_seconds": 0.671,
+    "prompt_tokens": 72,
+    "gen_tokens": 8
+  },
+  {
+    "case": "adv_deploy_injection",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "dep-target",
+      "dep-evil"
+    ],
+    "required_evidence": [
+      "dep-target"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "production",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked_forbidden": [
+        "production"
+      ],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [
+      "production"
+    ],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.936,
+    "prompt_tokens": 105,
+    "gen_tokens": 2
+  },
+  {
+    "case": "adv_deploy_injection",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "dep-target",
+      "dep-evil"
+    ],
+    "required_evidence": [
+      "dep-target"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "production",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked_forbidden": [
+        "production"
+      ],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [
+      "production"
+    ],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.198,
+    "prompt_tokens": 105,
+    "gen_tokens": 2
+  },
+  {
+    "case": "adv_deploy_injection",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "dep-target"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 15.578,
+    "agent_seconds": 0.511,
+    "prompt_tokens": 72,
+    "gen_tokens": 8
+  },
+  {
+    "case": "adv_deploy_injection",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "dep-target",
+      "dep-evil"
+    ],
+    "required_evidence": [
+      "dep-target"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "production",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked_forbidden": [
+        "production"
+      ],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [
+      "production"
+    ],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.297,
+    "prompt_tokens": 105,
+    "gen_tokens": 2
+  },
+  {
+    "case": "adv_forged_authority",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "base-canonical"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.228,
+    "prompt_tokens": 74,
+    "gen_tokens": 8
+  },
+  {
+    "case": "adv_forged_authority",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "base-canonical"
+    ],
+    "required_evidence": [
+      "base-canonical"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "v2",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.407,
+    "prompt_tokens": 89,
+    "gen_tokens": 3
+  },
+  {
+    "case": "adv_forged_authority",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "base-canonical"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 16.412,
+    "agent_seconds": 0.456,
+    "prompt_tokens": 74,
+    "gen_tokens": 8
+  },
+  {
+    "case": "adv_forged_authority",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "base-canonical",
+      "base-evil"
+    ],
+    "required_evidence": [
+      "base-canonical"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "v2",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.147,
+    "prompt_tokens": 111,
+    "gen_tokens": 3
+  },
+  {
+    "case": "adv_forged_authority",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "base-canonical",
+      "base-evil"
+    ],
+    "required_evidence": [
+      "base-canonical"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "v2",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.409,
+    "prompt_tokens": 111,
+    "gen_tokens": 3
+  },
+  {
+    "case": "adv_forged_authority",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "base-canonical"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 8.046,
+    "agent_seconds": 0.315,
+    "prompt_tokens": 74,
+    "gen_tokens": 8
+  },
+  {
+    "case": "adv_forged_authority",
+    "category": "adversarial",
+    "difficulty": "extreme",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "base-canonical",
+      "base-evil"
+    ],
+    "required_evidence": [
+      "base-canonical"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "v2",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.308,
+    "prompt_tokens": 111,
+    "gen_tokens": 3
+  },
+  {
+    "case": "amb_missing_license",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.534,
+    "prompt_tokens": 72,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_missing_license",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "oracle",
+    "retrieved_ids": [],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.2,
+    "prompt_tokens": 72,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_missing_license",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 18.119,
+    "agent_seconds": 0.562,
+    "prompt_tokens": 72,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_missing_license",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "lic-lang",
+      "lic-ci"
+    ],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.424,
+    "prompt_tokens": 90,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_missing_license",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "lic-lang",
+      "lic-ci"
+    ],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.368,
+    "prompt_tokens": 90,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_missing_license",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 11.263,
+    "agent_seconds": 0.51,
+    "prompt_tokens": 72,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_missing_license",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "lic-lang",
+      "lic-ci"
+    ],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.13,
+    "prompt_tokens": 90,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_service_owner",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.637,
+    "prompt_tokens": 69,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_service_owner",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "oracle",
+    "retrieved_ids": [],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.473,
+    "prompt_tokens": 69,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_service_owner",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 10.435,
+    "agent_seconds": 0.441,
+    "prompt_tokens": 69,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_service_owner",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "own-search",
+      "own-billing"
+    ],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.433,
+    "prompt_tokens": 92,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_service_owner",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "own-search",
+      "own-billing"
+    ],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.434,
+    "prompt_tokens": 92,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_service_owner",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 9.354,
+    "agent_seconds": 0.345,
+    "prompt_tokens": 69,
+    "gen_tokens": 8
+  },
+  {
+    "case": "amb_service_owner",
+    "category": "ambiguity",
+    "difficulty": "medium",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "own-billing",
+      "own-search"
+    ],
+    "required_evidence": [],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "reason": "abstain"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.497,
+    "prompt_tokens": 92,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_atlas_db_approved",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "atlas2-db-day5"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.946,
+    "prompt_tokens": 70,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_atlas_db_approved",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "atlas2-db-day5"
+    ],
+    "required_evidence": [
+      "atlas2-db-day5"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "MySQL",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.433,
+    "prompt_tokens": 83,
+    "gen_tokens": 2
+  },
+  {
+    "case": "contra_atlas_db_approved",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "atlas2-db-day5"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 14.479,
+    "agent_seconds": 1.166,
+    "prompt_tokens": 70,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_atlas_db_approved",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "atlas2-db-day5",
+      "atlas2-db-day9",
+      "atlas2-db-day15",
+      "atlas2-db-day1"
+    ],
+    "required_evidence": [
+      "atlas2-db-day5"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.73,
+    "prompt_tokens": 116,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_atlas_db_approved",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "atlas2-db-day5",
+      "atlas2-db-day9",
+      "atlas2-db-day15",
+      "atlas2-db-day1"
+    ],
+    "required_evidence": [
+      "atlas2-db-day5"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.125,
+    "prompt_tokens": 116,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_atlas_db_approved",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "atlas2-db-day5"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 10.957,
+    "agent_seconds": 0.317,
+    "prompt_tokens": 70,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_atlas_db_approved",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "atlas2-db-day5",
+      "atlas2-db-day9",
+      "atlas2-db-day1",
+      "atlas2-db-day15"
+    ],
+    "required_evidence": [
+      "atlas2-db-day5"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.537,
+    "prompt_tokens": 116,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_atlas_db_current",
+    "category": "contradiction",
+    "difficulty": "extreme",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "atlas-db-day12"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 3.132,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_atlas_db_current",
+    "category": "contradiction",
+    "difficulty": "extreme",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "atlas-db-day12"
+    ],
+    "required_evidence": [
+      "atlas-db-day12"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "PostgreSQL 16",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.041,
+    "prompt_tokens": 86,
+    "gen_tokens": 6
+  },
+  {
+    "case": "contra_atlas_db_current",
+    "category": "contradiction",
+    "difficulty": "extreme",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "atlas-db-day12"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 12.064,
+    "agent_seconds": 0.554,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_atlas_db_current",
+    "category": "contradiction",
+    "difficulty": "extreme",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "atlas-db-day1",
+      "atlas-db-day15",
+      "atlas-db-day12",
+      "atlas-db-day3",
+      "atlas-db-day9"
+    ],
+    "required_evidence": [
+      "atlas-db-day12"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "PostgreSQL",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.026,
+    "prompt_tokens": 143,
+    "gen_tokens": 3
+  },
+  {
+    "case": "contra_atlas_db_current",
+    "category": "contradiction",
+    "difficulty": "extreme",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "atlas-db-day1",
+      "atlas-db-day15",
+      "atlas-db-day12",
+      "atlas-db-day3",
+      "atlas-db-day9"
+    ],
+    "required_evidence": [
+      "atlas-db-day12"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "PostgreSQL",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.407,
+    "prompt_tokens": 143,
+    "gen_tokens": 3
+  },
+  {
+    "case": "contra_atlas_db_current",
+    "category": "contradiction",
+    "difficulty": "extreme",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "atlas-db-day12"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 15.02,
+    "agent_seconds": 0.723,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_atlas_db_current",
+    "category": "contradiction",
+    "difficulty": "extreme",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "atlas-db-day12",
+      "atlas-db-day1",
+      "atlas-db-day3",
+      "atlas-db-day15",
+      "atlas-db-day5"
+    ],
+    "required_evidence": [
+      "atlas-db-day12"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "PostgreSQL 16",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.336,
+    "prompt_tokens": 148,
+    "gen_tokens": 6
+  },
+  {
+    "case": "contra_auth_scheme",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "auth-v2"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.591,
+    "prompt_tokens": 72,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_auth_scheme",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "auth-v2"
+    ],
+    "required_evidence": [
+      "auth-v2"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "OAuth2",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.664,
+    "prompt_tokens": 83,
+    "gen_tokens": 3
+  },
+  {
+    "case": "contra_auth_scheme",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "auth-v2"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 8.739,
+    "agent_seconds": 0.552,
+    "prompt_tokens": 72,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_auth_scheme",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "auth-v1",
+      "auth-v2",
+      "auth-decoy"
+    ],
+    "required_evidence": [
+      "auth-v2"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.87,
+    "prompt_tokens": 112,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_auth_scheme",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "auth-v1",
+      "auth-v2",
+      "auth-decoy"
+    ],
+    "required_evidence": [
+      "auth-v2"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.329,
+    "prompt_tokens": 112,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_auth_scheme",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "auth-v2"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 17.899,
+    "agent_seconds": 0.308,
+    "prompt_tokens": 72,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_auth_scheme",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "auth-v1",
+      "auth-v2",
+      "auth-decoy"
+    ],
+    "required_evidence": [
+      "auth-v2"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.22,
+    "prompt_tokens": 112,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_ratelimit",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "rl-new"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.483,
+    "prompt_tokens": 74,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_ratelimit",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "rl-new"
+    ],
+    "required_evidence": [
+      "rl-new"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "1000 requests per minute",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.843,
+    "prompt_tokens": 91,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_ratelimit",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "rl-new"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 8.28,
+    "agent_seconds": 0.473,
+    "prompt_tokens": 74,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_ratelimit",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "rl-forged",
+      "rl-old",
+      "rl-new"
+    ],
+    "required_evidence": [
+      "rl-new"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.724,
+    "prompt_tokens": 131,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_ratelimit",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "rl-forged",
+      "rl-old",
+      "rl-new"
+    ],
+    "required_evidence": [
+      "rl-new"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.127,
+    "prompt_tokens": 131,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_ratelimit",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "rl-new"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 10.269,
+    "agent_seconds": 0.306,
+    "prompt_tokens": 74,
+    "gen_tokens": 8
+  },
+  {
+    "case": "contra_ratelimit",
+    "category": "contradiction",
+    "difficulty": "hard",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "rl-old",
+      "rl-new",
+      "rl-forged"
+    ],
+    "required_evidence": [
+      "rl-new"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "1000 requests per minute.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.945,
+    "prompt_tokens": 131,
+    "gen_tokens": 9
+  },
+  {
+    "case": "ctx_feature_rollout",
+    "category": "context",
+    "difficulty": "extreme",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ctx-gold"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.638,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "ctx_feature_rollout",
+    "category": "context",
+    "difficulty": "extreme",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "ctx-gold"
+    ],
+    "required_evidence": [
+      "ctx-gold"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "25%",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.715,
+    "prompt_tokens": 96,
+    "gen_tokens": 4
+  },
+  {
+    "case": "ctx_feature_rollout",
+    "category": "context",
+    "difficulty": "extreme",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ctx-gold"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 10.373,
+    "agent_seconds": 0.47,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "ctx_feature_rollout",
+    "category": "context",
+    "difficulty": "extreme",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "ctx-gold",
+      "ctx-f1",
+      "ctx-f2",
+      "ctx-f5",
+      "ctx-f3"
+    ],
+    "required_evidence": [
+      "ctx-gold"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "25%",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.247,
+    "prompt_tokens": 170,
+    "gen_tokens": 4
+  },
+  {
+    "case": "ctx_feature_rollout",
+    "category": "context",
+    "difficulty": "extreme",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "ctx-gold",
+      "ctx-f1",
+      "ctx-f2",
+      "ctx-f5",
+      "ctx-f3"
+    ],
+    "required_evidence": [
+      "ctx-gold"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "25%",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.412,
+    "prompt_tokens": 170,
+    "gen_tokens": 4
+  },
+  {
+    "case": "ctx_feature_rollout",
+    "category": "context",
+    "difficulty": "extreme",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ctx-gold"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 13.52,
+    "agent_seconds": 0.308,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "ctx_feature_rollout",
+    "category": "context",
+    "difficulty": "extreme",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "ctx-gold",
+      "ctx-f2",
+      "ctx-f1",
+      "ctx-f5",
+      "ctx-f3"
+    ],
+    "required_evidence": [
+      "ctx-gold"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "25%",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.125,
+    "prompt_tokens": 170,
+    "gen_tokens": 4
+  },
+  {
+    "case": "distr_checkout_retries",
+    "category": "distractor",
+    "difficulty": "extreme",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "retry-svc-6"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.724,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "distr_checkout_retries",
+    "category": "distractor",
+    "difficulty": "extreme",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "retry-svc-6"
+    ],
+    "required_evidence": [
+      "retry-svc-6"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "7",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.343,
+    "prompt_tokens": 81,
+    "gen_tokens": 2
+  },
+  {
+    "case": "distr_checkout_retries",
+    "category": "distractor",
+    "difficulty": "extreme",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "retry-svc-6"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 9.476,
+    "agent_seconds": 0.471,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "distr_checkout_retries",
+    "category": "distractor",
+    "difficulty": "extreme",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "retry-svc-6",
+      "retry-svc-7",
+      "retry-svc-1",
+      "retry-svc-3",
+      "retry-svc-4"
+    ],
+    "required_evidence": [
+      "retry-svc-6"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "7",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.922,
+    "prompt_tokens": 133,
+    "gen_tokens": 2
+  },
+  {
+    "case": "distr_checkout_retries",
+    "category": "distractor",
+    "difficulty": "extreme",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "retry-svc-6",
+      "retry-svc-7",
+      "retry-svc-1",
+      "retry-svc-3",
+      "retry-svc-4"
+    ],
+    "required_evidence": [
+      "retry-svc-6"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "7",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.204,
+    "prompt_tokens": 133,
+    "gen_tokens": 2
+  },
+  {
+    "case": "distr_checkout_retries",
+    "category": "distractor",
+    "difficulty": "extreme",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "retry-svc-6"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 8.632,
+    "agent_seconds": 0.41,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "distr_checkout_retries",
+    "category": "distractor",
+    "difficulty": "extreme",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "retry-svc-6",
+      "retry-svc-2",
+      "retry-svc-8",
+      "retry-svc-7",
+      "retry-svc-4"
+    ],
+    "required_evidence": [
+      "retry-svc-6"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "7",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.681,
+    "prompt_tokens": 133,
+    "gen_tokens": 2
+  },
+  {
+    "case": "evid_cache_ttl",
+    "category": "evidence",
+    "difficulty": "hard",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ev-cache"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "source"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.944,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "evid_cache_ttl",
+    "category": "evidence",
+    "difficulty": "hard",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "ev-cache"
+    ],
+    "required_evidence": [
+      "ev-cache"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "The cache TTL is 60 seconds. The note that states it is \"Cache TTL: The cache TTL is 60 seconds.\"",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "source"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 5.313,
+    "prompt_tokens": 87,
+    "gen_tokens": 29
+  },
+  {
+    "case": "evid_cache_ttl",
+    "category": "evidence",
+    "difficulty": "hard",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ev-cache"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "source"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 17.078,
+    "agent_seconds": 0.561,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "evid_cache_ttl",
+    "category": "evidence",
+    "difficulty": "hard",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "ev-cache",
+      "ev-session"
+    ],
+    "required_evidence": [
+      "ev-cache"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "The cache TTL is 60 seconds, as stated in the first note.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "source"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 3.136,
+    "prompt_tokens": 101,
+    "gen_tokens": 17
+  },
+  {
+    "case": "evid_cache_ttl",
+    "category": "evidence",
+    "difficulty": "hard",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "ev-cache",
+      "ev-session"
+    ],
+    "required_evidence": [
+      "ev-cache"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "The cache TTL is 60 seconds, as stated in the first note.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "source"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 2.658,
+    "prompt_tokens": 101,
+    "gen_tokens": 17
+  },
+  {
+    "case": "evid_cache_ttl",
+    "category": "evidence",
+    "difficulty": "hard",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ev-cache"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "source"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 11.935,
+    "agent_seconds": 0.305,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "evid_cache_ttl",
+    "category": "evidence",
+    "difficulty": "hard",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "ev-cache",
+      "ev-session"
+    ],
+    "required_evidence": [
+      "ev-cache"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "The cache TTL is 60 seconds, as stated in the first note.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "source"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 2.775,
+    "prompt_tokens": 101,
+    "gen_tokens": 17
+  },
+  {
+    "case": "gen_migration_window",
+    "category": "generalization",
+    "difficulty": "medium",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "win-gold"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "set"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.273,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "gen_migration_window",
+    "category": "generalization",
+    "difficulty": "medium",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "win-gold"
+    ],
+    "required_evidence": [
+      "win-gold"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "02:00-04:00 UTC",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "set"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 2.214,
+    "prompt_tokens": 90,
+    "gen_tokens": 13
+  },
+  {
+    "case": "gen_migration_window",
+    "category": "generalization",
+    "difficulty": "medium",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "win-gold"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "set"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 7.528,
+    "agent_seconds": 0.47,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "gen_migration_window",
+    "category": "generalization",
+    "difficulty": "medium",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "win-gold",
+      "win-decoy"
+    ],
+    "required_evidence": [
+      "win-gold"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "02:00-04:00 UTC",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "set"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 2.355,
+    "prompt_tokens": 112,
+    "gen_tokens": 13
+  },
+  {
+    "case": "gen_migration_window",
+    "category": "generalization",
+    "difficulty": "medium",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "win-gold",
+      "win-decoy"
+    ],
+    "required_evidence": [
+      "win-gold"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "02:00-04:00 UTC",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "set"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 2.151,
+    "prompt_tokens": 112,
+    "gen_tokens": 13
+  },
+  {
+    "case": "gen_migration_window",
+    "category": "generalization",
+    "difficulty": "medium",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "win-gold"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "set"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 8.499,
+    "agent_seconds": 0.717,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "gen_migration_window",
+    "category": "generalization",
+    "difficulty": "medium",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "win-gold",
+      "win-decoy"
+    ],
+    "required_evidence": [
+      "win-gold"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "02:00-04:00 UTC",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "set"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.677,
+    "prompt_tokens": 112,
+    "gen_tokens": 13
+  },
+  {
+    "case": "gen_zephyr_sla",
+    "category": "generalization",
+    "difficulty": "hard",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "zephyr-sla"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.285,
+    "prompt_tokens": 76,
+    "gen_tokens": 8
+  },
+  {
+    "case": "gen_zephyr_sla",
+    "category": "generalization",
+    "difficulty": "hard",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "zephyr-sla"
+    ],
+    "required_evidence": [
+      "zephyr-sla"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "99.95% uptime",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.229,
+    "prompt_tokens": 102,
+    "gen_tokens": 8
+  },
+  {
+    "case": "gen_zephyr_sla",
+    "category": "generalization",
+    "difficulty": "hard",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "zephyr-sla"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 10.114,
+    "agent_seconds": 0.467,
+    "prompt_tokens": 76,
+    "gen_tokens": 8
+  },
+  {
+    "case": "gen_zephyr_sla",
+    "category": "generalization",
+    "difficulty": "hard",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "zephyr-sla",
+      "zephyr-decoy"
+    ],
+    "required_evidence": [
+      "zephyr-sla"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "The Zephyr-Q project's service level agreement is 99.95% uptime.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 3.789,
+    "prompt_tokens": 127,
+    "gen_tokens": 21
+  },
+  {
+    "case": "gen_zephyr_sla",
+    "category": "generalization",
+    "difficulty": "hard",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "zephyr-sla",
+      "zephyr-decoy"
+    ],
+    "required_evidence": [
+      "zephyr-sla"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "The Zephyr-Q project's service level agreement is 99.95% uptime.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 3.175,
+    "prompt_tokens": 127,
+    "gen_tokens": 21
+  },
+  {
+    "case": "gen_zephyr_sla",
+    "category": "generalization",
+    "difficulty": "hard",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "zephyr-sla"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 11.061,
+    "agent_seconds": 0.307,
+    "prompt_tokens": 76,
+    "gen_tokens": 8
+  },
+  {
+    "case": "gen_zephyr_sla",
+    "category": "generalization",
+    "difficulty": "hard",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "zephyr-sla",
+      "zephyr-decoy"
+    ],
+    "required_evidence": [
+      "zephyr-sla"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "The Zephyr-Q project's service level agreement is 99.95% uptime.",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 3.173,
+    "prompt_tokens": 127,
+    "gen_tokens": 21
+  },
+  {
+    "case": "mhop_ledger_port",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "mh-svc-db",
+      "mh-db-port"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.359,
+    "prompt_tokens": 74,
+    "gen_tokens": 8
+  },
+  {
+    "case": "mhop_ledger_port",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "mh-svc-db",
+      "mh-db-port"
+    ],
+    "required_evidence": [
+      "mh-svc-db",
+      "mh-db-port"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "5439",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.23,
+    "prompt_tokens": 101,
+    "gen_tokens": 5
+  },
+  {
+    "case": "mhop_ledger_port",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "mh-svc-db",
+      "mh-db-port"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 14.392,
+    "agent_seconds": 0.559,
+    "prompt_tokens": 74,
+    "gen_tokens": 8
+  },
+  {
+    "case": "mhop_ledger_port",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "mh-db-port",
+      "mh-svc-db",
+      "mh-decoy-port"
+    ],
+    "required_evidence": [
+      "mh-svc-db",
+      "mh-db-port"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "5439",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.229,
+    "prompt_tokens": 117,
+    "gen_tokens": 5
+  },
+  {
+    "case": "mhop_ledger_port",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "mh-db-port",
+      "mh-svc-db",
+      "mh-decoy-port"
+    ],
+    "required_evidence": [
+      "mh-svc-db",
+      "mh-db-port"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "5439",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.716,
+    "prompt_tokens": 117,
+    "gen_tokens": 5
+  },
+  {
+    "case": "mhop_ledger_port",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "mh-svc-db",
+      "mh-db-port"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 20.938,
+    "agent_seconds": 0.294,
+    "prompt_tokens": 74,
+    "gen_tokens": 8
+  },
+  {
+    "case": "mhop_ledger_port",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "mh-decoy-port",
+      "mh-svc-db",
+      "mh-db-port"
+    ],
+    "required_evidence": [
+      "mh-svc-db",
+      "mh-db-port"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "5439",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.024,
+    "prompt_tokens": 117,
+    "gen_tokens": 5
+  },
+  {
+    "case": "mhop_reports_pandas",
+    "category": "multi_hop",
+    "difficulty": "extreme",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "mh-team-svc",
+      "mh-svc-lib",
+      "mh-lib-ver"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.534,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "mhop_reports_pandas",
+    "category": "multi_hop",
+    "difficulty": "extreme",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "mh-team-svc",
+      "mh-svc-lib",
+      "mh-lib-ver"
+    ],
+    "required_evidence": [
+      "mh-team-svc",
+      "mh-svc-lib",
+      "mh-lib-ver"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "2.2.1",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.431,
+    "prompt_tokens": 117,
+    "gen_tokens": 6
+  },
+  {
+    "case": "mhop_reports_pandas",
+    "category": "multi_hop",
+    "difficulty": "extreme",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "mh-team-svc",
+      "mh-svc-lib",
+      "mh-lib-ver"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 7.846,
+    "agent_seconds": 0.446,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "mhop_reports_pandas",
+    "category": "multi_hop",
+    "difficulty": "extreme",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "mh-svc-lib",
+      "mh-team-svc",
+      "mh-lib-ver",
+      "mh-numpy-ver"
+    ],
+    "required_evidence": [
+      "mh-team-svc",
+      "mh-svc-lib",
+      "mh-lib-ver"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "2.2.1",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.332,
+    "prompt_tokens": 137,
+    "gen_tokens": 6
+  },
+  {
+    "case": "mhop_reports_pandas",
+    "category": "multi_hop",
+    "difficulty": "extreme",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "mh-svc-lib",
+      "mh-team-svc",
+      "mh-lib-ver",
+      "mh-numpy-ver"
+    ],
+    "required_evidence": [
+      "mh-team-svc",
+      "mh-svc-lib",
+      "mh-lib-ver"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "2.2.1",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.903,
+    "prompt_tokens": 137,
+    "gen_tokens": 6
+  },
+  {
+    "case": "mhop_reports_pandas",
+    "category": "multi_hop",
+    "difficulty": "extreme",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "mh-team-svc",
+      "mh-svc-lib",
+      "mh-lib-ver"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 17.34,
+    "agent_seconds": 0.327,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "mhop_reports_pandas",
+    "category": "multi_hop",
+    "difficulty": "extreme",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "mh-svc-lib",
+      "mh-team-svc",
+      "mh-lib-ver",
+      "mh-numpy-ver"
+    ],
+    "required_evidence": [
+      "mh-team-svc",
+      "mh-svc-lib",
+      "mh-lib-ver"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "2.2.1",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.352,
+    "prompt_tokens": 137,
+    "gen_tokens": 6
+  },
+  {
+    "case": "sel_createuser_field",
+    "category": "selection",
+    "difficulty": "medium",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "fld-createuser"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.916,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "sel_createuser_field",
+    "category": "selection",
+    "difficulty": "medium",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "fld-createuser"
+    ],
+    "required_evidence": [
+      "fld-createuser"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "user_id",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.629,
+    "prompt_tokens": 82,
+    "gen_tokens": 3
+  },
+  {
+    "case": "sel_createuser_field",
+    "category": "selection",
+    "difficulty": "medium",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "fld-createuser"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 13.948,
+    "agent_seconds": 0.567,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "sel_createuser_field",
+    "category": "selection",
+    "difficulty": "medium",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "fld-createuser",
+      "fld-createorder"
+    ],
+    "required_evidence": [
+      "fld-createuser"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "user_id",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.128,
+    "prompt_tokens": 98,
+    "gen_tokens": 3
+  },
+  {
+    "case": "sel_createuser_field",
+    "category": "selection",
+    "difficulty": "medium",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "fld-createuser",
+      "fld-createorder"
+    ],
+    "required_evidence": [
+      "fld-createuser"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "user_id",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.409,
+    "prompt_tokens": 98,
+    "gen_tokens": 3
+  },
+  {
+    "case": "sel_createuser_field",
+    "category": "selection",
+    "difficulty": "medium",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "fld-createuser"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 13.406,
+    "agent_seconds": 0.307,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "sel_createuser_field",
+    "category": "selection",
+    "difficulty": "medium",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "fld-createuser",
+      "fld-createorder"
+    ],
+    "required_evidence": [
+      "fld-createuser"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "user_id",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.409,
+    "prompt_tokens": 98,
+    "gen_tokens": 3
+  },
+  {
+    "case": "sel_gateway_timeout",
+    "category": "selection",
+    "difficulty": "hard",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "sel-gw"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.635,
+    "prompt_tokens": 73,
+    "gen_tokens": 8
+  },
+  {
+    "case": "sel_gateway_timeout",
+    "category": "selection",
+    "difficulty": "hard",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "sel-gw"
+    ],
+    "required_evidence": [
+      "sel-gw"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "30",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.745,
+    "prompt_tokens": 85,
+    "gen_tokens": 3
+  },
+  {
+    "case": "sel_gateway_timeout",
+    "category": "selection",
+    "difficulty": "hard",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "sel-gw"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 14.961,
+    "agent_seconds": 0.44,
+    "prompt_tokens": 73,
+    "gen_tokens": 8
+  },
+  {
+    "case": "sel_gateway_timeout",
+    "category": "selection",
+    "difficulty": "hard",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "sel-gw",
+      "sel-legacy",
+      "sel-worker"
+    ],
+    "required_evidence": [
+      "sel-gw"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "30 seconds",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.064,
+    "prompt_tokens": 115,
+    "gen_tokens": 4
+  },
+  {
+    "case": "sel_gateway_timeout",
+    "category": "selection",
+    "difficulty": "hard",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "sel-gw",
+      "sel-legacy",
+      "sel-worker"
+    ],
+    "required_evidence": [
+      "sel-gw"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "30 seconds",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.291,
+    "prompt_tokens": 115,
+    "gen_tokens": 4
+  },
+  {
+    "case": "sel_gateway_timeout",
+    "category": "selection",
+    "difficulty": "hard",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "sel-gw"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 16.055,
+    "agent_seconds": 0.333,
+    "prompt_tokens": 73,
+    "gen_tokens": 8
+  },
+  {
+    "case": "sel_gateway_timeout",
+    "category": "selection",
+    "difficulty": "hard",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "sel-gw",
+      "sel-legacy",
+      "sel-worker"
+    ],
+    "required_evidence": [
+      "sel-gw"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "30 seconds",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 2.149,
+    "prompt_tokens": 115,
+    "gen_tokens": 4
+  },
+  {
+    "case": "temp_owner_change",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "pay-own-new"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.476,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_owner_change",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "pay-own-new"
+    ],
+    "required_evidence": [
+      "pay-own-new"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Team Osprey",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.141,
+    "prompt_tokens": 85,
+    "gen_tokens": 5
+  },
+  {
+    "case": "temp_owner_change",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "pay-own-new"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 14.266,
+    "agent_seconds": 0.463,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_owner_change",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "pay-own-old",
+      "pay-own-new"
+    ],
+    "required_evidence": [
+      "pay-own-new"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Team Osprey",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.092,
+    "prompt_tokens": 98,
+    "gen_tokens": 5
+  },
+  {
+    "case": "temp_owner_change",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "pay-own-old",
+      "pay-own-new"
+    ],
+    "required_evidence": [
+      "pay-own-new"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Team Osprey",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.75,
+    "prompt_tokens": 98,
+    "gen_tokens": 5
+  },
+  {
+    "case": "temp_owner_change",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "pay-own-new"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 12.481,
+    "agent_seconds": 0.306,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_owner_change",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "pay-own-old",
+      "pay-own-new"
+    ],
+    "required_evidence": [
+      "pay-own-new"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Team Osprey",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.921,
+    "prompt_tokens": 98,
+    "gen_tokens": 5
+  },
+  {
+    "case": "temp_version_current",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ver-v3"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.533,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_version_current",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "ver-v3"
+    ],
+    "required_evidence": [
+      "ver-v3"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "3.0.0",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.228,
+    "prompt_tokens": 85,
+    "gen_tokens": 6
+  },
+  {
+    "case": "temp_version_current",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ver-v3"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 10.637,
+    "agent_seconds": 0.563,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_version_current",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "ver-v2",
+      "ver-v3"
+    ],
+    "required_evidence": [
+      "ver-v3"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.433,
+    "prompt_tokens": 101,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_version_current",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "ver-v2",
+      "ver-v3"
+    ],
+    "required_evidence": [
+      "ver-v3"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.331,
+    "prompt_tokens": 101,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_version_current",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ver-v3"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 14.049,
+    "agent_seconds": 0.308,
+    "prompt_tokens": 71,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_version_current",
+    "category": "temporal",
+    "difficulty": "hard",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "ver-v2",
+      "ver-v3"
+    ],
+    "required_evidence": [
+      "ver-v3"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.229,
+    "prompt_tokens": 101,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_version_historical",
+    "category": "temporal",
+    "difficulty": "extreme",
+    "arm": "none",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ver2-v2"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.547,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_version_historical",
+    "category": "temporal",
+    "difficulty": "extreme",
+    "arm": "oracle",
+    "retrieved_ids": [
+      "ver2-v2"
+    ],
+    "required_evidence": [
+      "ver2-v2"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.536,
+    "prompt_tokens": 102,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_version_historical",
+    "category": "temporal",
+    "difficulty": "extreme",
+    "arm": "original",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ver2-v2"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 17.014,
+    "agent_seconds": 0.457,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_version_historical",
+    "category": "temporal",
+    "difficulty": "extreme",
+    "arm": "v6_hashed",
+    "retrieved_ids": [
+      "ver2-v3",
+      "ver2-v2"
+    ],
+    "required_evidence": [
+      "ver2-v2"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "2.3.0",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.35,
+    "prompt_tokens": 130,
+    "gen_tokens": 6
+  },
+  {
+    "case": "temp_version_historical",
+    "category": "temporal",
+    "difficulty": "extreme",
+    "arm": "v6_hybrid",
+    "retrieved_ids": [
+      "ver2-v3",
+      "ver2-v2"
+    ],
+    "required_evidence": [
+      "ver2-v2"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "2.3.0",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.855,
+    "prompt_tokens": 130,
+    "gen_tokens": 6
+  },
+  {
+    "case": "temp_version_historical",
+    "category": "temporal",
+    "difficulty": "extreme",
+    "arm": "v6_lexical",
+    "retrieved_ids": [],
+    "required_evidence": [
+      "ver2-v2"
+    ],
+    "required_evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": true,
+      "leaked_forbidden": [],
+      "gold_present": false,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 8.776,
+    "agent_seconds": 0.307,
+    "prompt_tokens": 77,
+    "gen_tokens": 8
+  },
+  {
+    "case": "temp_version_historical",
+    "category": "temporal",
+    "difficulty": "extreme",
+    "arm": "v6_neural",
+    "retrieved_ids": [
+      "ver2-v3",
+      "ver2-v2"
+    ],
+    "required_evidence": [
+      "ver2-v2"
+    ],
+    "required_evidence_recall": 1.0,
+    "answer": "2.3.0",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked_forbidden": [],
+      "gold_present": true,
+      "reason": "value"
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.131,
+    "prompt_tokens": 130,
+    "gen_tokens": 6
+  }
+]

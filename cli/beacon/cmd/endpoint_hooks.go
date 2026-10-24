@@ -1,0 +1,892 @@
+package cmd
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+
+	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
+	endpointhooks "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks"
+	"github.com/spf13/cobra"
+)
+
+var endpointHooksCmd = &cobra.Command{
+	Use:   "hooks",
+	Short: "Manage endpoint hook integrations",
+}
+
+var endpointHooksInstallCmd = &cobra.Command{
+	Use:          "install",
+	Short:        "Install endpoint hooks for supported harnesses",
+	SilenceUsage: true,
+	RunE:         runEndpointHooksInstall,
+}
+
+var endpointHooksUninstallCmd = &cobra.Command{
+	Use:          "uninstall",
+	Short:        "Uninstall endpoint hooks for supported harnesses",
+	SilenceUsage: true,
+	RunE:         runEndpointHooksUninstall,
+}
+
+var endpointHooksStatusCmd = &cobra.Command{
+	Use:          "status",
+	Short:        "Show endpoint hook integration status",
+	SilenceUsage: true,
+	RunE:         runEndpointHooksStatus,
+}
+
+func runEndpointHooksInstall(cmd *cobra.Command, args []string) error {
+	targets, err := hookTargets()
+	if err != nil {
+		return err
+	}
+	if endpointOpts.dryRun {
+		actions := []plannedAction{}
+		for _, name := range targets {
+			actions = append(actions, plannedAction{Action: "configure_harness", Target: name, Message: "install endpoint hook integration"})
+		}
+		return printPlannedActions(actions)
+	}
+	cfg := loadOrDefaultConfig()
+	for _, name := range targets {
+		if err := installEndpointHookTarget(name, cfg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func installEndpointHookTarget(name string, cfg endpointconfig.Config) error {
+	return installEndpointHookTargetTo(os.Stdout, os.Stdout, name, cfg)
+}
+
+// installEndpointHookTargetTo installs one hook target. report gets the files written; notes gets
+// what the person still has to do or know for the runtime to collect (a restart, a trust prompt, a
+// scope caveat). The onboarding wizard's short closing drops the first and keeps the second.
+func installEndpointHookTargetTo(report, notes io.Writer, name string, cfg endpointconfig.Config) error {
+	switch strings.TrimSpace(name) {
+	case "antigravity":
+		status, err := endpointhooks.InstallAntigravity(endpointhooks.AntigravityOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Antigravity hooks installed: %s\n", status.ConfigPath)
+	case "cursor":
+		status, err := endpointhooks.InstallCursor(endpointhooks.CursorOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Cursor hooks installed: %s\n", status.HooksJSONPath)
+	case "claude":
+		status, err := endpointhooks.InstallClaude(endpointhooks.ClaudeOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Claude Code hooks installed: %s\n", status.SettingsPath)
+	case "codex":
+		status, err := endpointhooks.InstallCodex(endpointhooks.CodexOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Codex CLI endpoint hooks installed: %s\n", status.HooksPath)
+	case "vscode":
+		status, err := endpointhooks.InstallVSCode(endpointhooks.VSCodeOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "VS Code hooks installed: %s\n", status.HooksPath)
+	case "factory":
+		status, err := endpointhooks.InstallFactory(endpointhooks.FactoryOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Factory hooks installed: %s\n", status.SettingsPath)
+	case "opencode":
+		status, err := endpointhooks.InstallOpenCode(endpointhooks.OpenCodeOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "opencode plugin installed: %s\n", status.PluginPath)
+	case "cline":
+		status, err := endpointhooks.InstallCline(endpointhooks.ClineOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Cline plugin installed: %s\n", status.PluginPath)
+	case "pi":
+		status, err := endpointhooks.InstallPi(endpointhooks.PiOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Pi extension installed: %s\n", status.ExtensionPath)
+		if endpointhooks.Level(endpointOpts.hookLevel) == endpointhooks.LevelProject {
+			fmt.Fprintln(notes, "Project-level Pi extensions are subject to Pi's project-trust prompt; a user-level install needs no further interaction.")
+		}
+	case "omp":
+		status, err := endpointhooks.InstallOmp(endpointhooks.OmpOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Oh My Pi extension installed: %s\n", status.ExtensionPath)
+		if endpointhooks.Level(endpointOpts.hookLevel) == endpointhooks.LevelProject {
+			// Unlike Pi, Oh My Pi has no per-directory trust gate -- its own isProjectTrusted()
+			// always returns true because `.omp` project inputs are loaded unconditionally. So the
+			// note here is about scope rather than about a prompt: a project install covers one
+			// checkout, and the operator's other Oh My Pi sessions stay uninstrumented.
+			fmt.Fprintln(notes, "Project-level Oh My Pi extensions cover only this working directory; a user-level install follows the operator across checkouts.")
+		}
+	case "prime":
+		status, err := endpointhooks.InstallPrime(endpointhooks.PrimeOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Prime Agent extension installed: %s\n", status.ExtensionPath)
+	case "omo":
+		status, err := endpointhooks.InstallOmo(endpointhooks.OmoOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Senpi extension installed: %s\n", status.ExtensionPath)
+	case "openclaw":
+		status, err := endpointhooks.InstallOpenClaw(endpointhooks.OpenClawOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "OpenClaw plugin installed: %s\n", status.PluginPath)
+		if endpointhooks.Level(endpointOpts.hookLevel) == endpointhooks.LevelProject {
+			// OpenClaw reads a workspace plugin root relative to the gateway's working directory,
+			// which for a daemonized gateway is wherever the service manager started it rather
+			// than the checkout the operator is thinking of. A user-level install follows the
+			// gateway regardless, which is why it is the default.
+			fmt.Fprintln(notes, "Project-level OpenClaw plugins are discovered relative to the gateway's workspace, not the directory you install from; a user-level install follows the gateway.")
+		}
+		// OpenClaw gates conversation hooks behind a config key Beacon does not write, and an
+		// allowlisted config has to name the plugin. Printed at install time because the symptom
+		// otherwise is partial telemetry that looks like working telemetry.
+		for _, advice := range status.ConfigAdvice {
+			fmt.Fprintln(notes, advice)
+		}
+		fmt.Fprintln(notes, "Restart the gateway, or run `openclaw plugins reload beacon-endpoint`, for OpenClaw to pick the plugin up.")
+	case "grok":
+		status, err := endpointhooks.InstallGrok(endpointhooks.GrokOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Grok hooks installed: %s\n", status.HooksPath)
+		if strings.Contains(status.Message, "/hooks-trust") {
+			fmt.Fprintln(notes, status.Message)
+		}
+	case "openhands":
+		status, err := endpointhooks.InstallOpenHands(endpointhooks.OpenHandsOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "OpenHands hooks installed: %s\n", status.HooksPath)
+		// Said at user scope only, because it is the case where a successful install still collects
+		// nothing. OpenHands reads the first hooks.json it finds rather than merging the two, and
+		// the agent server behind the CLI and the GUI reads only the project file -- so a
+		// user-scope install is right for someone driving the SDK directly and silently inert for
+		// everyone else. Better to say it here than to have somebody discover it from an empty log.
+		if endpointhooks.Level(endpointOpts.hookLevel) != endpointhooks.LevelProject {
+			fmt.Fprintln(notes, "OpenHands reads a repository's own .openhands/hooks.json in preference to this one, "+
+				"and its agent server (used by the CLI and the GUI) reads only the repository file. "+
+				"Run the install again with --level project inside a repository to cover those.")
+		}
+	case "dsh":
+		status, err := endpointhooks.InstallDsh(endpointhooks.DshOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		// Both paths, because the install is two files and the mount is the half an operator is
+		// least likely to guess at. Naming only the hooks file would send somebody looking for a
+		// mount that is not there.
+		fmt.Fprintf(report, "DeepSeek Harness hooks installed: %s\n", status.HooksPath)
+		fmt.Fprintf(report, "DeepSeek Harness hook bridge mounted in: %s\n", status.PatchPath)
+		// Said on every install, because a running dsh will not pick this up on its own unless the
+		// profile enabled HMR -- and the symptom otherwise is a successful install collecting
+		// nothing until the next restart, which reads as a broken install.
+		fmt.Fprintln(notes, "Restart dsh (or rely on its config watcher, if your profile enables HMR) for the hooks to take effect.")
+	case "kimi":
+		status, err := endpointhooks.InstallKimi(endpointhooks.KimiOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Kimi Code hooks installed: %s\n", status.HooksPath)
+		// Said on every install, because Kimi Code reads config.toml once at startup: a running
+		// session will not pick these up, and the symptom is a successful install collecting
+		// nothing until the next `kimi`, which reads as a broken install.
+		fmt.Fprintln(notes, "Start a new Kimi Code session (or run /reload) for the hooks to take effect.")
+	case "kiro":
+		status, err := endpointhooks.InstallKiro(endpointhooks.KiroOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Kiro hooks installed: %s\n", status.HooksPath)
+		// No scope caveat, unlike OpenHands just above. Kiro merges hook files across scopes
+		// rather than resolving them by precedence, so a user-scope install keeps working inside a
+		// repository that has hooks of its own, and one install covers the IDE and the CLI at
+		// once. There is nothing here that a successful install leaves silently uncovered.
+	case "muse":
+		status, err := endpointhooks.InstallMuse(endpointhooks.MuseOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		// Both paths, because an install is only complete with both and neither is guessable from
+		// the other: Beacon owns the hooks file, while the settings key that makes Muse read it
+		// lives in the user's own settings.json. Anyone verifying the install by hand needs to look
+		// at both files.
+		fmt.Fprintf(report, "Muse Code hooks installed: %s\n", status.HooksPath)
+		fmt.Fprintf(report, "Muse Code settings updated: %s\n", status.SettingsPath)
+	case "qwen":
+		status, err := endpointhooks.InstallQwen(endpointhooks.QwenOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Qwen Code hooks installed: %s\n", status.SettingsPath)
+		// Printed only when it applies. A project-level install into an untrusted folder writes a
+		// file that does nothing until the user trusts the folder, and silence there would read as
+		// "collecting".
+		if strings.Contains(status.Message, "trusted") {
+			fmt.Fprintln(notes, status.Message)
+		}
+	case "hermes":
+		status, err := endpointhooks.InstallHermes(endpointhooks.HermesOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Hermes Agent hooks installed: %s\n", status.ConfigPath)
+		fmt.Fprintln(notes, "Hermes may prompt to trust new shell hooks on first use; use HERMES_ACCEPT_HOOKS=1 or hooks_auto_accept: true for non-TTY runs.")
+	case "devin-cli":
+		status, err := endpointhooks.InstallDevin(endpointhooks.DevinOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Devin CLI hooks installed: %s\n", status.ConfigPath)
+	case "devin-desktop":
+		status, err := endpointhooks.InstallDevinDesktop(endpointhooks.DevinDesktopOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(report, "Devin Desktop hooks installed: %s\n", status.ConfigPath)
+		fmt.Fprintln(notes, "Devin Desktop hook files are installed; generate a Desktop event and check the runtime log to validate execution.")
+	case "":
+	default:
+		return fmt.Errorf("unsupported hook harness %q", name)
+	}
+	return nil
+}
+
+func runEndpointHooksUninstall(cmd *cobra.Command, args []string) error {
+	targets, err := hookTargets()
+	if err != nil {
+		return err
+	}
+	if endpointOpts.dryRun {
+		actions := []plannedAction{}
+		for _, name := range targets {
+			actions = append(actions, plannedAction{Action: "remove_hook", Target: name, Message: "uninstall endpoint hook integration"})
+		}
+		return printPlannedActions(actions)
+	}
+	cfg := loadOrDefaultConfig()
+	for _, name := range targets {
+		if err := uninstallEndpointHookTarget(name, cfg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func uninstallEndpointHookTarget(name string, cfg endpointconfig.Config) error {
+	switch strings.TrimSpace(name) {
+	case "antigravity":
+		status, err := endpointhooks.UninstallAntigravity(endpointhooks.AntigravityOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "cursor":
+		status, err := endpointhooks.UninstallCursor(endpointhooks.CursorOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "claude":
+		status, err := endpointhooks.UninstallClaude(endpointhooks.ClaudeOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "codex":
+		status, err := endpointhooks.UninstallCodex(endpointhooks.CodexOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "vscode":
+		status, err := endpointhooks.UninstallVSCode(endpointhooks.VSCodeOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "factory":
+		status, err := endpointhooks.UninstallFactory(endpointhooks.FactoryOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "opencode":
+		status, err := endpointhooks.UninstallOpenCode(endpointhooks.OpenCodeOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "cline":
+		status, err := endpointhooks.UninstallCline(endpointhooks.ClineOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "pi":
+		status, err := endpointhooks.UninstallPi(endpointhooks.PiOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "omp":
+		status, err := endpointhooks.UninstallOmp(endpointhooks.OmpOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "prime":
+		status, err := endpointhooks.UninstallPrime(endpointhooks.PrimeOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "omo":
+		status, err := endpointhooks.UninstallOmo(endpointhooks.OmoOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "openclaw":
+		status, err := endpointhooks.UninstallOpenClaw(endpointhooks.OpenClawOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "grok":
+		status, err := endpointhooks.UninstallGrok(endpointhooks.GrokOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "openhands":
+		status, err := endpointhooks.UninstallOpenHands(endpointhooks.OpenHandsOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "dsh":
+		status, err := endpointhooks.UninstallDsh(endpointhooks.DshOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "kimi":
+		status, err := endpointhooks.UninstallKimi(endpointhooks.KimiOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "kiro":
+		status, err := endpointhooks.UninstallKiro(endpointhooks.KiroOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "muse":
+		status, err := endpointhooks.UninstallMuse(endpointhooks.MuseOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "qwen":
+		status, err := endpointhooks.UninstallQwen(endpointhooks.QwenOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "hermes":
+		status, err := endpointhooks.UninstallHermes(endpointhooks.HermesOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "devin-cli":
+		status, err := endpointhooks.UninstallDevin(endpointhooks.DevinOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "devin-desktop":
+		status, err := endpointhooks.UninstallDevinDesktop(endpointhooks.DevinDesktopOptions{
+			Level:    endpointhooks.Level(endpointOpts.hookLevel),
+			LogPath:  cfg.LogPath,
+			UserMode: cfg.UserMode,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(status.Message)
+	case "":
+	default:
+		return fmt.Errorf("unsupported hook harness %q", name)
+	}
+	return nil
+}
+
+func runEndpointHooksStatus(cmd *cobra.Command, args []string) error {
+	targets, err := hookTargets()
+	if err != nil {
+		return err
+	}
+	cfg := loadOrDefaultConfig()
+	statuses := map[string]interface{}{}
+	for _, name := range targets {
+		switch strings.TrimSpace(name) {
+		case "antigravity":
+			statuses["antigravity"] = endpointhooks.AntigravityHookStatus(endpointhooks.AntigravityOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "cursor":
+			statuses["cursor"] = endpointhooks.CursorHookStatus(endpointhooks.CursorOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "claude":
+			statuses["claude"] = endpointhooks.ClaudeHookStatus(endpointhooks.ClaudeOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "codex":
+			statuses["codex"] = endpointhooks.CodexHookStatus(endpointhooks.CodexOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "vscode":
+			statuses["vscode"] = endpointhooks.VSCodeHookStatus(endpointhooks.VSCodeOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "factory":
+			statuses["factory"] = endpointhooks.FactoryHookStatus(endpointhooks.FactoryOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "opencode":
+			statuses["opencode"] = endpointhooks.OpenCodeHookStatus(endpointhooks.OpenCodeOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "cline":
+			statuses["cline"] = endpointhooks.ClineHookStatus(endpointhooks.ClineOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "pi":
+			statuses["pi"] = endpointhooks.PiHookStatus(endpointhooks.PiOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "omp":
+			statuses["omp"] = endpointhooks.OmpHookStatus(endpointhooks.OmpOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "prime":
+			statuses["prime"] = endpointhooks.PrimeHookStatus(endpointhooks.PrimeOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "omo":
+			statuses["omo"] = endpointhooks.OmoHookStatus(endpointhooks.OmoOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "openclaw":
+			statuses["openclaw"] = endpointhooks.OpenClawHookStatus(endpointhooks.OpenClawOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "grok":
+			statuses["grok"] = endpointhooks.GrokHookStatus(endpointhooks.GrokOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "openhands":
+			statuses["openhands"] = endpointhooks.OpenHandsHookStatus(endpointhooks.OpenHandsOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "dsh":
+			statuses["dsh"] = endpointhooks.DshHookStatus(endpointhooks.DshOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "kimi":
+			statuses["kimi"] = endpointhooks.KimiHookStatus(endpointhooks.KimiOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "kiro":
+			statuses["kiro"] = endpointhooks.KiroHookStatus(endpointhooks.KiroOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "muse":
+			statuses["muse"] = endpointhooks.MuseHookStatus(endpointhooks.MuseOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "qwen":
+			statuses["qwen"] = endpointhooks.QwenHookStatus(endpointhooks.QwenOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "hermes":
+			statuses["hermes"] = endpointhooks.HermesHookStatus(endpointhooks.HermesOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "devin-cli":
+			statuses["devin-cli"] = endpointhooks.DevinHookStatus(endpointhooks.DevinOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "devin-desktop":
+			statuses["devin-desktop"] = endpointhooks.DevinDesktopHookStatus(endpointhooks.DevinDesktopOptions{
+				Level:    endpointhooks.Level(endpointOpts.hookLevel),
+				LogPath:  cfg.LogPath,
+				UserMode: cfg.UserMode,
+			})
+		case "":
+		default:
+			return fmt.Errorf("unsupported hook harness %q", name)
+		}
+	}
+	if endpointOpts.jsonOutput {
+		return json.NewEncoder(os.Stdout).Encode(statuses)
+	}
+	for _, name := range targets {
+		switch strings.TrimSpace(name) {
+		case "antigravity":
+			status := statuses["antigravity"].(endpointhooks.AntigravityStatus)
+			fmt.Printf("Antigravity hooks: installed=%t path=%s\n", status.Installed, status.ConfigPath)
+			fmt.Println(status.Message)
+		case "cursor":
+			status := statuses["cursor"].(endpointhooks.CursorStatus)
+			fmt.Printf("Cursor hooks: installed=%t path=%s\n", status.Installed, status.HooksJSONPath)
+			fmt.Println(status.Message)
+		case "claude":
+			status := statuses["claude"].(endpointhooks.ClaudeStatus)
+			fmt.Printf("Claude Code hooks: installed=%t path=%s\n", status.Installed, status.SettingsPath)
+			fmt.Println(status.Message)
+		case "vscode":
+			status := statuses["vscode"].(endpointhooks.VSCodeStatus)
+			fmt.Printf("VS Code hooks: installed=%t path=%s\n", status.Installed, status.HooksPath)
+			fmt.Println(status.Message)
+		case "factory":
+			status := statuses["factory"].(endpointhooks.FactoryStatus)
+			fmt.Printf("Factory hooks: installed=%t path=%s\n", status.Installed, status.SettingsPath)
+			fmt.Println(status.Message)
+		case "opencode":
+			status := statuses["opencode"].(endpointhooks.OpenCodeStatus)
+			fmt.Printf("opencode plugin: installed=%t path=%s\n", status.Installed, status.PluginPath)
+			fmt.Println(status.Message)
+		case "cline":
+			status := statuses["cline"].(endpointhooks.ClineStatus)
+			fmt.Printf("Cline plugin: installed=%t path=%s\n", status.Installed, status.PluginPath)
+			fmt.Println(status.Message)
+		case "pi":
+			status := statuses["pi"].(endpointhooks.PiStatus)
+			fmt.Printf("Pi extension: installed=%t path=%s\n", status.Installed, status.ExtensionPath)
+			fmt.Println(status.Message)
+		case "omp":
+			status := statuses["omp"].(endpointhooks.OmpStatus)
+			fmt.Printf("Oh My Pi extension: installed=%t path=%s\n", status.Installed, status.ExtensionPath)
+			fmt.Println(status.Message)
+		case "prime":
+			status := statuses["prime"].(endpointhooks.PrimeStatus)
+			fmt.Printf("Prime Agent extension: installed=%t path=%s\n", status.Installed, status.ExtensionPath)
+			fmt.Println(status.Message)
+		case "omo":
+			status := statuses["omo"].(endpointhooks.OmoStatus)
+			fmt.Printf("Senpi extension: installed=%t path=%s\n", status.Installed, status.ExtensionPath)
+			fmt.Println(status.Message)
+		case "openclaw":
+			status := statuses["openclaw"].(endpointhooks.OpenClawStatus)
+			fmt.Printf("OpenClaw plugin: installed=%t path=%s\n", status.Installed, status.PluginPath)
+			fmt.Println(status.Message)
+			// An installed plugin with conversation access withheld collects everything except
+			// tokens and agent messages, which reads as working until somebody looks for a token
+			// count. Surfaced on every status check rather than only at install.
+			for _, advice := range status.ConfigAdvice {
+				fmt.Println(advice)
+			}
+		case "grok":
+			status := statuses["grok"].(endpointhooks.GrokStatus)
+			fmt.Printf("Grok hooks: installed=%t path=%s\n", status.Installed, status.HooksPath)
+			fmt.Println(status.Message)
+		case "openhands":
+			status := statuses["openhands"].(endpointhooks.OpenHandsStatus)
+			fmt.Printf("OpenHands hooks: installed=%t path=%s\n", status.Installed, status.HooksPath)
+			fmt.Println(status.Message)
+		case "dsh":
+			status := statuses["dsh"].(endpointhooks.DshStatus)
+			// Both paths again, and here it is diagnostic rather than informational: installed is
+			// the conjunction of the two files, so an operator reading installed=false needs to
+			// know which one to look at.
+			fmt.Printf("DeepSeek Harness hooks: installed=%t path=%s patch=%s\n",
+				status.Installed, status.HooksPath, status.PatchPath)
+			fmt.Println(status.Message)
+		case "kimi":
+			status := statuses["kimi"].(endpointhooks.KimiStatus)
+			fmt.Printf("Kimi Code hooks: installed=%t path=%s\n", status.Installed, status.HooksPath)
+			fmt.Println(status.Message)
+		case "kiro":
+			status := statuses["kiro"].(endpointhooks.KiroStatus)
+			fmt.Printf("Kiro hooks: installed=%t path=%s\n", status.Installed, status.HooksPath)
+			fmt.Println(status.Message)
+		case "muse":
+			status := statuses["muse"].(endpointhooks.MuseStatus)
+			fmt.Printf("Muse Code hooks: installed=%t path=%s settings=%s\n", status.Installed, status.HooksPath, status.SettingsPath)
+			fmt.Println(status.Message)
+		case "qwen":
+			status := statuses["qwen"].(endpointhooks.QwenStatus)
+			fmt.Printf("Qwen Code hooks: installed=%t path=%s\n", status.Installed, status.SettingsPath)
+			fmt.Println(status.Message)
+		case "hermes":
+			status := statuses["hermes"].(endpointhooks.HermesStatus)
+			fmt.Printf("Hermes Agent hooks: installed=%t path=%s\n", status.Installed, status.ConfigPath)
+			fmt.Println(status.Message)
+		case "devin-cli":
+			status := statuses["devin-cli"].(endpointhooks.DevinStatus)
+			fmt.Printf("Devin CLI hooks: installed=%t path=%s\n", status.Installed, status.ConfigPath)
+			fmt.Println(status.Message)
+		case "devin-desktop":
+			status := statuses["devin-desktop"].(endpointhooks.DevinStatus)
+			fmt.Printf("Devin Desktop hooks: installed=%t path=%s\n", status.Installed, status.ConfigPath)
+			fmt.Println(status.Message)
+		}
+	}
+	return nil
+}

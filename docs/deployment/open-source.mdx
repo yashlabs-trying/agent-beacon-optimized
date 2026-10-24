@@ -1,0 +1,130 @@
+---
+title: "Local"
+description: "Install Beacon locally, configure telemetry, and keep the CLI up to date"
+---
+
+Install Beacon on macOS, Windows, or Linux, configure the local endpoint telemetry path, and use the repair workflow when you need to reapply configuration after an upgrade. For CI, cloud-agent, and SDK setup paths, see [Agent harness integrations](/runtimes).
+
+## Install Beacon
+
+<Tabs>
+  <Tab title="macOS">
+    Install Beacon with Homebrew:
+
+    ```bash
+    brew update
+    brew trust asymptote-labs/tap
+    brew tap asymptote-labs/tap
+    brew install beacon
+    beacon version
+    ```
+
+    See the [macOS install guide](/platforms/macos) to configure endpoint telemetry or deploy the signed package to a fleet.
+  </Tab>
+  <Tab title="Windows">
+    Download `BeaconEndpointAgent-<version>-x64.msi` from the [latest release](https://github.com/asymptote-labs/agent-beacon/releases/latest), then run PowerShell as an administrator:
+
+    ```powershell
+    msiexec /i BeaconEndpointAgent-<version>-x64.msi
+    & "$env:ProgramFiles\Beacon\bin\beacon.exe" version
+    ```
+
+    See the [Windows install guide](/platforms/windows) for silent installation, checksum verification, and service management.
+  </Tab>
+  <Tab title="Linux">
+    Download the `.deb` or `.rpm` for your architecture from the [latest release](https://github.com/asymptote-labs/agent-beacon/releases/latest):
+
+    <CodeGroup>
+      ```bash title="Debian, Ubuntu"
+      sudo apt install ./beacon_<version>_linux_amd64.deb
+      beacon version
+      ```
+
+      ```bash title="Fedora, RHEL, Rocky, Alma"
+      sudo dnf install ./beacon_<version>_linux_amd64.rpm
+      beacon version
+      ```
+    </CodeGroup>
+
+    Replace `amd64` with `arm64` on ARM systems. See the [Linux install guide](/platforms/linux) for rootless and tarball installation.
+  </Tab>
+</Tabs>
+
+<Accordion title="Example output">
+```bash title="beacon version output"
+$ beacon version
+beacon version 0.0.48
+```
+</Accordion>
+
+## Configure endpoint telemetry
+
+Setting up the endpoint differs by operating system. Start with your platform if you want the
+packages, service management, and fleet deployment for it:
+
+<Columns cols={3}>
+  <Card title="macOS" icon="apple" href="/platforms/macos">
+    Homebrew, or the signed `.pkg` for MDM. launchd.
+  </Card>
+  <Card title="Windows" icon="windows" href="/platforms/windows">
+    `.msi` for x64. Windows service.
+  </Card>
+  <Card title="Linux" icon="linux" href="/platforms/linux">
+    `.deb` and `.rpm` packages. systemd.
+  </Card>
+</Columns>
+
+The Windows MSI and Linux packages configure a system endpoint during installation. For a Homebrew, tarball, or other CLI-only install, configure a per-user endpoint:
+
+```bash title="Configure endpoint telemetry"
+beacon endpoint install
+beacon endpoint status
+```
+
+By default, Beacon detects runtimes installed for the invoking user and configures every integration it can safely install. Pass an exact list when you want deterministic target selection:
+
+```bash title="Configure an exact runtime set"
+beacon endpoint install --harness claude,codex,gemini
+```
+
+<Note>
+  System-mode install (`--system`) is supported on macOS, Linux distributions that use systemd, and Windows. The default mode uses per-user paths; package installers configure system mode for you.
+</Note>
+
+Beacon records supported prompt, tool, command, file, approval, policy, and runtime context when the source runtime emits it. Before events are written to `runtime.jsonl` or sent through configured destinations, Beacon applies redaction, sanitization, truncation, and event-size limits.
+
+Beacon filters generic process/runtime OTLP metrics, Copilot CLI and OpenClaw operational metrics, and high-volume Codex spans out of the local JSONL log by default. Use `--include-runtime-metrics` or `--include-codex-spans` only when troubleshooting.
+
+## Upgrade Beacon
+
+Use the standard Homebrew upgrade flow, then reapply endpoint configuration if needed:
+
+```bash title="Upgrade Beacon"
+beacon version check
+brew update
+brew trust asymptote-labs/tap
+brew upgrade beacon
+beacon endpoint repair
+```
+
+`beacon endpoint repair` reapplies managed service files, collector configuration, harness telemetry settings, and forwarding destinations while preserving runtime logs. On v0.0.43 or newer, use `beacon endpoint doctor --fix` when you only need supported health-check drift remediated without a full repair.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Hosting Options" icon="cloud" href="/deployment/hosting-options">
+    Choose between Beacon Cloud and the open-source Agent Beacon path.
+  </Card>
+  <Card title="Endpoint paths and ports" icon="folder-tree" href="/cli/endpoint-paths">
+    Review files, logs, collector config, ports, and hook locations.
+  </Card>
+  <Card title="Endpoint command reference" icon="terminal" href="/cli/endpoint">
+    Review install, status, repair, and uninstall commands.
+  </Card>
+  <Card title="Endpoint repair" icon="wrench" href="/cli/endpoint-repair">
+    Reapply service files and telemetry configuration.
+  </Card>
+  <Card title="Manual CLI installation" icon="file-zipper" href="/cli/manual-install">
+    Install from platform archives or build the CLI from source.
+  </Card>
+</Columns>

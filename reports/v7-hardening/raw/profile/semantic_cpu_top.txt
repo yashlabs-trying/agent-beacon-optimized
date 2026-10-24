@@ -1,0 +1,39 @@
+File: learning.test
+Build ID: 22868944051ce04e68f79973bbe44b3b7067f03d
+Type: cpu
+Time: 2026-10-23 16:39:05 UTC
+Duration: 6.44s, Total samples = 8.38s (130.19%)
+Showing nodes accounting for 3.83s, 45.70% of 8.38s total
+Dropped 546 nodes (cum <= 0.04s)
+Showing top 30 nodes out of 298
+      flat  flat%   sum%        cum   cum%
+     0.70s  8.35%  8.35%      0.70s  8.35%  runtime.futex
+     0.39s  4.65% 13.01%      1.93s 23.03%  modernc.org/sqlite/lib._sqlite3VdbeExec
+     0.21s  2.51% 15.51%      0.47s  5.61%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.decodeVector
+     0.19s  2.27% 17.78%      0.19s  2.27%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.cosine
+     0.19s  2.27% 20.05%      0.19s  2.27%  runtime.memmove
+     0.15s  1.79% 21.84%      0.16s  1.91%  runtime.asyncPreempt
+     0.15s  1.79% 23.63%      0.19s  2.27%  runtime.typePointers.next
+     0.13s  1.55% 25.18%      0.13s  1.55%  internal/runtime/maps.memHashAES
+     0.13s  1.55% 26.73%      0.13s  1.55%  internal/runtime/syscall/linux.Syscall6
+     0.12s  1.43% 28.16%      0.60s  7.16%  modernc.org/sqlite/lib._sqlite3BtreeTableMoveto
+     0.12s  1.43% 29.59%      0.40s  4.77%  runtime.scanObject
+     0.12s  1.43% 31.03%      0.18s  2.15%  strings.ToLower
+     0.10s  1.19% 32.22%      0.19s  2.27%  modernc.org/sqlite/lib._btreeParseCell
+     0.09s  1.07% 33.29%      0.13s  1.55%  modernc.org/sqlite/lib._pcache1FetchNoMutex
+     0.09s  1.07% 34.37%      0.09s  1.07%  runtime.procyieldAsm
+     0.08s  0.95% 35.32%      0.20s  2.39%  modernc.org/sqlite/lib._sqlite3BtreeIndexMoveto
+     0.08s  0.95% 36.28%      0.19s  2.27%  strings.FieldsFunc
+     0.07s  0.84% 37.11%      0.07s  0.84%  encoding/binary.littleEndian.Uint32 (inline)
+     0.07s  0.84% 37.95%      0.07s  0.84%  encoding/json/internal/jsonwire.ConsumeSimpleString (inline)
+     0.07s  0.84% 38.78%      0.07s  0.84%  internal/sync.(*Mutex).Unlock (inline)
+     0.07s  0.84% 39.62%      0.99s 11.81%  runtime.mallocgc
+     0.07s  0.84% 40.45%      0.09s  1.07%  runtime.step
+     0.06s  0.72% 41.17%      0.30s  3.58%  database/sql.convertAssignRows
+     0.06s  0.72% 41.89%      0.11s  1.31%  modernc.org/sqlite/lib._vdbeRecordCompareString
+     0.06s  0.72% 42.60%      0.06s  0.72%  runtime.memclrNoHeapPointers
+     0.06s  0.72% 43.32%      0.22s  2.63%  runtime.pcvalue
+     0.05s   0.6% 43.91%      0.05s   0.6%  cmpbody
+     0.05s   0.6% 44.51%      0.08s  0.95%  encoding/json/jsontext.(*decoderState).consumeObject
+     0.05s   0.6% 45.11%      0.05s   0.6%  modernc.org/sqlite/lib._btreeParseCellPtr
+     0.05s   0.6% 45.70%      0.24s  2.86%  modernc.org/sqlite/lib._getCellInfo

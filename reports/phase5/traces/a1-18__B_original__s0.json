@@ -1,0 +1,28 @@
+{
+  "task": "a1-18",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-18-fixed",
+    "a1-18-failed"
+  ],
+  "required_evidence": [
+    "a1-18-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the ledger batch size problem in the new environment, you should use a mutex to guard the critical section of code. This approach ensures that only one thread can access the shared resource at a time, preventing race conditions and ensuring data integrity.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 19.068,
+  "agent_seconds": 3.891,
+  "prompt_tokens": 154,
+  "gen_tokens": 50
+}

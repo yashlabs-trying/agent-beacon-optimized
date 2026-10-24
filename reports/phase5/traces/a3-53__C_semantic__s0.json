@@ -1,0 +1,28 @@
+{
+  "task": "a3-53",
+  "suite": "A",
+  "category": "A3_knowledge_transfer",
+  "difficulty": "medium",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a3-53-conv",
+    "a3-53-noise"
+  ],
+  "required_evidence": [
+    "a3-53-conv"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.935,
+  "prompt_tokens": 135,
+  "gen_tokens": 8
+}

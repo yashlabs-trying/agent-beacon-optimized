@@ -1,0 +1,66 @@
+---
+title: "Gemini CLI"
+description: "Beacon support details for Gemini CLI endpoint telemetry"
+---
+
+## Runtime overview
+
+Beacon supports Gemini CLI through local OTLP logs, traces, and metrics. The default endpoint install enables it when Gemini is detected.
+
+## Prerequisites
+
+Before enabling Gemini CLI telemetry, make sure:
+
+- Gemini CLI is installed and available as the `gemini` executable for the user or managed endpoint.
+- `beacon endpoint install` has run so the local collector, endpoint config, and runtime log path exist.
+- Gemini is detectable through its executable or user configuration. If automatic discovery is unavailable in an unattended environment, explicitly include it with `beacon endpoint install --harness claude,codex,gemini`.
+- No project settings or `GEMINI_TELEMETRY_*` environment variables override the user-level Beacon settings you expect to use.
+- Your team has reviewed content handling and destination access for prompt telemetry.
+
+## Collection path
+
+Gemini CLI exports local OpenTelemetry data to Beacon's localhost collector when the `gemini` endpoint harness is enabled. Beacon maps Gemini prompts, tool calls, MCP activity, file operations, and approval-related events into normalized endpoint events.
+
+## Discovery and status
+
+Beacon detects Gemini CLI through the `gemini` executable and `$GEMINI_CLI_HOME/.gemini/settings.json` (default `~/.gemini/settings.json`). Use `beacon endpoint discover` or `beacon endpoint status` to confirm that Gemini CLI is present and configured.
+
+Install, discovery, inventory, and `beacon mcp connect` honor `GEMINI_CLI_HOME` as Gemini CLI does: when it is set, its `.gemini` directory replaces `~/.gemini`. The scheduled inventory job starts without your shell's environment, so a per-user `beacon endpoint install` or `repair` writes the `GEMINI_CLI_HOME` it resolved into the job's launchd or systemd definition. If you change `GEMINI_CLI_HOME` later, run `beacon endpoint repair` from a shell that has the new value. System-mode installs do not record it.
+
+## Install or configuration support
+
+The default `beacon endpoint install` configures Gemini automatically when it is detected. Run `beacon endpoint install --harness claude,codex,gemini` to select it explicitly instead.
+
+Beacon writes local OTLP settings to `$GEMINI_CLI_HOME/.gemini/settings.json` (default `~/.gemini/settings.json`), sets `target` to `local`, uses OTLP gRPC, enables collector mode, and removes `outfile` so telemetry flows to Beacon.
+
+Gemini CLI is not currently configured through Beacon's hook adapter.
+
+## Telemetry coverage
+
+| Area | Support |
+|------|---------|
+| Prompt telemetry | Supported when emitted through Gemini OTLP |
+| Turn identity | Supported. Gemini CLI's `prompt_id` is promoted to `prompt.id` |
+| Command, tool, and file telemetry | Supported for prompts, tool calls, MCP activity, file operations, and approval-related events emitted through OTLP |
+| Token usage | Supported from the `gemini_cli.api_response` log and `gemini_cli.token.usage` counter: input, output, cache read, and thinking tokens as reasoning, per session. Gemini CLI reports no cost. See [Token usage](/cli/token-usage) for how Gemini's overlapping counts are made disjoint |
+| Local JSONL and dashboard | Supported |
+| MDM deployment | Supported through the system-mode package or MDM-managed config when `gemini` is included in the harness list |
+
+## Deployment notes
+
+Project settings or `GEMINI_TELEMETRY_*` environment variables may override Beacon's user-level Gemini config.
+
+For enterprise rollouts, add `gemini` to the endpoint harness list, for example `claude,codex,gemini`, when you want Beacon to manage `~/.gemini/settings.json` for local OTLP collection.
+
+If a system collector is running while the CLI is reading the default per-user log, `beacon endpoint status` and the local dashboard surface a runtime-log source warning so you can tell where OTLP events are being written.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Supported agent harnesses" icon="list-check" href="/runtimes">
+    Return to the runtime support overview.
+  </Card>
+  <Card title="Agent harness integration model" icon="plug" href="/runtimes/integration-model">
+    See how Beacon discovers and configures supported runtimes.
+  </Card>
+</Columns>

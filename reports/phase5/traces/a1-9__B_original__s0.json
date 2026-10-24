@@ -1,0 +1,28 @@
+{
+  "task": "a1-9",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-9-fixed",
+    "a1-9-failed"
+  ],
+  "required_evidence": [
+    "a1-9-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the auth timeout problem in the new environment, you should validate the input as was done in the verified fix.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 8.984,
+  "agent_seconds": 1.44,
+  "prompt_tokens": 149,
+  "gen_tokens": 25
+}

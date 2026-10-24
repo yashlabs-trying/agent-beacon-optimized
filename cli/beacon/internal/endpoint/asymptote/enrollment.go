@@ -1,0 +1,235 @@
+package asymptote
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/atomicfile"
+	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
+)
+
+// Files under <BaseDir>/asymptote/. The directory is 0700 and the two credential-adjacent
+// files are 0600; vector.toml is 0644 because it holds no secret, only the SECRET[] reference.
+const (
+	DirName            = "asymptote"
+	EnrollmentFileName = "enrollment.json"
+	// InstallIDFileName pins this machine's install id before enrollment starts, so a
+	// connect that fails after approval (validate, unit, load) retries with the same id and
+	// the server rotates the device's key instead of registering a second device.
+	InstallIDFileName = "install-id"
+	// ConnectPendingFileName marks a connect that has received a key from the server and not
+	// yet finished. On a re-connect that key replaced the one the running forwarder holds, so
+	// from then until every later step has succeeded the endpoint must not be reported as
+	// connected. It holds only a timestamp and whether this was a re-connect.
+	ConnectPendingFileName = "connect-pending"
+	SecretsFileName        = "vector-secrets.json"
+	VectorConfigName       = "vector.toml"
+	DataDirName            = "vector-data"
+)
+
+// Dir is the managed-ingest state directory for the selected endpoint mode.
+func Dir(userMode bool) string { return filepath.Join(endpointconfig.BaseDir(userMode), DirName) }
+
+// EnrollmentPath, SecretsPath, VectorConfigPath and DataDir locate the individual files.
+func EnrollmentPath(userMode bool) string   { return filepath.Join(Dir(userMode), EnrollmentFileName) }
+func SecretsPath(userMode bool) string      { return filepath.Join(Dir(userMode), SecretsFileName) }
+func VectorConfigPath(userMode bool) string { return filepath.Join(Dir(userMode), VectorConfigName) }
+func DataDir(userMode bool) string          { return filepath.Join(Dir(userMode), DataDirName) }
+func InstallIDPath(userMode bool) string    { return filepath.Join(Dir(userMode), InstallIDFileName) }
+func ConnectPendingPath(userMode bool) string {
+	return filepath.Join(Dir(userMode), ConnectPendingFileName)
+}
+
+// ConnectIncomplete reports whether a connect got as far as the key exchange and then failed
+// before finishing. On a re-connect the server has already rotated the device key by then, so
+// the forwarder still running with the previous key cannot upload until connect is run again.
+func ConnectIncomplete(userMode bool) bool {
+	_, err := os.Stat(ConnectPendingPath(userMode))
+	return err == nil
+}
+
+type connectPending struct {
+	StartedAt time.Time `json:"started_at"`
+	Reconnect bool      `json:"reconnect"`
+}
+
+// markConnectPending records that a connect has received a key and not yet finished.
+func markConnectPending(userMode bool, at time.Time, reconnect bool) error {
+	if err := ensureDir(userMode); err != nil {
+		return err
+	}
+	data, err := json.Marshal(connectPending{StartedAt: at.UTC(), Reconnect: reconnect})
+	if err != nil {
+		return err
+	}
+	return atomicfile.Write(ConnectPendingPath(userMode), append(data, '\n'), 0o600)
+}
+
+func loadConnectPending(userMode bool) (connectPending, error) {
+	data, err := os.ReadFile(ConnectPendingPath(userMode))
+	if err != nil {
+		return connectPending{}, err
+	}
+	var pending connectPending
+	if err := json.Unmarshal(data, &pending); err != nil {
+		return connectPending{}, fmt.Errorf("pending connect marker %s is not valid JSON: %w", ConnectPendingPath(userMode), err)
+	}
+	return pending, nil
+}
+
+// clearConnectPending removes the marker once a connect has finished.
+func clearConnectPending(userMode bool) error {
+	if err := os.Remove(ConnectPendingPath(userMode)); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+// ReadInstallID returns the pinned install id, or "" when none has been written.
+func ReadInstallID(userMode bool) string {
+	data, err := os.ReadFile(InstallIDPath(userMode))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+// WriteInstallID pins the install id for this machine.
+func WriteInstallID(userMode bool, installID string) error {
+	if err := ensureDir(userMode); err != nil {
+		return err
+	}
+	return atomicfile.Write(InstallIDPath(userMode), []byte(installID+"\n"), 0o600)
+}
+
+// Connected reports whether this endpoint is enrolled and has its forwarder configured: both
+// enrollment.json and vector.toml exist and no connect is left incomplete. Either file alone is
+// not a connection. disconnect --keep-credentials leaves the record behind without a config,
+// and a first connect that failed at vector validate or at loading the service leaves the
+// config behind without a record. A re-connect that failed after the key exchange leaves both
+// files from the previous connection, but the server has rotated the key that connection's
+// forwarder holds, so the pending marker decides. A machine in any of these states must be
+// offered connect again and reported as not connected.
+func Connected(userMode bool) bool {
+	if _, err := os.Stat(VectorConfigPath(userMode)); err != nil {
+		return false
+	}
+	if _, err := os.Stat(EnrollmentPath(userMode)); err != nil {
+		return false
+	}
+	return !ConnectIncomplete(userMode)
+}
+
+// Enrollment is the non-secret record of a device's enrollment. Everything `beacon endpoint
+// status` prints comes from here; the device key itself is only in the secrets file.
+type Enrollment struct {
+	InstallID        string    `json:"install_id"`
+	IngestURL        string    `json:"ingest_url"`
+	DashboardURL     string    `json:"dashboard_url"`
+	DeviceID         string    `json:"device_id"`
+	KeyPrefix        string    `json:"key_prefix"`
+	OrganizationID   string    `json:"organization_id"`
+	OrganizationName string    `json:"organization_name,omitempty"`
+	Email            string    `json:"email,omitempty"`
+	EnrolledAt       time.Time `json:"enrolled_at"`
+	ExpiresAt        string    `json:"expires_at,omitempty"`
+	VectorBin        string    `json:"vector_bin,omitempty"`
+	VectorVersion    string    `json:"vector_version,omitempty"`
+	PrivacyMode      string    `json:"privacy_mode,omitempty"`
+}
+
+// ErrNotEnrolled is returned when no enrollment record exists.
+var ErrNotEnrolled = errors.New("this endpoint is not connected to Asymptote managed ingest")
+
+// LoadEnrollment reads the enrollment record.
+func LoadEnrollment(userMode bool) (*Enrollment, error) {
+	data, err := os.ReadFile(EnrollmentPath(userMode))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrNotEnrolled
+		}
+		return nil, err
+	}
+	var enrollment Enrollment
+	if err := json.Unmarshal(data, &enrollment); err != nil {
+		return nil, fmt.Errorf("enrollment record %s is not valid JSON: %w", EnrollmentPath(userMode), err)
+	}
+	return &enrollment, nil
+}
+
+// SaveEnrollment writes the record with 0600 permissions inside a 0700 directory.
+func SaveEnrollment(userMode bool, enrollment Enrollment) error {
+	if err := ensureDir(userMode); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(enrollment, "", "  ")
+	if err != nil {
+		return err
+	}
+	return atomicfile.Write(EnrollmentPath(userMode), append(data, '\n'), 0o600)
+}
+
+// WriteSecrets stores the device key in the file Vector's secret backend reads.
+func WriteSecrets(userMode bool, deviceKey string) error {
+	if !strings.HasPrefix(deviceKey, "bcn_device_") {
+		return errors.New("refusing to store a credential that is not a Beacon device key")
+	}
+	if err := ensureDir(userMode); err != nil {
+		return err
+	}
+	return atomicfile.Write(SecretsPath(userMode), []byte(SecretsFileContent(deviceKey)), 0o600)
+}
+
+// ReadDeviceKey returns the stored device key, for the credential check.
+func ReadDeviceKey(userMode bool) (string, error) {
+	data, err := os.ReadFile(SecretsPath(userMode))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", ErrNotEnrolled
+		}
+		return "", err
+	}
+	var secrets map[string]string
+	if err := json.Unmarshal(data, &secrets); err != nil {
+		return "", fmt.Errorf("secrets file %s is not valid JSON: %w", SecretsPath(userMode), err)
+	}
+	key := secrets[SecretsKey]
+	if key == "" {
+		return "", fmt.Errorf("secrets file %s has no %s", SecretsPath(userMode), SecretsKey)
+	}
+	return key, nil
+}
+
+// RemoveState deletes the managed-ingest directory. With keepCredentials the enrollment record
+// and secrets file stay so a later connect can rotate in place without a new approval.
+func RemoveState(userMode bool, keepCredentials bool) error {
+	dir := Dir(userMode)
+	if !keepCredentials {
+		if err := os.RemoveAll(dir); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+	}
+	// The forwarder is gone, so a pending connect has nothing left running on a dead key.
+	for _, path := range []string{VectorConfigPath(userMode), DataDir(userMode), ConnectPendingPath(userMode)} {
+		if err := os.RemoveAll(path); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func ensureDir(userMode bool) error {
+	dir := Dir(userMode)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	// MkdirAll leaves an existing directory's mode alone; tighten it in case it was created
+	// by an older tool or by hand.
+	return os.Chmod(dir, 0o700)
+}

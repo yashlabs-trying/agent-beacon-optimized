@@ -1,0 +1,151 @@
+---
+title: "beacon endpoint traces"
+description: "Search local endpoint traces and keep a local history of them"
+---
+
+## Command overview
+
+`beacon endpoint traces` reads the Beacon runtime JSONL log as traces: one per session or OpenTelemetry trace, with its events in order. Use it when you want a trace-oriented view of endpoint activity without starting the dashboard.
+
+Run the top-level command on an interactive terminal to open the full-screen local trace browser:
+
+```bash title="Browse local traces"
+beacon traces
+```
+
+Use the arrow keys or `j`/`k` to move, `enter` to open a trace, `/` to search, and `1`–`4` to filter an open trace by event type. Page Up and Page Down scroll long event details. The browser reads only local Beacon state and does not contact the network.
+
+A trace shared with [`beacon share`](/cli/share) is marked `shared` in the list, or `shared (stale)` when the session has activity newer than its last share or refresh (Beacon's own records, such as a commit link, do not count). An open trace shows its link and, when it is stale, the `beacon share refresh …` command to run. The plain list adds a last column for shared traces with the state, the link and, when stale, that command. In `--json` output, `sharing.refresh_command` carries the command for any shared trace.
+
+When stdout or stdin is redirected, `beacon traces` falls back to a bounded tab-separated trace list instead of emitting terminal control sequences. The `beacon endpoint traces` commands below remain the stable JSON and scripting interface.
+
+```bash title="Command syntax"
+beacon endpoint traces [command]
+```
+
+The commands read local files only and do not contact the network.
+
+Plain-text list, search, and show metadata rows collapse line breaks, tabs, and other whitespace to single spaces so each result stays on one row. JSON output retains the original text, and show keeps multiline text and commands in its indented event details.
+
+## Local history
+
+The runtime log rotates after about 60 MB, which is a day or two of activity on a busy machine. Without a local history, trace commands can only see what is still in the log.
+
+The local history is a SQLite file, `~/.beacon/endpoint/history.db`, that keeps sessions after the log rotates them away. Every trace command catches it up with the log before answering, so it needs no background service. It also makes search faster, since it keeps a full-text index of the same text the commands search.
+
+It is off until you turn it on:
+
+- The first `beacon endpoint traces` or `beacon traces` command on an interactive terminal asks once whether to create it. "Not now" is remembered.
+- `beacon endpoint traces reindex` creates it without asking.
+- Commands run by scripts, agents, pipes, `--json` or CI are never asked. They read the log and print a one-line note on stderr.
+
+What it holds:
+
+- The same prompts, commands, output and file changes the runtime log holds, after the same redaction. The runtime's raw payload is dropped except for the few fields trace summaries read.
+- Nothing leaves the machine. The file is readable only by you (mode `0600`).
+- Traces whose last event is older than 90 days are removed, and the oldest traces are removed once the file reaches 1 GB. Change either with `reindex --retention-days` and `reindex --max-size-mb`.
+
+If the log rotates more than five times between two trace commands, the files in between are deleted before the history reads them. `status` reports this as a gap.
+
+`beacon endpoint traces reset` deletes the history. `beacon endpoint uninstall` deletes it along with the runtime logs, unless you pass `--keep-logs`.
+
+Set `BEACON_HISTORY_DB` to keep the history somewhere else.
+
+For assistant message and reasoning events, an event's `content.text` is the text retained in `gen_ai.output.messages`: what the assistant said, or its reasoning. The event's label, such as `Codex assistant message`, stays in `summary`, and fills `content.text` only when the event retained no text. The retained text went through Beacon's redaction and size limits when it was written, and `content.redacted` and `content.truncated` report either change. `beacon memory` evaluates traces from this same view.
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `beacon endpoint traces status` | Show whether the local history is set up, and its size, trace and event counts, oldest and newest event, limits, and any gaps |
+| `beacon endpoint traces reindex` | Create the local history, or bring it up to date with the runtime log |
+| `beacon endpoint traces reset` | Delete the local history. Asks first; `--yes` skips the question |
+| `beacon endpoint traces list` | List local traces with harness, update time, and title |
+| `beacon endpoint traces search <pattern>` | Search trace metadata or indexed event text |
+| `beacon endpoint traces show <trace-id>` | Show events from one trace |
+
+## Flags
+
+All commands accept:
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Print results as JSON |
+| `--log-path <path>` | Runtime JSONL log path. Defaults to the resolved endpoint log |
+| `--user` | Use per-user endpoint paths. Enabled by default |
+| `--system` | Use system endpoint paths |
+
+`list`, `search`, and `show` also accept:
+
+| Flag | Description |
+|------|-------------|
+| `--limit <n>` | Limit returned traces or events. Defaults to `100` |
+| `--event-type <types>` | Filter trace events by comma-separated event type |
+
+`list` also accepts:
+
+| Flag | Description |
+|------|-------------|
+| `--query <text>`, `-q <text>` | Filter traces by text |
+| `--page <n>` | Page number for trace listing. Defaults to `1` |
+| `--state <state>` | Filter by sharing state: `local_only`, `shared` for sessions published with [`beacon share`](/cli/share) (including stale ones), or `stale` for only the shared sessions with newer local activity |
+| `--visibility <visibility>` | Filter by sharing visibility: `private` for local-only traces, or the `public`, `direct` or `private` a shared trace was given |
+
+`search` also accepts:
+
+| Flag | Description |
+|------|-------------|
+| `--result-level trace` | Return matching traces. This is the default |
+| `--result-level event` | Return matching events with snippets |
+
+`reindex` also accepts:
+
+| Flag | Description |
+|------|-------------|
+| `--retention-days <n>` | Remove traces whose last event is older than this. Defaults to `90`, and a value you set is kept |
+| `--max-size-mb <n>` | Remove the oldest traces once the history reaches this size. Defaults to `1024`, and a value you set is kept |
+| `--rebuild` | Recompute search text and summaries from the stored events |
+
+`show` also accepts:
+
+| Flag | Description |
+|------|-------------|
+| `--offset <n>` | Start at this position in the filtered events. Defaults to `1` |
+| `--around-event <n>` | Center output around this event number |
+| `--before <n>` | Events before `--around-event`. Defaults to `3` |
+| `--after <n>` | Events after `--around-event`. Defaults to `3` |
+
+With `--event-type`, `--around-event` still takes the original event number, and `--before` and `--after` count matching events.
+
+## Examples
+
+```bash title="Check the local history"
+beacon endpoint traces status
+```
+
+```bash title="Create the local history, keeping 30 days"
+beacon endpoint traces reindex --retention-days 30
+```
+
+```bash title="List recent traces"
+beacon endpoint traces list --limit 20
+```
+
+```bash title="Search event text"
+beacon endpoint traces search "npm install" --result-level event
+```
+
+```bash title="Show a focused event window"
+beacon endpoint traces show <trace-id> --around-event 42 --before 5 --after 10
+```
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Local dashboard" icon="chart-line" href="/cli/dashboard">
+    Inspect the same local endpoint activity in the loopback dashboard.
+  </Card>
+  <Card title="Local JSONL" icon="file-lines" href="/log-forwarding/local-jsonl">
+    Understand the runtime log that traces and the local history are read from.
+  </Card>
+</Columns>

@@ -1,0 +1,27 @@
+{
+  "task": "a3-44",
+  "suite": "A",
+  "category": "A3_knowledge_transfer",
+  "difficulty": "medium",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a3-44-conv"
+  ],
+  "required_evidence": [
+    "a3-44-conv"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "All TypeScript services in this project must use UTC timestamps.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 9.15,
+  "agent_seconds": 1.21,
+  "prompt_tokens": 123,
+  "gen_tokens": 12
+}

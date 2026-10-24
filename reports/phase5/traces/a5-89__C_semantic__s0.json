@@ -1,0 +1,33 @@
+{
+  "task": "a5-89",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-89-gold",
+    "a5-89-n0",
+    "a5-89-n5",
+    "a5-89-n1",
+    "a5-89-n3",
+    "a5-89-n2",
+    "a5-89-n4"
+  ],
+  "required_evidence": [
+    "a5-89-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The reports batch size is 42 records.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.439,
+  "prompt_tokens": 210,
+  "gen_tokens": 11
+}

@@ -1,0 +1,27 @@
+{
+  "task": "a1-3",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-3-fixed"
+  ],
+  "required_evidence": [
+    "a1-3-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the ledger rate limit problem in the new environment, you should close the resource.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.923,
+  "prompt_tokens": 134,
+  "gen_tokens": 19
+}

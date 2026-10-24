@@ -1,0 +1,28 @@
+{
+  "task": "a1-7",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-7-fixed",
+    "a1-7-failed"
+  ],
+  "required_evidence": [
+    "a1-7-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Based on the project notes, the checkout timeout problem should be fixed by closing the resource.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 11.914,
+  "agent_seconds": 1.023,
+  "prompt_tokens": 150,
+  "gen_tokens": 19
+}

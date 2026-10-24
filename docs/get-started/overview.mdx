@@ -1,0 +1,99 @@
+---
+title: "Beacon Overview"
+description: "Beacon is the open-source trace and reviewed-memory layer for AI agents."
+---
+
+Beacon captures activity across agent harnesses and turns it into a shared history you can search, debug, analyze, and learn from.
+
+Run Beacon locally with full control of your data, or use Beacon Cloud for hosted storage, search, analytics, and unlimited retention.
+
+## Why Beacon
+
+Agent history is fragmented across tools.
+
+Prompts, tool calls, commands, file edits, and model interactions are often trapped inside individual harnesses and session formats. Beacon normalizes that activity into one consistent record across agents.
+
+That shared history makes it easier to:
+
+- debug failed workflows
+- understand how agents are being used
+- analyze runtime behavior
+- compare activity across harnesses
+- surface recurring workflows and corrections
+- turn past agent runs into reusable knowledge
+
+## From traces to shared knowledge
+
+Every agent session contains useful context: debugging paths, repository conventions, repeated corrections, commands, and tool sequences.
+
+Beacon captures that history so it can be reused across future runs and across different harnesses.
+
+Every run can add to the local trace history. Reusable project memory is created
+only when you explicitly evaluate traces and approve candidates.
+
+| Capability | Local | Beacon Cloud |
+| --- | --- | --- |
+| Cross-harness agent telemetry | ✓ | ✓ |
+| Local, CI & cloud collection | ✓ | ✓ |
+| Unified agent session history | ✓ | ✓ |
+| Store data locally | ✓ | ✓ |
+| Forward to your own data stack | ✓ | ✓ |
+| Hosted ingest & storage | — | ✓ |
+| Search & analytics | — | ✓ |
+| Identity mapping | — | ✓ |
+| **Agent Session Retention** | **You manage** | **Unlimited** |
+| SSO & RBAC | — | ✓ |
+
+## Beacon
+
+Beacon is built on the [`agent-beacon`](https://github.com/asymptote-labs/agent-beacon) repository.
+
+<a href="https://github.com/asymptote-labs/agent-beacon">
+  <img
+    src="https://api.star-history.com/svg?repos=asymptote-labs/agent-beacon&type=Date"
+    alt="Agent Beacon GitHub star growth"
+    width="860"
+  />
+</a>
+
+If you are starting with Beacon, these pages are the most useful next steps:
+
+<Columns cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/get-started/quickstart">
+    Choose the right setup path for a managed rollout or local developer evaluation.
+  </Card>
+  <Card title="Open Source Architecture" icon="diagram-project" href="/architecture/architecture">
+    Learn how Beacon collects, normalizes, stores, correlates, and detects telemetry across every supported surface.
+  </Card>
+  <Card title="Local testing" icon="flask-vial" href="/guides/local-testing">
+    Validate endpoint health, events, dashboard access, MCP access, and logs.
+  </Card>
+  <Card title="Agent harness integrations" icon="list-check" href="/runtimes">
+    See supported agent harnesses, deployment modes, destinations, and boundaries.
+  </Card>
+  <Card title="Endpoint event schema" icon="code" href="/telemetry-schema/event-schema">
+    Review Beacon JSONL fields, normalization behavior, and example events.
+  </Card>
+  <Card title="Security & IT Rollout Guide" icon="building-shield" href="/security">
+    Plan endpoint inventory, MDM rollout, retention policy, validation, and log forwarding.
+  </Card>
+</Columns>
+
+Additional references: [Core Concepts](/concepts/core-concepts), [Command reference](/cli), and [MCP server](/cli/mcp).
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Beacon" icon="download" href="/deployment/open-source">
+    Install the open-source CLI and configure Agent Beacon telemetry.
+  </Card>
+  <Card title="Beacon Cloud" icon="key" href="/deployment/managed">
+    Review managed visibility, investigations, and rollout support.
+  </Card>
+  <Card title="Hosting Options" icon="cloud" href="/deployment/hosting-options">
+    Compare the open-source local path with managed and enterprise deployment options.
+  </Card>
+  <Card title="Pricing" icon="tag" href="https://asymptotelabs.ai/pricing">
+    See plan positioning for open-source, managed enterprise, and private deployment.
+  </Card>
+</Columns>

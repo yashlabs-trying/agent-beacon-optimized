@@ -1,0 +1,301 @@
+# Contributing to Beacon
+
+Thanks for helping improve Beacon. This guide covers the day-to-day workflow for
+changes to the local endpoint agent, hook adapter, Collector exporter, and
+packaging assets.
+
+Beacon is a local-only endpoint telemetry agent for AI runtimes. Keep
+contributions aligned with that posture: normal hook execution should not depend
+on hosted accounts, remote policy fetches, hosted dashboards, or external network
+services.
+
+## Memory-Engine Optimization Work
+
+This repository also carries an ongoing **memory-engine optimization and hardening**
+lineage on top of upstream Beacon (commits after `7b605aa84`). If your change touches
+the memory store, retrieval pipeline, MCP memory tools, storage placement, or the
+security of those paths, read these first:
+
+- [`docs/optimization/architecture.md`](docs/optimization/architecture.md) — the pipeline
+  and the three optimization themes.
+- [`docs/optimization/benchmarks.md`](docs/optimization/benchmarks.md) — how each number
+  is measured and reproduced.
+- [`docs/optimization/limitations.md`](docs/optimization/limitations.md) — what is **not**
+  established. Read this before making any performance or quality claim.
+- [`docs/optimization/roadmap.md`](docs/optimization/roadmap.md) — the open gaps.
+
+Rules for this work:
+
+- **Evidence or it didn't happen.** A performance or security claim must point to a
+  committed benchmark or test and a report under `reports/`. Do not present a
+  historical or non-reproducible number as a current result.
+- **Never claim agent-quality gains from a retrieval microbenchmark.** Faster or
+  leaner retrieval does not imply a more accurate or more successful agent.
+- **Preserve the default path.** The plain `memory list` path, public APIs, and existing
+  benchmarks must keep working. Optimizations are additive or opt-in.
+- **Mind the filesystem.** Benchmark on a **local** filesystem. Synchronized/network
+  mounts are ~12× slower at p99 and will falsify your numbers.
+- **Attribution stays.** Upstream copyright, the MIT license, and upstream docs are not
+  to be modified for this work.
+
+Validation for memory-engine changes:
+
+```bash
+cd cli/beacon
+go build ./...
+go test ./internal/learning/ -count=1
+go vet ./internal/learning/
+go test -race ./internal/learning/ -run 'Concurrency|Concurrent|Crash' -count=1
+```
+
+## Ways to Contribute
+
+Useful contributions include:
+
+- **Bug fixes:** Improve the endpoint agent, hook adapter, Collector exporter,
+  packaging, and local dashboard.
+- **Documentation:** Clarify examples, validation steps, rollout guidance, and
+  user-visible behavior.
+- **Tests:** Make supported runtime, event schema, retention, redaction, and
+  packaging behavior easier to verify.
+- **Integrations:** Improve runtime or destination behavior that fits Beacon's
+  local-only scope and supported forwarding model.
+- **Packaging:** Improve MDM assets, package scripts, and smoke tests for
+  supported macOS deployment paths.
+
+## Project Layout
+
+- `cli/beacon`: public `beacon` CLI, endpoint runtime, local dashboard, and
+  endpoint integrations.
+- `cli/beacon-hooks`: hook adapter invoked by supported AI agent runtimes.
+- `pkg/asymptoteobserve`: shared endpoint event schema, provenance markers, and
+  the threat-rules engine. Imported by the modules above through a `replace`.
+- `collector-builder`: OpenTelemetry Collector distribution and
+  `beaconjson` exporter.
+- `packages/asymptote-sdk-js`: the `@asymptote/sdk` TypeScript SDK for cloud
+  agent telemetry. npm.
+- `plugins/*-beacon`: managed plugin and extension sources for OpenCode, Cline,
+  and Pi. bun. Each is the root source for a copy embedded in `cli/beacon`, and
+  tests on both sides fail if the two drift.
+- `browser-extension`: optional Chrome MV3 collector for Claude.ai and ChatGPT
+  chat telemetry. npm, with a Playwright replay harness that loads the real
+  extension into headless Chromium.
+- `rules`: the threat-rule corpus, shipped as a release asset rather than
+  embedded in the binary.
+- `spec/threat-rules`: the open Threat Rules format, its JSON schema, and the
+  generated field reference.
+- `packaging`: macOS, Linux, and Windows package scripts, deployment helpers,
+  and MDM assets.
+- `beacon-sandbox`: end-to-end verification tool that runs a real Claude Code
+  session in a disposable Linux sandbox and checks what Beacon captured. See
+  [Verify Beacon In A Sandbox](https://docs.asymptotelabs.ai/contributing/beacon-sandbox).
+
+Removed mirror trees and old product surfaces are not active contribution
+targets. New work should stay focused on the Beacon paths above unless a
+maintainer asks otherwise.
+
+## Development Setup
+
+Install Go 1.27 or newer. The repository has separate Go modules for the CLI,
+hook adapter, and Collector exporter, so run Go commands from the module you are
+working in.
+
+Optional tools are only needed for specific workflows:
+
+- `golangci-lint` for `make lint` in `cli/beacon`.
+- `ocb` when building the custom Collector distribution from
+  `collector-builder/builder.yaml`.
+- macOS for endpoint packaging checks and smoke tests.
+
+Build the public CLI:
+
+```bash
+cd cli/beacon
+make build
+```
+
+Run the local dashboard during manual testing:
+
+```bash
+cd cli/beacon
+go run . endpoint dashboard
+```
+
+## Development Workflow
+
+1. Fork the repository or create a branch in your working copy.
+2. Create a focused branch for the change:
+
+   ```bash
+   git checkout -b feature/your-change
+   ```
+
+3. Make the change, keeping refactors separate from feature or bug-fix work when
+   practical.
+4. Run the relevant tests and validation commands.
+5. Open a pull request against `main` with a clear description of what changed,
+   why it changed, and how reviewers can verify it locally.
+
+## Common Workflows
+
+Run CLI tests:
+
+```bash
+cd cli/beacon
+go test ./...
+go test -race ./internal/endpoint/...
+```
+
+Run hook adapter tests:
+
+```bash
+cd cli/beacon-hooks
+go test ./...
+```
+
+Run Collector exporter tests:
+
+```bash
+cd collector-builder/exporter/beaconjsonexporter
+go test ./...
+```
+
+Check macOS packaging scripts:
+
+```bash
+sh packaging/macos/test-endpoint-scripts.sh
+```
+
+Run the macOS endpoint smoke test:
+
+```bash
+sh packaging/macos/smoke-endpoint.sh
+```
+
+## Validation Before PRs
+
+Run the checks that match your change. For shared behavior, public CLI behavior,
+event schema changes, hook normalization, Collector output, or packaging changes,
+prefer the full recommended set:
+
+```bash
+cd cli/beacon && go test ./...
+cd cli/beacon && go test -race ./internal/endpoint/...
+cd cli/beacon-hooks && go test ./...
+cd collector-builder/exporter/beaconjsonexporter && go test ./...
+cd pkg/asymptoteobserve && go test ./...
+cd beacon-sandbox && go test ./...
+sh packaging/macos/test-endpoint-scripts.sh
+sh packaging/macos/smoke-endpoint.sh
+```
+
+The npm and bun subprojects are separate from the Go modules. Run the ones your
+change touches:
+
+```bash
+cd packages/asymptote-sdk-js && npm ci && npm test && npm run check
+cd browser-extension && npm ci && npm run check && npm run test:unit && npm test
+cd plugins/opencode-beacon && bun run check && bun test
+cd plugins/cline-beacon && bun run check && bun test
+cd plugins/pi-beacon && bun run check && bun test
+```
+
+The browser extension's `npm test` builds the bundle and runs the Playwright
+replay e2e, which needs `openssl` on PATH and a one-time
+`npx playwright install chromium`. After editing a plugin or extension source
+under `plugins/`, run `bun run sync` in its directory so the copy embedded in
+`cli/beacon` matches; a Go test fails if the two drift. The payload serializer
+the plugins share lives only in `plugins/shared/safe-clone.ts`: edit it there and
+run `bun run sync` in `plugins/shared`, which rewrites the generated copy in every
+plugin.
+
+If you cannot run a relevant check locally, mention that in the pull request and
+explain why.
+
+### Optional End-To-End Verification
+
+For changes to telemetry capture — the CLI, the hook adapter, or the `beaconjson`
+exporter — you can verify against a real Claude Code session instead of only
+asserting on synthetic payloads:
+
+```bash
+cd beacon-sandbox
+go run ./cmd/beacon-sandbox doctor
+go run ./cmd/beacon-sandbox run --scenario s02-bash-command
+```
+
+This runs in a disposable Linux sandbox and costs a small amount of real money,
+so it is optional rather than a gate. Its own unit tests, included above, are
+hermetic and cost nothing. See
+[Verify Beacon In A Sandbox](https://docs.asymptotelabs.ai/contributing/beacon-sandbox)
+for setup and limitations, including the fact that it cannot verify the macOS
+build.
+
+## Contribution Guidelines
+
+- **Preserve local-only behavior:** Do not add hosted account requirements,
+  remote policy services, hosted dashboards, or external network dependencies to
+  normal endpoint or hook execution.
+- **Keep destinations scoped:** Use the repository's supported local and
+  customer-managed forwarding patterns. Do not add vulnerability scanning,
+  dependency remediation, broad endpoint enforcement, or new hosted SIEM
+  dependencies unless a maintainer explicitly requests that direction.
+- **Protect event contracts:** Keep `vendor`, `product`, `schema_version`,
+  required event fields, and Wazuh-compatible JSONL output stable. When adding a
+  new signal, include stable identifiers, counts, or hashes alongside retained
+  raw content, and route raw fields through redaction, sanitization, truncation,
+  and event-size controls.
+- **Keep the dashboard read-only:** It should inspect local status and JSONL
+  events, not mutate endpoint configuration or telemetry.
+- **Write deterministic tests:** Prefer `t.TempDir()`, `t.Setenv("HOME", ...)`,
+  fake binaries, and free local ports. Avoid tests that require root, real
+  `launchctl` service changes, Wazuh, a live Collector, or external network
+  access. Gate macOS-only behavior with `runtime.GOOS == "darwin"` or assert the
+  non-Darwin contract explicitly. `beacon-sandbox` is the deliberate exception:
+  it reaches the network by design, but only when a contributor runs it
+  explicitly, and it is developer tooling rather than part of endpoint or hook
+  execution, so Beacon's local-only runtime posture is unaffected. Its own unit
+  tests follow the rule above and need no network.
+- **Update relevant docs:** Keep documentation current when install, packaging,
+  Collector, dashboard, or event schema behavior changes. The top-level
+  `README.md` and module-level READMEs should stay consistent with user-visible
+  behavior.
+- **Verify platform support:** Do not claim support for macOS packaging paths,
+  runtime harnesses, SIEM forwarding patterns, or other environments you cannot
+  actually run or test. Open an issue or draft PR to discuss support you can only
+  partially verify.
+
+## AI-Assisted Contributions
+
+AI-assisted development is welcome. Contributors still own the correctness,
+security, maintainability, and product fit of every change they submit.
+
+Before opening a PR, make sure you can explain non-trivial parts of the diff:
+why the implementation works, what alternatives you considered, what you tested,
+and what could break. If an AI tool generated a large portion of the change, a
+short note about how you validated the result can help reviewers, but disclosure
+is not required unless a maintainer asks.
+
+## Getting Help
+
+If you are unsure whether a change fits Beacon's scope, open a GitHub issue or a
+draft pull request with the problem, proposed approach, and what you can verify
+locally. You can also join the
+[Discord community](https://discord.gg/zdNChS2fBu) for questions and discussion.
+
+## Pull Request Checklist
+
+- **Scope:** Keep the change focused on one contributor-visible problem or
+  capability, and avoid mixing unrelated refactors with behavior changes.
+- **Summary:** Explain what changed and why in a few sentences.
+- **Tests:** Add or update tests for behavior changes.
+- **Validation:** Run the relevant validation commands, include them in the PR
+  description, and note any relevant checks you could not run.
+- **Verification:** Provide local review steps, expected output, a minimal repro,
+  or another concrete way to confirm the change works.
+- **Tradeoffs:** Call out important edge cases, compatibility concerns, or
+  tradeoffs when they are relevant to review.
+- **Docs:** Update docs for user-visible behavior, deployment, schema, or
+  packaging changes.
+- **Artifacts:** Do not commit secrets, local credentials, generated binaries,
+  temporary logs, or unrelated build artifacts.

@@ -1,0 +1,407 @@
+package asymptote
+
+import (
+	"bufio"
+	"encoding/json"
+	"errors"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+	"testing/fstest"
+
+	"github.com/pelletier/go-toml/v2"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/testenv"
+)
+
+func TestVectorConfigForwardsBothStreamsOverHTTPWithABearerSecret(t *testing.T) {
+	got, err := VectorConfig("/tmp/beacon/runtime.jsonl")
+	if err != nil {
+		t.Fatalf("VectorConfig returned error: %v", err)
+	}
+	for _, want := range []string{
+		`include = ["/tmp/beacon/runtime.jsonl"]`,
+		`include = ["/tmp/beacon/inventory_state.jsonl"]`,
+		`read_from = "end"`,
+		`read_from = "beginning"`,
+		`[secret.beacon]`,
+		`type = "file"`,
+		`path = "${BEACON_ASYMPTOTE_SECRETS_FILE}"`,
+		`data_dir = "${BEACON_ASYMPTOTE_DATA_DIR:-/var/lib/vector/beacon-asymptote}"`,
+		`type = "http"`,
+		`uri = "${BEACON_ASYMPTOTE_INGEST_URL}/v1/ingest/runtime"`,
+		`uri = "${BEACON_ASYMPTOTE_INGEST_URL}/v1/ingest/inventory"`,
+		`uri = "${BEACON_ASYMPTOTE_INGEST_URL}/v1/ingest/health"`,
+		`strategy = "bearer"`,
+		`token = "SECRET[beacon.device_key]"`,
+		`compression = "gzip"`,
+		`codec = "text"`,
+		`method = "newline_delimited"`,
+		`Content-Type = "application/x-ndjson"`,
+		`max_bytes = 5000000`,
+		`max_events = 5000`,
+		`type = "disk"`,
+		`when_full = "block"`,
+		`retry_max_duration_secs = 300`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("vector config missing %q:\n%s", want, got)
+		}
+	}
+	for _, forbidden := range []string{"{{LOG_PATH}}", "{{INVENTORY_LOG_PATH}}", "bcn_device", "parse_json"} {
+		if strings.Contains(got, forbidden) {
+			t.Fatalf("vector config must not contain %q:\n%s", forbidden, got)
+		}
+	}
+	// Only the secret reference may carry the key; a literal token would defeat the
+	// secrets file.
+	if strings.Count(got, "SECRET[beacon.device_key]") != 2 {
+		t.Fatalf("expected the two sinks to reference the secret exactly once each:\n%s", got)
+	}
+}
+
+// A new user's first sessions should reach the dashboard within seconds of connecting, so the
+// runtime sink flushes a partial batch after ten seconds and paces itself at the one request a
+// second the ingest service allows each device. Vector accepts unknown keys in these sections
+// without a word, so a misspelled or misplaced key would validate and do nothing; this pins them.
+func TestRuntimeSinkFlushesQuicklyAtTheIngestRate(t *testing.T) {
+	got, err := VectorConfig("/tmp/beacon/runtime.jsonl")
+	if err != nil {
+		t.Fatalf("VectorConfig returned error: %v", err)
+	}
+	var config struct {
+		Sinks map[string]struct {
+			Batch struct {
+				TimeoutSecs *int64 `toml:"timeout_secs"`
+			} `toml:"batch"`
+			Request struct {
+				RateLimitNum          *int64 `toml:"rate_limit_num"`
+				RateLimitDurationSecs *int64 `toml:"rate_limit_duration_secs"`
+			} `toml:"request"`
+		} `toml:"sinks"`
+	}
+	if err := toml.Unmarshal([]byte(got), &config); err != nil {
+		t.Fatalf("parse rendered config: %v", err)
+	}
+	runtime, ok := config.Sinks["asymptote_runtime"]
+	if !ok {
+		t.Fatalf("no asymptote_runtime sink:\n%s", got)
+	}
+	for _, setting := range []struct {
+		name  string
+		value *int64
+		want  int64
+	}{
+		{"batch.timeout_secs", runtime.Batch.TimeoutSecs, 10},
+		{"request.rate_limit_num", runtime.Request.RateLimitNum, 1},
+		{"request.rate_limit_duration_secs", runtime.Request.RateLimitDurationSecs, 1},
+	} {
+		if setting.value == nil || *setting.value != setting.want {
+			t.Fatalf("asymptote_runtime %s = %v, want %d", setting.name, setting.value, setting.want)
+		}
+	}
+}
+
+func TestIngestSmokeTestChecksCredentialBeforePosting(t *testing.T) {
+	got, err := IngestSmokeTest("/tmp/beacon/runtime.jsonl")
+	if err != nil {
+		t.Fatalf("IngestSmokeTest returned error: %v", err)
+	}
+	for _, want := range []string{
+		`BEACON_LOG="${BEACON_LOG:-/tmp/beacon/runtime.jsonl}"`,
+		// Derived with the host's separator; the assertion is that it sits beside the log.
+		`BEACON_INVENTORY_LOG="${BEACON_INVENTORY_LOG:-` + filepath.Join("/tmp/beacon", "inventory_state.jsonl") + `}"`,
+		"BEACON_ASYMPTOTE_INGEST_URL",
+		"BEACON_ASYMPTOTE_SECRETS_FILE",
+		"https://*)",
+		"/v1/ingest/health",
+		"/v1/ingest/runtime",
+		"/v1/ingest/inventory",
+		"Content-Encoding: gzip",
+		"Content-Type: application/x-ndjson",
+		"-H @",
+		"validation only",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("smoke test missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "{{LOG_PATH}}") {
+		t.Fatalf("smoke test still contains template token:\n%s", got)
+	}
+	if strings.Contains(got, `-H "Authorization: Bearer $`) {
+		t.Fatalf("smoke test must not pass the device key on the curl command line:\n%s", got)
+	}
+}
+
+func TestInstallPackWritesExpectedFilesWithSafeModes(t *testing.T) {
+	dir := t.TempDir()
+	if err := InstallPack(dir, "/tmp/beacon/runtime.jsonl"); err != nil {
+		t.Fatalf("InstallPack returned error: %v", err)
+	}
+	for _, name := range []string{"README.md", "asymptote-ingest-smoke-test.sh", "sample-event.jsonl", "vector.toml"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+			t.Fatalf("expected %s: %v", name, err)
+		}
+	}
+	script, err := os.Stat(filepath.Join(dir, "asymptote-ingest-smoke-test.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if testenv.HasPOSIXFileModes() && script.Mode().Perm()&0111 == 0 {
+		t.Fatalf("smoke test should be executable, mode=%s", script.Mode())
+	}
+	vectorPath := filepath.Join(dir, "vector.toml")
+	vectorConfig, err := os.ReadFile(vectorPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(vectorConfig), "/tmp/beacon/runtime.jsonl") {
+		t.Fatalf("generated vector config missing configured log path: %s", vectorConfig)
+	}
+	if strings.Contains(string(vectorConfig), "bcn_device") {
+		t.Fatalf("generated vector config must never contain a device key: %s", vectorConfig)
+	}
+	info, err := os.Stat(vectorPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if testenv.HasPOSIXFileModes() && info.Mode().Perm() != 0644 {
+		t.Fatalf("generated vector config should be 0644, mode=%s", info.Mode().Perm())
+	}
+}
+
+func TestSampleEventsAreValidBeaconEventsForThisDestination(t *testing.T) {
+	sample := mustRead("pack/sample-event.jsonl")
+	scanner := bufio.NewScanner(strings.NewReader(sample))
+	lines := 0
+	sawDestination := false
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		lines++
+		var event map[string]any
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			t.Fatalf("sample line %d is not JSON: %v", lines, err)
+		}
+		for _, key := range []string{"timestamp", "vendor", "product", "schema_version", "event"} {
+			if _, ok := event[key]; !ok {
+				t.Fatalf("sample line %d missing %q", lines, key)
+			}
+		}
+		if event["vendor"] != "beacon" || event["product"] != "endpoint-agent" {
+			t.Fatalf("sample line %d has wrong vendor/product: %v", lines, event)
+		}
+		if dest, ok := event["destination"].(map[string]any); ok {
+			sawDestination = true
+			if dest["type"] != "asymptote" || dest["mode"] != "asymptote_managed_http" {
+				t.Fatalf("sample destination = %v", dest)
+			}
+		}
+	}
+	if lines < 2 || !sawDestination {
+		t.Fatalf("expected several sample events including a validation event, got %d lines (destination seen: %t)", lines, sawDestination)
+	}
+}
+
+func TestRenderVectorConfigReplacesEveryEnvironmentReference(t *testing.T) {
+	got, err := RenderVectorConfig(RenderOptions{
+		LogPath:     "/Users/me/.beacon/endpoint/logs/runtime.jsonl",
+		IngestURL:   "https://ingest.example.test/",
+		SecretsFile: "/Users/me/.beacon/endpoint/asymptote/vector-secrets.json",
+		DataDir:     "/Users/me/.beacon/endpoint/asymptote/vector-data",
+	})
+	if err != nil {
+		t.Fatalf("RenderVectorConfig returned error: %v", err)
+	}
+	for _, want := range []string{
+		`data_dir = "/Users/me/.beacon/endpoint/asymptote/vector-data"`,
+		`path = "/Users/me/.beacon/endpoint/asymptote/vector-secrets.json"`,
+		`uri = "https://ingest.example.test/v1/ingest/runtime"`,
+		`uri = "https://ingest.example.test/v1/ingest/inventory"`,
+		`uri = "https://ingest.example.test/v1/ingest/health"`,
+		`include = ["/Users/me/.beacon/endpoint/logs/runtime.jsonl"]`,
+		`token = "SECRET[beacon.device_key]"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("rendered config missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "${") {
+		t.Fatalf("rendered config still has environment references:\n%s", got)
+	}
+}
+
+func TestRenderVectorConfigRefusesInsecureOrIncompleteInput(t *testing.T) {
+	if _, err := RenderVectorConfig(RenderOptions{LogPath: "/tmp/r.jsonl", IngestURL: "http://ingest.example.test", SecretsFile: "/s", DataDir: "/d"}); !errors.Is(err, ErrInsecureIngestURL) {
+		t.Fatalf("expected ErrInsecureIngestURL, got %v", err)
+	}
+	if _, err := RenderVectorConfig(RenderOptions{LogPath: "/tmp/r.jsonl", IngestURL: "http://127.0.0.1:8080", SecretsFile: "/s", DataDir: "/d"}); err != nil {
+		t.Fatalf("loopback http must be allowed for local development, got %v", err)
+	}
+	if _, err := RenderVectorConfig(RenderOptions{LogPath: "/tmp/r.jsonl", IngestURL: "https://ingest.example.test"}); !errors.Is(err, ErrIncompleteRender) {
+		t.Fatalf("expected ErrIncompleteRender, got %v", err)
+	}
+}
+
+func TestRenderVectorConfigSelectsMetadataOnlyTransforms(t *testing.T) {
+	got, err := RenderVectorConfig(RenderOptions{
+		LogPath:     "/tmp/runtime.jsonl",
+		IngestURL:   "https://ingest.example.test",
+		SecretsFile: "/tmp/secrets.json",
+		DataDir:     "/tmp/vector-data",
+		PrivacyMode: "metadata-only",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`inputs = ["beacon_runtime_metadata"]`,
+		`inputs = ["beacon_inventory_metadata"]`,
+		`drop_on_abort = true`,
+		`del(event.prompt.text)`,
+		`del(event.command.output)`,
+		`del(event.file.diff)`,
+		`del(event.gen_ai.tool.call.arguments)`,
+		`del(item.definition)`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("metadata config missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Count(got, "drop_on_abort = true") != 2 {
+		t.Fatalf("both metadata transforms must set drop_on_abort = true:\n%s", got)
+	}
+	if strings.Contains(got, "[sinks.asymptote_runtime]\ntype = \"http\"\ninputs = [\"beacon_runtime\"]") {
+		t.Fatal("runtime sink bypasses metadata transform")
+	}
+}
+
+func TestRenderedPrivacyConfigsValidateWithVector(t *testing.T) {
+	vector := os.Getenv("BEACON_TEST_VECTOR_BIN")
+	if vector == "" {
+		t.Skip("set BEACON_TEST_VECTOR_BIN to validate rendered configs with Vector")
+	}
+	for _, mode := range []string{"standard", "metadata_only"} {
+		t.Run(mode, func(t *testing.T) {
+			rendered, err := RenderVectorConfig(RenderOptions{
+				LogPath:     filepath.Join(t.TempDir(), "runtime.jsonl"),
+				IngestURL:   "https://ingest.example.test",
+				SecretsFile: filepath.Join(t.TempDir(), "secrets.json"),
+				DataDir:     t.TempDir(),
+				PrivacyMode: mode,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(t.TempDir(), "vector.toml")
+			if err := os.WriteFile(path, []byte(rendered), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := ValidateVectorConfig(vector, path); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+// Runs the metadata-only transform on every sample event with Vector's own VRL runtime. No retained
+// text survives, and a session.context skill index still says what it was and which skills it
+// listed, so the backend can tell it from any other session.context and join it to inventory.
+func TestMetadataTransformKeepsSystemContextWithVector(t *testing.T) {
+	vector := os.Getenv("BEACON_TEST_VECTOR_BIN")
+	if vector == "" {
+		t.Skip("set BEACON_TEST_VECTOR_BIN to run the metadata transform with Vector")
+	}
+	var transforms struct {
+		Transforms map[string]struct {
+			Source string `toml:"source"`
+		} `toml:"transforms"`
+	}
+	data, err := fs.ReadFile(packFS, privacyTransformAsset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := toml.Unmarshal(data, &transforms); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	program := filepath.Join(dir, "runtime.vrl")
+	if err := os.WriteFile(program, []byte(transforms.Transforms["beacon_runtime_metadata"].Source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	samples, err := fs.ReadFile(packFS, "pack/sample-event.jsonl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var input strings.Builder
+	for _, line := range strings.Split(strings.TrimSpace(string(samples)), "\n") {
+		wrapped, _ := json.Marshal(map[string]string{"message": line})
+		input.Write(append(wrapped, '\n'))
+	}
+	inputPath := filepath.Join(dir, "input.jsonl")
+	if err := os.WriteFile(inputPath, []byte(input.String()), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out, err := exec.Command(vector, "vrl", "--input", inputPath, "--program", program, "--print-object").CombinedOutput()
+	if err != nil {
+		t.Fatalf("vector vrl: %v\n%s", err, out)
+	}
+	sawListing := false
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		var wrapped struct {
+			Message string `json:"message"`
+		}
+		if err := json.Unmarshal([]byte(line), &wrapped); err != nil || wrapped.Message == "" {
+			continue
+		}
+		var event schema.Event
+		if err := json.Unmarshal([]byte(wrapped.Message), &event); err != nil {
+			t.Fatalf("transformed event is not an event: %v\n%s", err, wrapped.Message)
+		}
+		if event.GenAI != nil && (event.GenAI.SystemInstructions != nil || event.GenAI.Input != nil) {
+			t.Fatalf("metadata-only kept retained text: %s", wrapped.Message)
+		}
+		if event.SystemContext == nil {
+			continue
+		}
+		sawListing = true
+		if event.SystemContext.Kind != schema.SystemContextSkillListing || len(event.SystemContext.Skills) == 0 || event.SystemContext.Skills[0].SkillNameHash == "" {
+			t.Fatalf("system_context = %+v, want the listing's kind and named skills", event.SystemContext)
+		}
+		if strings.Contains(wrapped.Message, "release checklist") || event.Content == nil || event.Content.Retention != schema.ContentRetentionMetadata {
+			t.Fatalf("skill listing text or retention survived metadata-only: %s", wrapped.Message)
+		}
+	}
+	if !sawListing {
+		t.Fatal("no sample event carries a skill listing; the pack's samples should show one")
+	}
+}
+
+func TestSecretsFileContentIsTheShapeTheTemplateReads(t *testing.T) {
+	content := SecretsFileContent(`bcn_device_abcdefgh_` + strings.Repeat("x", 43))
+	var parsed map[string]string
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		t.Fatalf("secrets content is not JSON: %v", err)
+	}
+	if !strings.HasPrefix(parsed[SecretsKey], "bcn_device_abcdefgh_") {
+		t.Fatalf("secrets content = %q", content)
+	}
+	quoted := SecretsFileContent(`a"b\c`)
+	if err := json.Unmarshal([]byte(quoted), &parsed); err != nil || parsed[SecretsKey] != `a"b\c` {
+		t.Fatalf("secrets content must escape the key: %q (%v)", quoted, err)
+	}
+}
+
+func TestFilesFromFSPropagatesReadErrors(t *testing.T) {
+	fsys := fstest.MapFS{"pack/README.md": &fstest.MapFile{Data: []byte("readme")}}
+	if _, err := filesFromFS(fsys); err == nil || !strings.Contains(err.Error(), "asymptote pack asset") {
+		t.Fatalf("expected a labelled asset read error, got %v", err)
+	}
+}

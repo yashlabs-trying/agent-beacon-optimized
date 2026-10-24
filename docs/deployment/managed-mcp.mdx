@@ -1,0 +1,286 @@
+---
+title: "Beacon Cloud MCP"
+sidebarTitle: "MCP"
+description: "Search your agent history and publish lenses from the assistants you already use"
+---
+
+Beacon Cloud MCP connects the agent you are working in to your Beacon Cloud history. It can find a
+past session, recover a command or tool result, compare work across harnesses, review token usage,
+and [publish lenses](/cloud/lenses/lenses-mcp) for you.
+
+The server is hosted at `https://mcp.beacon.sh`. It uses Streamable HTTP and OAuth, so there is
+nothing to run locally and no key to paste.
+
+Session search, lenses and sharing work on every Beacon Cloud account. The findings and memory
+tools are part of [Beacon Cloud Pro](/deployment/plans).
+
+## Connect
+
+You need Beacon [connected to Beacon Cloud](/cloud/devices) so there is history to search. If you
+chose Beacon Cloud during `beacon endpoint install`, the installer has already offered to connect
+MCP for you.
+
+### Automatic setup
+
+```bash
+beacon mcp connect
+```
+
+Beacon finds the supported harnesses on the machine (Claude Code, Codex CLI, Cursor, VS Code,
+Gemini CLI, OpenCode and Oh My Pi), shows every change it plans to make, and asks before writing. Each
+changed file is backed up first. The server is added as **`beacon-managed`**, with only its URL.
+
+Restart any harness that is already running, then sign in from it the first time:
+
+- **Claude Code:** run `/mcp` and choose `beacon-managed`.
+- **Codex CLI:** run `codex mcp login beacon-managed`.
+- **Cursor:** open **Cursor Settings → MCP** and sign in to `beacon-managed`.
+- **VS Code:** run **MCP: List Servers** and start `beacon-managed`.
+- **Gemini CLI:** run `/mcp auth beacon-managed`.
+- **OpenCode:** run `opencode mcp auth beacon-managed`.
+- **Oh My Pi:** run `/mcp reauth beacon-managed`.
+
+Each opens the Beacon approval page in your browser.
+
+### Manual setup
+
+<Tabs>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add --transport http --scope user beacon-managed https://mcp.beacon.sh
+    ```
+    Then run `/mcp`, choose `beacon-managed`, and approve access in the browser.
+  </Tab>
+  <Tab title="Codex CLI">
+    ```bash
+    codex mcp add beacon-managed --url https://mcp.beacon.sh
+    codex mcp login beacon-managed
+    ```
+  </Tab>
+  <Tab title="Cursor">
+    Add to `~/.cursor/mcp.json`:
+    ```json
+    {
+      "mcpServers": {
+        "beacon-managed": { "url": "https://mcp.beacon.sh" }
+      }
+    }
+    ```
+    Cursor shows the server as needing login. Select it to approve access in the browser.
+  </Tab>
+  <Tab title="VS Code">
+    Add to `.vscode/mcp.json`:
+    ```json
+    {
+      "servers": {
+        "beacon-managed": { "type": "http", "url": "https://mcp.beacon.sh" }
+      }
+    }
+    ```
+    Start the server from **MCP: List Servers** and approve access in the browser.
+  </Tab>
+  <Tab title="Gemini CLI">
+    ```bash
+    gemini mcp add --scope user --transport http beacon-managed https://mcp.beacon.sh
+    ```
+    Then run `/mcp auth beacon-managed`.
+  </Tab>
+  <Tab title="OpenCode">
+    Add to `~/.config/opencode/opencode.json`:
+    ```json
+    {
+      "$schema": "https://opencode.ai/config.json",
+      "mcp": {
+        "beacon-managed": { "type": "remote", "url": "https://mcp.beacon.sh", "enabled": true }
+      }
+    }
+    ```
+    Then run `opencode mcp auth beacon-managed`.
+  </Tab>
+</Tabs>
+
+For other harnesses and every command flag, see the [`beacon mcp connect` reference](/cli/mcp-connect).
+
+### Verify
+
+Ask your agent:
+
+```text
+List my five most recent Beacon sessions.
+```
+
+## Read or write access
+
+When your client signs in, the Beacon approval page asks what to allow:
+
+- **Read** is always granted. The agent can search and read your sessions (prompts, responses,
+  tool calls and output, commands and file edits) and, on Pro, your findings and memory.
+- **Write** is optional and only offered when the client asks for it. Tick the checkbox to let the
+  agent share your sessions, create, upload, release and publish lenses under your account,
+  record your feedback on findings or resolve and dismiss them, and file and review memory
+  candidates.
+
+Neither lets the agent change your sessions, your devices, or anything on your machine, or read
+anyone else's data. A tool that needs write access is hidden from read-only connections.
+
+## Tools
+
+| Tool | What it does | Plan |
+| --- | --- | --- |
+| `beacon_search_sessions` | Lists sessions by text and filters: time, harness, repository, model, device, needs review | All |
+| `beacon_grep` | Searches prompts, responses, commands, tool calls and results with a regular expression | All |
+| `beacon_read_session` | Reads a window of one session's timeline, or the events around one event | All |
+| `beacon_get_event` | Returns one event in full | All |
+| `beacon_lookup` | Lists the harnesses, repositories, models and devices you can filter on | All |
+| `beacon_usage` | Summarizes token usage and reported cost by model, harness, repository or day | All |
+| `beacon_lenses_list` | Lists your lenses, the lenses you added, or the marketplace | All |
+| `beacon_lenses_*` | Create, upload, release and update lenses (write access). See [Lenses with MCP](/cloud/lenses/lenses-mcp) | All |
+| `beacon_shared_traces_list` | Lists your shared traces with their link, visibility and view counts | All |
+| `beacon_share_session` | Shares one of your sessions as a trace and returns its link; direct (link-only) unless you ask for public or private (write access) | All |
+| `beacon_shared_trace_update` | Changes a shared trace's visibility, title or keep-updating setting, or unshares it after you confirm (write access) | All |
+| `beacon_findings_list` | Lists your findings, the ones that still need review first, filtered by severity or kind | Pro |
+| `beacon_get_finding` | Returns one finding in full: detail, recommendation, cited sessions and evidence, and the prompt in effect | Pro |
+| `beacon_finding_feedback` | Marks a finding helpful or not helpful with a note, and/or sets it resolved, dismissed or open (write access) | Pro |
+| `beacon_memory_candidate_create` | Files a lesson drafted from one of your sessions as a memory candidate, after you confirm it (write access) | Pro |
+| `beacon_memory_candidates_list` | Lists your memory candidates by state (awaiting review, approved, rejected, superseded) and repository | Pro |
+| `beacon_memory_candidate_get` | Returns one memory candidate in full, with the session evidence it rests on | Pro |
+| `beacon_memory_candidate_review` | Approves a candidate with the reviewed text, rejects it, or supersedes it with an existing memory (write access) | Pro |
+| `beacon_memory_search` | Searches your approved memory; every word must match | Pro |
+| `beacon_memory_get` | Returns one approved memory in full | Pro |
+| `beacon_memory_skill` | Renders an approved memory as an Agent Skill (`SKILL.md`) for the agent to save in your repository | Pro |
+
+Time filters accept a relative window such as `24h`, `7d` or `2w`, or exact `after` and `before`
+dates. `beacon_read_session` also accepts a dashboard session URL.
+
+Agents work best when they search first and then read only the part of a session they need.
+
+A Pro tool called from a free account returns an error saying the tool is part of Beacon Cloud Pro,
+with a link to [the pricing page](https://beacon.sh/pricing), so the agent can tell you why. An
+upgrade reaches your agents within about a minute, without reconnecting.
+
+Findings are what [Beacon Cloud's hourly analysis](/cloud/findings) noticed in your forwarded activity (security
+issues, repeated workflows worth turning into skills, and behavioral insights), the same ones the
+dashboard's **Findings** page shows. They are separate from the local `beacon scan` results.
+Feedback and status set over MCP are the same review you give on the dashboard: the next analysis
+reads your feedback and note, so it stops repeating what you rejected. `beacon_get_finding` and
+`beacon_finding_feedback` also accept a finding's dashboard URL.
+
+## Memory
+
+<Note>Memory over MCP is part of [Beacon Cloud Pro](/deployment/plans).</Note>
+
+Memory turns lessons from your sessions into reviewed knowledge that any agent connected to
+Beacon Cloud can recall, the same workflow as [`beacon memory`](/cli/memory) on a machine. The
+agent reads a session, drafts the lesson, and shows it to you; it files the candidate only after
+you confirm, and records your decision to approve, reject or supersede it. There is no evaluator
+in Beacon Cloud, so every candidate is one you reviewed. Approved memory is recalled with
+`beacon_memory_search`, and `beacon_memory_skill` renders one as the same Agent Skill
+`beacon memory skills install` writes. Beacon Cloud cannot write to your repository, so the agent
+saves the file after you confirm. The [Beacon Agent Skills](/concepts/beacon-skills)
+`beacon-memory-distill`, `beacon-memory-recall` and `beacon-memory-promote` drive this workflow
+for you. Memory in Beacon Cloud is separate from the local memory store on your machines; see
+[Memory in Beacon Cloud](/concepts/cross-harness-memory#memory-in-beacon-cloud).
+
+## Example prompts
+
+- "Find the session where I fixed the release workflow last week."
+- "Show me the command that resolved the failing Go test."
+- "Search my Claude Code and Cursor history for changes to the MCP connection flow."
+- "Summarize token usage for this repository over the past seven days, by model."
+- "Build a lens that shows every failed command and publish it." (needs write access)
+- "Which of my Beacon findings are high severity? Open the first one and check its evidence."
+- "Turn yesterday's fix for the flaky release test into Beacon memory." (needs write access)
+- "Have we solved this ENOSPC error before? Check my Beacon memory."
+- "Dismiss that finding as not helpful: the key it flagged is a test fixture." (needs write access)
+
+Session titles and summaries are metadata. For exact claims about commands, files or errors, have
+the agent read the events.
+
+## Access tokens
+
+If a harness cannot sign in with OAuth, create a personal MCP token and keep it in an environment
+variable:
+
+```bash
+export BEACON_MCP_TOKEN="$(beacon mcp token create --name laptop)"
+beacon mcp connect --token-env BEACON_MCP_TOKEN
+```
+
+Beacon writes only the variable's name into the harness configuration, never the token.
+
+- Tokens from `beacon mcp token create` are **read-only**. To publish lenses with a token, create
+  one with **Read + publish lenses** access on the [MCP Access](https://beacon.sh/dashboard/mcp)
+  page instead.
+- Tokens start with `bcn_mcp_`, are shown once, and expire after 90 days by default
+  (`--expires-in-days`, up to 366, or `0` for never).
+- You can have up to 25 active tokens.
+
+## Manage access in the dashboard
+
+The **MCP Access** page at [beacon.sh/dashboard/mcp](https://beacon.sh/dashboard/mcp), under
+**Identity** in the dashboard sidebar, shows everything that can reach your history over MCP:
+
+- **What Beacon MCP can access:** the server URL, and what read and write access allow.
+- **Connected apps:** every client you approved in the browser, whether it can publish lenses, and
+  when it was last used. Select **Disconnect** to remove one.
+- **Access tokens:** every token, its access, expiry and last use. Create a token here, including
+  one that can publish lenses, or select **Revoke**. A token is shown once, when you create it.
+- **Agents on your devices:** each supported agent Beacon found on your connected devices, and
+  whether `beacon-managed` is already configured in it. For one that is not, the page gives you the
+  `beacon mcp connect --harness <name>` command to run on that device.
+
+Disconnecting an app or revoking a token takes effect within 30 seconds.
+
+## Security
+
+- **Session content is data, not instructions.** Your history can contain text that looks like
+  instructions, including prompt injection captured from a tool result. Keep your agent's
+  confirmations on for actions that change systems or send data out.
+- **You see only your own history.** Results are limited to sessions forwarded from your devices.
+- **Privacy modes apply.** MCP returns only what a device forwarded. A Metadata-only device sends
+  no prompts, responses, tool arguments or output, so there is nothing to grep. Retained strings
+  are capped at 4 KB on the device before forwarding.
+- **Connect only to `https://mcp.beacon.sh`.**
+
+See [Beacon Cloud forwarding](/log-forwarding/asymptote#what-leaves-the-machine) and
+[retention and redaction](/security/retention-redaction) for the full data flow.
+
+## Check or remove the connection
+
+```bash
+beacon mcp status --check
+beacon mcp disconnect
+```
+
+`status` reports which harnesses are configured and checks the server. `disconnect` removes only
+the entries Beacon wrote, and leaves MCP entries you added yourself untouched.
+
+## Troubleshooting
+
+- **Authentication needed.** Restart the sign-in from your client, for example `/mcp` in Claude
+  Code.
+- **Lens tools are missing.** The connection is read-only. Sign in again and tick the lens
+  checkbox on the approval page.
+- **No results.** Check that the session appears at [beacon.sh](https://beacon.sh/dashboard), widen
+  the time window, and use `beacon_lookup` to get exact harness and repository names.
+- **Config changes not picked up.** Restart the harness.
+
+## Beacon Cloud and local MCP
+
+Beacon has two MCP servers. Use either, or both.
+
+| Server | Data | Set up with |
+| --- | --- | --- |
+| `beacon-managed` | History forwarded to Beacon Cloud from all your devices | `beacon mcp connect` |
+| `beacon` | This machine's local runtime log and approved local memory | [`beacon mcp doctor`](/cli/mcp) |
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Lenses with MCP" icon="layer-group" href="/cloud/lenses/lenses-mcp">
+    Have your agent build, publish and release lenses.
+  </Card>
+  <Card title="beacon mcp connect" icon="terminal" href="/cli/mcp-connect">
+    Every flag, supported harness and configuration format.
+  </Card>
+</Columns>

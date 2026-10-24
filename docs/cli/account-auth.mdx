@@ -1,0 +1,111 @@
+---
+title: "Beacon account authentication"
+description: "Sign the Beacon CLI in through beacon.sh without enabling managed telemetry forwarding"
+---
+
+Beacon account authentication is separate from endpoint forwarding. Signing in establishes your CLI identity, but it does not start Vector, register a managed endpoint, or send local telemetry anywhere.
+
+The interactive `beacon endpoint install` wizard requires this sign-in and launches
+the same flow when needed. System, package, MDM, CI, dry-run, and redirected-input
+installs skip the wizard and remain account-free.
+
+```bash
+beacon login
+beacon whoami
+beacon logout
+```
+
+## Sign in
+
+`beacon login` starts a PKCE exchange and opens `https://beacon.sh/cli/auth`. After authentication, beacon.sh redirects a one-time exchange code to a temporary loopback listener. The PKCE verifier never leaves the CLI except during the HTTPS exchange.
+
+```bash
+beacon login
+```
+
+For a terminal that cannot open a browser automatically, or a remote or headless
+machine (`--headless` is the same flag):
+
+```bash
+beacon login --no-browser
+```
+
+This is still a loopback-callback PKCE flow, not a device-code flow: after you
+approve, beacon.sh sends the browser to `http://127.0.0.1:<port>/callback` on the
+machine running the CLI.
+
+On Linux, `beacon login` does not try to open a browser when there is no display
+(`DISPLAY` and `WAYLAND_DISPLAY` unset) or in an SSH session. It says so, prints the
+URL, and waits:
+
+```text
+No browser can be opened on this machine: this is an SSH session.
+Sign-in finishes when beacon.sh redirects a browser back to this machine.
+Open this URL to sign in to Beacon:
+https://beacon.sh/cli/auth?port=43121&state=...
+Signing in from another computer? After you approve, that browser cannot reach this
+machine and shows a connection error. Copy the full address from its address bar
+(it starts with http://127.0.0.1) and paste it here, then press Enter.
+Or forward the port over SSH before opening the URL: ssh -L 43121:127.0.0.1:43121 <this machine>
+Waiting for Beacon sign-in...
+```
+
+### Signing in to a remote machine
+
+Open the URL in the browser on your own computer and approve. That browser then
+tries to load `http://127.0.0.1:<port>/callback?...`, which is your computer rather
+than the remote one, so the page fails to load. Copy the whole address from the
+address bar, paste it into the waiting terminal, and press Enter. The CLI checks that
+the address belongs to this sign-in, redeems the one-time exchange code, and
+finishes. An address from another attempt is rejected and you can paste again.
+
+Pasting the address is safe for the same reason the loopback redirect is: the
+exchange code is single use and is worthless without the PKCE verifier, which only
+the waiting CLI holds.
+
+Alternatively, run the printed `ssh -L` command in a second terminal on your own
+computer before opening the URL, and the redirect reaches the remote CLI directly.
+The port changes on every attempt.
+
+The session is stored at `~/.beacon/auth/session.json` in a `0700` directory with file mode `0600`. Human and JSON command output never includes the access token. Tokens expire rather than refreshing indefinitely; run `beacon login` again after expiry.
+
+Use `--auth-url` or `BEACON_AUTH_URL` only for a self-hosted or development authentication service. Non-loopback authentication URLs must use HTTPS.
+
+## Inspect the account
+
+`beacon whoami` reads the local session and displays the user, organization, expiry, authentication service, and session path. It does not contact beacon.sh.
+
+```bash
+beacon whoami
+beacon whoami --json
+```
+
+## Sign out
+
+`beacon logout` asks beacon.sh to revoke the CLI token and always removes the local session. If beacon.sh is unavailable, logout succeeds locally and warns that server revocation could not be confirmed.
+
+```bash
+beacon logout
+```
+
+Signing out does not stop an already configured managed forwarder. Use `beacon endpoint disconnect` for that separate device credential and service.
+
+## beacon.sh server contract
+
+The CLI uses the versioned `2026-09-01` grant contract:
+
+- `POST /api/cli/auth/init` registers the PKCE challenge, state, loopback port, CLI version, operating system, and architecture.
+- `GET /cli/auth?state=...&port=...&scopes=...` authenticates the person, lists every requested scope (space-separated in `scopes`), and redirects to the loopback callback with `state` and a one-time `exchange_code`.
+- `POST /api/cli/auth/exchange` accepts the exchange code, state, and PKCE verifier. It returns a scoped access token, expiry, user identity, organization memberships, and optional active organization.
+- `POST /api/cli/mcp/tokens` accepts `{"name": ..., "expires_in_days": ...}` with the access token as a Bearer credential and returns a personal Beacon Cloud MCP token (`token`, `access_token` metadata, `mcp_url`). It requires `mcp:token:create`.
+- `PUT /v1/traces/{external_id}`, `POST /v1/traces/{external_id}/events/batch` and `GET /v1/traces/{external_id}` create a shared trace from its `beacon.trace.v1` summary, upsert its trace events, and read it back (with the id of the last event held) for [`beacon share`](/cli/share) (and for the git pre-push hook, only after you opt in with [`beacon git setup --share-sessions`](/cli/git#sharing-sessions-on-push)), with the access token (or a `bcn_api_` API key) as a Bearer credential. They require `traces:write`. For a beacon.sh sign-in they go to `https://api.beacon.sh`; see [where the requests go](/cli/share#where-the-requests-go).
+- `POST /api/cli/auth/revoke` accepts the access token as a Bearer credential and revokes it.
+
+`beacon login` requests `profile:read`, `device:enroll`, `mcp:token:create` and `traces:write`. A later `beacon endpoint connect` can use `device:enroll` to mint a device-specific ingest key without treating the account token as an ingest credential, and `beacon mcp token create` uses `mcp:token:create` to mint a personal MCP token. beacon.sh approves the sign-in only when the permissions its page showed match the ones the CLI registered, so a crafted link cannot hide one. `beacon share` uses `traces:write` to upload a session you choose to share. A session from an older `beacon login` lacks `mcp:token:create` or `traces:write`; run `beacon login` again to create MCP tokens or share traces from the CLI.
+
+For that enrollment, `beacon endpoint connect` sends the machine description to
+`POST /api/cli/enroll/account` with the CLI access token. The response uses the
+existing device-enrollment shape (`device_id`, `device_key`, `key_prefix`,
+`ingest_url`, organization identity, email, and `ingest:write` scope). The account
+token is used only for this request; the returned device key remains Vector's sole
+credential.

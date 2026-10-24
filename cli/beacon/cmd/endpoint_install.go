@@ -1,0 +1,537 @@
+package cmd
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/auth"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/harness"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/service"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/writer"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/onboarding"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/version"
+	"github.com/spf13/cobra"
+)
+
+var endpointInstallCmd = &cobra.Command{
+	Use:          "install",
+	Short:        "Install local endpoint telemetry configuration",
+	SilenceUsage: true,
+	RunE:         runEndpointInstall,
+}
+
+var endpointStatusCmd = &cobra.Command{
+	Use:          "status",
+	Short:        "Show local endpoint status",
+	SilenceUsage: true,
+	RunE:         runEndpointStatus,
+}
+
+var endpointDiscoverCmd = &cobra.Command{
+	Use:          "discover",
+	Short:        "Discover supported local AI agent runtimes",
+	SilenceUsage: true,
+	RunE:         runEndpointDiscover,
+}
+
+var endpointUninstallCmd = &cobra.Command{
+	Use:          "uninstall",
+	Short:        "Remove local endpoint service files",
+	SilenceUsage: true,
+	RunE:         runEndpointUninstall,
+}
+
+var endpointRepairCmd = &cobra.Command{
+	Use:          "repair",
+	Short:        "Repair local endpoint service and telemetry configuration",
+	SilenceUsage: true,
+	RunE:         runEndpointRepair,
+}
+
+var endpointDashboardCmd = &cobra.Command{
+	Use:          "dashboard",
+	Short:        "Run the local Beacon endpoint dashboard",
+	SilenceUsage: true,
+	RunE:         runEndpointDashboard,
+}
+
+var dashboardListenAndServe = dashboard.ListenAndServe
+
+func runEndpointDashboard(cmd *cobra.Command, args []string) error {
+	cfg := loadOrDefaultConfig()
+	userMode := endpointUserMode()
+	runtimeLog := lifecycle.ResolveRuntimeLog(userMode, endpointOpts.logPath)
+	cfg.UserMode = runtimeLog.EffectiveUserMode
+	cfg.LogPath = runtimeLog.EffectiveLogPath
+	if endpointOpts.dashboardAddr == "" {
+		endpointOpts.dashboardAddr = dashboard.DefaultAddr
+	}
+	if err := dashboard.ValidateLoopbackAddr(endpointOpts.dashboardAddr); err != nil {
+		return err
+	}
+	url := dashboard.URL(endpointOpts.dashboardAddr)
+	fmt.Printf("Beacon endpoint dashboard: %s\n", url)
+	fmt.Printf("Runtime log: %s\n", cfg.LogPath)
+	if runtimeLog.Warning != "" {
+		fmt.Printf("Runtime log source: %s\n", runtimeLog.Warning)
+	}
+	if endpointOpts.dashboardOpen {
+		if err := dashboard.OpenBrowser(url); err != nil {
+			// Over SSH the dashboard is still worth serving: forward its port and open it on
+			// the client.
+			if !errors.Is(err, auth.ErrNoDisplay) {
+				return err
+			}
+			fmt.Printf("Not opening a browser (%v).\n", err)
+		}
+	}
+	return dashboardListenAndServe(dashboard.Options{
+		Addr:     endpointOpts.dashboardAddr,
+		LogPath:  endpointOpts.logPath,
+		UserMode: userMode,
+	})
+}
+
+// Seams for tests. Production always runs the lifecycle package.
+var (
+	endpointLifecycleInstall = lifecycle.Install
+	endpointLifecycleRepair  = lifecycle.Repair
+)
+
+// endpointInstallOptions builds the lifecycle options shared by `endpoint install` and
+// `endpoint repair` from the resolved target selection and flags.
+//
+// The selection is authoritative for OTLP runtimes: every --harness value (auto, all, an
+// explicit list, or "" for collector-only) has been resolved by this point, so a selection with
+// no OTLP targets means "configure none". lifecycle.InstallOptions reads a nil Harnesses as
+// "unspecified" and substitutes the config default of Claude Code and Codex, which is how
+// `--harness omp` came to rewrite ~/.claude/settings.json and ~/.codex/config.toml on every
+// install and repair (#640). So the list is always handed over non-nil.
+func endpointInstallOptions(selection endpointTargetSelection, serviceKind service.Kind) lifecycle.InstallOptions {
+	harnesses := append([]string{}, selection.OTLP...)
+	return lifecycle.InstallOptions{
+		UserMode:                  endpointUserMode(),
+		LogPath:                   endpointOpts.logPath,
+		Harnesses:                 harnesses,
+		GRPCPort:                  endpointOpts.grpcPort,
+		HTTPPort:                  endpointOpts.httpPort,
+		HealthPort:                endpointOpts.healthPort,
+		CollectorPath:             endpointOpts.collectorPath,
+		StartService:              !endpointOpts.noStart,
+		IncludeRuntimeMetrics:     endpointOpts.includeRuntimeMetrics,
+		IncludeCodexSpans:         endpointOpts.includeCodexSpans,
+		ClaudeCaptureModelContext: endpointOpts.claudeCaptureModelContext,
+		SplunkHEC:                 splunkHECOptions(),
+		FalconHEC:                 falconHECOptions(),
+		ServiceKind:               serviceKind,
+	}
+}
+
+// errSetupCancelled replaces the wizard's own "onboarding cancelled", which read as a failure
+// and left the person to guess what state the machine was in. The wizard runs before anything is
+// written, so the answer is always the same: nothing changed, and here is how to start again.
+var errSetupCancelled = fmt.Errorf("setup cancelled; nothing was installed. Run `beacon endpoint install` again when you are ready, or set %s=0 to install without the guided setup", onboardingEnvEnabled)
+
+func runEndpointInstall(cmd *cobra.Command, args []string) error {
+	selection, err := resolveEndpointTargets(endpointOpts.harnesses, harness.DiscoverAll())
+	if err != nil {
+		return err
+	}
+	reportEndpointTargetSelection(cmd, selection)
+	serviceKind, err := service.ParseKind(endpointOpts.serviceKind)
+	if err != nil {
+		return err
+	}
+	if endpointOpts.dryRun {
+		return printPlannedActions(plannedInstallActions(false, serviceKind, selection.OTLP, selection.Hooks))
+	}
+	// Asked once, on an interactive install, before anything is written to disk. Every
+	// non-interactive path (package postinstall, MDM, CI) is gated out inside.
+	onboarded, err := maybeRunOnboarding(cmd)
+	if err != nil {
+		if errors.Is(err, onboarding.ErrWizardCancelled) {
+			return errSetupCancelled
+		}
+		return err
+	}
+	// Confirming Beacon Cloud connects this endpoint; --connect does the same for
+	// the paths the wizard did not own.
+	connectAfterInstall := onboarded.Connect || endpointOpts.connect
+	// A wizard install that connects to Beacon Cloud closes on a short summary (cloudSummary)
+	// instead of the paths and per-runtime lines below, which are for operators and scripts.
+	// Warnings still go to stderr. With nothing else said, the install, the backfill and the
+	// connect would pass in silence, so one line says what is happening first.
+	var summary *cloudSummary
+	details := io.Writer(os.Stdout)
+	if onboarded.briefClose() {
+		summary = &cloudSummary{}
+		details = io.Discard
+		fmt.Fprintln(cmd.OutOrStdout(), "Installing Beacon and connecting to Beacon Cloud...")
+	}
+	result, err := endpointLifecycleInstall(endpointInstallOptions(selection, serviceKind))
+	if err != nil {
+		return err
+	}
+	// Only now is the machine actually installed, so only now is it onboarded. The
+	// record used to be written before this call, which meant a failed install left
+	// a profile claiming otherwise and the retry silently skipped the wizard.
+	if onboarded.Persist != nil {
+		if err := onboarded.Persist(); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "beacon: %v\n", err)
+		}
+	}
+	fmt.Fprintf(details, "Endpoint config written to %s\n", result.ConfigPath)
+	fmt.Fprintf(details, "Collector config written to %s\n", result.CollectorConfigPath)
+	fmt.Fprintf(details, "Service definition written to %s\n", result.PlistPath)
+	fmt.Fprintf(details, "Install manifest written to %s\n", result.ManifestPath)
+	fmt.Fprintf(details, "Runtime log: %s\n", result.LogPath)
+	switch {
+	case result.InventoryJobPath != "":
+		fmt.Fprintf(details, "Scheduled inventory job: %s\n", result.InventoryJobPath)
+	case result.InventoryJobDetail != "":
+		fmt.Fprintf(details, "Scheduled inventory job not installed: %s\n", result.InventoryJobDetail)
+	}
+	reportManagedForwarder(details, cmd.ErrOrStderr(), result.ManagedForwarder)
+	printLingerGap(cmd.ErrOrStderr(), result)
+	installHookTargetsFromEndpointInstall(details, cmd.ErrOrStderr(), selection.Hooks)
+	refreshAgentSkills(cmd.ErrOrStderr())
+	installAgentSkillsFromOnboarding(cmd, onboarded)
+	// Read recent history from the agents' own session stores so the dashboard has sessions
+	// in it before any agent runs again. Local only, bounded, and never a reason to fail the
+	// install; a connect below ships what it wrote rather than sweeping again.
+	backfilled := false
+	if endpointBackfillEnabled() {
+		backfillOut := cmd.OutOrStdout()
+		if summary != nil {
+			backfillOut = &summary.backfill
+		}
+		reportEndpointBackfill(backfillOut, runEndpointBackfill(result.LogPath, endpointUserMode()))
+		backfilled = true
+	}
+	finishCloudSetup(cmd, onboarded, connectAfterInstall, summary, func() error {
+		return connectEndpointFor(cmd, endpointUserMode(), result.LogPath, backfilled, summary)
+	})
+	return nil
+}
+
+// cloudSummary is the closing of a wizard install that connects to Beacon Cloud, said in place of
+// the full install, connect and Beacon Cloud MCP reports. Those are written for an operator reading
+// a log. Someone who has just confirmed the wizard needs to know that it worked, what history is on
+// its way, where to look, and what is left to do in their agents, in that order:
+//
+//	Beacon is installed and connected to Beacon Cloud as <account> (device <id>, <mode> privacy).
+//	Session backfill: <n> events from the last 30 days (<runtime> <n>, ...).
+//	Dashboard: <url> (...)
+//	Beacon Cloud MCP added to <apps>; sign in to beacon-managed once in each app (...).
+//
+// Warnings, and the retry commands they name, still go to stderr. `beacon endpoint connect`,
+// `beacon mcp connect` and `install --connect` without the wizard keep their full output.
+type cloudSummary struct {
+	// backfill holds the install's session backfill report until the connected line is said.
+	backfill bytes.Buffer
+	// dashboardURL is the hosted dashboard, set by a successful connect.
+	dashboardURL string
+	// uploading is how many events of session history the connect staged for upload.
+	uploading int
+}
+
+// onboardingOpenDashboard is a seam for tests, which must never open a real browser.
+var onboardingOpenDashboard = auth.OpenBrowser
+
+// finishCloudSetup connects the endpoint when the wizard or --connect asked for it, and then
+// registers Beacon Cloud MCP when the wizard kept it selected. MCP is registered only once the
+// endpoint forwards to Beacon Cloud, since there is nothing for it to search otherwise. summary is
+// non-nil when the install closes on the wizard's short summary; connect fills it in.
+func finishCloudSetup(cmd *cobra.Command, onboarded onboardingOutcome, connectAfterInstall bool, summary *cloudSummary, connect func() error) {
+	if !connectAfterInstall {
+		if onboarded.ConnectCloudMCP {
+			// An endpoint that was already connected keeps its device key and is not
+			// re-enrolled, but the person still asked for Beacon Cloud MCP.
+			connectCloudMCPFromOnboarding(cmd, false)
+		}
+		return
+	}
+	// The install is complete and stands on its own; a failed connect is reported with the
+	// retry command rather than turning a working install into an error.
+	out := cmd.OutOrStdout()
+	fmt.Fprintln(out)
+	if err := connect(); err != nil {
+		if summary != nil {
+			fmt.Fprintln(out, "Beacon is installed on this machine, but it is not connected to Beacon Cloud yet.")
+			_, _ = summary.backfill.WriteTo(out)
+		}
+		fmt.Fprintf(cmd.ErrOrStderr(), "beacon: managed ingest was not connected (%v). Run `beacon endpoint connect` to try again.\n", err)
+		if onboarded.ConnectCloudMCP {
+			fmt.Fprintln(cmd.ErrOrStderr(), "beacon: Beacon Cloud MCP was not registered either; run `beacon mcp connect` once the endpoint is connected.")
+		}
+		return
+	}
+	recordDestinationAsymptote(cmd)
+	if summary != nil {
+		showDashboard(cmd, summary)
+	}
+	if onboarded.ConnectCloudMCP {
+		connectCloudMCPFromOnboarding(cmd, summary != nil)
+		return
+	}
+	suggestMCPConnect(out, onboarded.Connect)
+}
+
+// showDashboard names the hosted dashboard and opens it, since that is where someone who just
+// finished the wizard goes next. The browser is opened only where the person can see it: not with
+// --no-browser, not over SSH (a browser there would open on the remote machine's screen, if
+// anywhere), and not on a Linux machine without a display. A browser that fails to open is not
+// worth a warning, because the URL is on screen either way.
+func showDashboard(cmd *cobra.Command, summary *cloudSummary) {
+	url := summary.dashboardURL
+	if url == "" {
+		url = dashboardHomeURL("")
+	}
+	line := "Dashboard: " + url
+	if summary.uploading > 0 {
+		line += " (your recent sessions appear within a minute)"
+	} else {
+		line += " (sessions appear within about 15 seconds of agent activity)"
+	}
+	fmt.Fprintln(cmd.OutOrStdout(), line)
+	if endpointOpts.noBrowser || os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_TTY") != "" {
+		return
+	}
+	if onboardingDisplayCheck() != nil {
+		return
+	}
+	_ = onboardingOpenDashboard(url)
+}
+
+// suggestMCPConnect points a person who chose Beacon Cloud in the wizard, but turned Beacon
+// Cloud MCP off, at `beacon mcp connect`. It only prints, and the unattended install paths never
+// reach the wizard at all.
+func suggestMCPConnect(out io.Writer, chosenInWizard bool) {
+	if !chosenInWizard {
+		return
+	}
+	fmt.Fprintln(out, "To let your agents search this history through Beacon Cloud MCP, run `beacon mcp connect`.")
+}
+
+func runEndpointStatus(cmd *cobra.Command, args []string) error {
+	status := lifecycle.GetStatus(endpointUserMode(), endpointOpts.logPath)
+	if endpointOpts.jsonOutput {
+		return json.NewEncoder(os.Stdout).Encode(status)
+	}
+	fmt.Printf("Beacon Endpoint Agent %s\n", status.Version)
+	fmt.Printf("Config: %s\n", status.ConfigPath)
+	fmt.Printf("Runtime log: %s\n", status.LogPath)
+	if status.RuntimeLog.Warning != "" {
+		fmt.Printf("Runtime log source: %s\n", status.RuntimeLog.Warning)
+	}
+	fmt.Printf("Collector: grpc=%t http=%t", status.Collector.GRPCReady, status.Collector.HTTPReady)
+	if status.Collector.Message != "" {
+		fmt.Printf(" (%s)", status.Collector.Message)
+	}
+	fmt.Println()
+	fmt.Printf("Service: loaded=%t running=%t", status.Service.Loaded, status.Service.Running)
+	if status.Service.Message != "" {
+		fmt.Printf(" (%s)", status.Service.Message)
+	}
+	fmt.Println()
+	for _, h := range status.Harnesses {
+		if h.Detected {
+			fmt.Printf("Harness: %s %s telemetry=%s\n", h.DisplayName, h.Version, h.TelemetryStatus)
+		}
+	}
+	for _, check := range status.Diagnostics {
+		if check.Status != "ok" {
+			fmt.Printf("Diagnostic: %s %s (%s)\n", check.Name, check.Status, check.Message)
+		}
+	}
+	if status.LastEvent == "" {
+		fmt.Println("Last event: none")
+	} else {
+		fmt.Println("Last event: present")
+	}
+	for _, forwarder := range status.ScriptForwarders {
+		fmt.Println(scriptForwarderStatusLine(forwarder))
+	}
+	if line := cloudStatusLine(status.ManagedIngest, endpointUserMode(), len(status.ScriptForwarders) > 0); line != "" {
+		fmt.Println(line)
+	}
+	fmt.Println(inventoryHeartbeatStatusLine(status.InventoryHeartbeat))
+	return nil
+}
+
+func runEndpointDiscover(cmd *cobra.Command, args []string) error {
+	discovered := harness.DiscoverAll()
+	if endpointOpts.jsonOutput {
+		if !endpointOpts.allTargets {
+			filtered := []harness.Harness{}
+			for _, h := range discovered {
+				if h.Detected {
+					filtered = append(filtered, h)
+				}
+			}
+			return json.NewEncoder(os.Stdout).Encode(filtered)
+		}
+		return json.NewEncoder(os.Stdout).Encode(discovered)
+	}
+	for _, h := range discovered {
+		if !endpointOpts.allTargets && !h.Detected {
+			continue
+		}
+		state := "not detected"
+		if h.Detected {
+			state = "detected"
+		}
+		fmt.Printf("%s: %s, telemetry=%s", h.DisplayName, state, h.TelemetryStatus)
+		if h.ExecutablePath != "" {
+			fmt.Printf(", path=%s", h.ExecutablePath)
+		}
+		fmt.Println()
+	}
+	cfg := loadOrDefaultConfig()
+	for _, h := range discovered {
+		if h.Detected {
+			event := schema.NewEvent(schema.NewEventOptions{
+				Action:       "agent.detected",
+				Category:     "inventory",
+				Severity:     schema.SeverityInfo,
+				AgentVersion: version.GetVersion(),
+				Harness: schema.HarnessInfo{
+					Name:           h.Name,
+					Version:        h.Version,
+					ExecutablePath: h.ExecutablePath,
+					ConfigPath:     h.ConfigPath,
+				},
+				Message: h.DisplayName + " detected",
+			})
+			if _, err := writer.AppendEvent(event, writer.Options{Path: cfg.LogPath, UserMode: cfg.UserMode}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func runEndpointUninstall(cmd *cobra.Command, args []string) error {
+	if endpointOpts.dryRun {
+		return printPlannedActions(plannedUninstallActions())
+	}
+	if err := lifecycle.Uninstall(lifecycle.UninstallOptions{UserMode: endpointUserMode(), LogPath: endpointOpts.logPath, KeepLogs: endpointOpts.keepLogs, KeepConfig: endpointOpts.keepConfig}); err != nil {
+		return err
+	}
+	fmt.Println("Endpoint service, config, and managed files removed.")
+	return nil
+}
+
+func runEndpointRepair(cmd *cobra.Command, args []string) error {
+	selection, err := resolveEndpointTargets(endpointOpts.harnesses, harness.DiscoverAll())
+	if err != nil {
+		return err
+	}
+	reportEndpointTargetSelection(cmd, selection)
+	serviceKind, err := service.ParseKind(endpointOpts.serviceKind)
+	if err != nil {
+		return err
+	}
+	if endpointOpts.dryRun {
+		return printPlannedActions(plannedInstallActions(true, serviceKind, selection.OTLP, selection.Hooks))
+	}
+	// Resend only. Repair is a maintenance command and never asks a question, but a
+	// signup that failed on a flaky network deserves the retry the docs promise.
+	retryPendingOnboarding()
+	result, err := endpointLifecycleRepair(endpointInstallOptions(selection, serviceKind))
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Endpoint repaired. Manifest: %s\n", result.ManifestPath)
+	reportManagedForwarder(os.Stdout, cmd.ErrOrStderr(), result.ManagedForwarder)
+	printLingerGap(cmd.ErrOrStderr(), result)
+	installHookTargetsFromEndpointInstall(os.Stdout, cmd.ErrOrStderr(), selection.Hooks)
+	refreshAgentSkills(cmd.ErrOrStderr())
+	return nil
+}
+
+func reportEndpointTargetSelection(cmd *cobra.Command, selection endpointTargetSelection) {
+	if !selection.Automatic {
+		return
+	}
+	out := cmd.OutOrStdout()
+	var targets []string
+	seen := map[string]bool{}
+	for _, target := range append(append([]string(nil), selection.OTLP...), selection.Hooks...) {
+		if !seen[target] {
+			targets = append(targets, target)
+			seen[target] = true
+		}
+	}
+	if len(targets) == 0 {
+		fmt.Fprintln(out, "No automatically installable runtimes were detected; no runtime integrations will be configured.")
+	} else {
+		fmt.Fprintf(out, "Automatically configuring detected runtimes: %s\n", strings.Join(targets, ", "))
+	}
+	for _, skipped := range selection.Skipped {
+		fmt.Fprintf(out, "Detected %s but skipped automatic configuration: %s.\n", skipped.Name, skipped.Reason)
+	}
+}
+
+// printLingerGap says so when the collector is running but will not outlive this login session.
+//
+// Install used to print an unbroken run of success lines here even when the systemd --user unit
+// had no linger, so the user learned about it at their next logout, with collection already
+// stopped. The headline is chosen by whether a remediation is known rather than by inspecting
+// the detail text: a known-off linger gets the fact and the exact command, and an unverifiable
+// one is reported as unverified instead of asserted as broken.
+func printLingerGap(out io.Writer, result lifecycle.InstallResult) {
+	if !result.LingerApplicable || result.LingerEnabled {
+		return
+	}
+	if result.LingerRemediation == "" {
+		fmt.Fprintln(out, "Warning: could not verify that collection survives logout.")
+	} else {
+		fmt.Fprintln(out, "Warning: the collector is running, but collection will stop when this user logs out.")
+	}
+	if result.LingerDetail != "" {
+		fmt.Fprintf(out, "Detail: %s\n", result.LingerDetail)
+	}
+	if result.LingerRemediation != "" {
+		fmt.Fprintf(out, "To keep collecting after logout, run: %s\n", result.LingerRemediation)
+	}
+}
+
+// installHookTargetsFromEndpointInstall installs the hook targets that ride an endpoint
+// install or repair, says what it wrote on report, and reports the ones it could not write as
+// warnings on out. What a runtime still needs from the person (a restart, a trust prompt) goes to
+// stdout whatever report is, because that runtime collects nothing until it is done.
+//
+// By the time this runs the collector, its config, the service unit, and the OTLP settings
+// are all in place, so the endpoint works. A hook that could not be written, most often a
+// runtime settings file with a shape the merge does not understand, is one command away
+// from being retried, and it used to turn that complete install into a non-zero exit that
+// read as a broken endpoint. Every target is still attempted, so one runtime's settings
+// file cannot stop another runtime's hooks from being installed.
+func installHookTargetsFromEndpointInstall(report, out io.Writer, targets []string) {
+	if len(targets) == 0 {
+		return
+	}
+	cfg := loadOrDefaultConfig()
+	if endpointOpts.logPath != "" {
+		cfg.LogPath = endpointOpts.logPath
+	}
+	var failed []string
+	for _, target := range targets {
+		if err := installEndpointHookTargetTo(report, os.Stdout, target, cfg); err != nil {
+			failed = append(failed, target)
+			fmt.Fprintf(out, "Warning: %s hooks were not installed: %v\n", target, err)
+		}
+	}
+	if len(failed) > 0 {
+		fmt.Fprintf(out, "The endpoint is installed without them. Retry with: beacon endpoint hooks install --harness %s\n", strings.Join(failed, ","))
+	}
+}

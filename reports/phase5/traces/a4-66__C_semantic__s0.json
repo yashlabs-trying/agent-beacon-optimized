@@ -1,0 +1,28 @@
+{
+  "task": "a4-66",
+  "suite": "A",
+  "category": "A4_recovery",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a4-66-stale",
+    "a4-66-durable"
+  ],
+  "required_evidence": [
+    "a4-66-durable"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.615,
+  "prompt_tokens": 146,
+  "gen_tokens": 8
+}

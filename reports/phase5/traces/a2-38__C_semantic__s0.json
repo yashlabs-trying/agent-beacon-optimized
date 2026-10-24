@@ -1,0 +1,29 @@
+{
+  "task": "a2-38",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-38-new",
+    "a2-38-old",
+    "a2-38-decoy"
+  ],
+  "required_evidence": [
+    "a2-38-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The current ledger pool size is 53 connections.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.151,
+  "prompt_tokens": 151,
+  "gen_tokens": 12
+}

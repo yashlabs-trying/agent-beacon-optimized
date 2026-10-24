@@ -1,0 +1,114 @@
+---
+title: "beacon endpoint config"
+description: "Inspect Beacon endpoint configuration and validate destination settings"
+---
+
+## Command overview
+
+`beacon endpoint config` inspects the local Beacon endpoint configuration and
+validates its destination settings. It does not edit the configuration.
+
+```bash title="Command syntax"
+beacon endpoint config [command]
+```
+
+Use this command group when you need to review the effective endpoint configuration
+or validate configured destinations without reinstalling the endpoint agent.
+
+## Commands
+
+<Columns cols={2}>
+  <Card title="show" icon="eye" href="#beacon-endpoint-config-show">
+    Print endpoint configuration with secrets redacted.
+  </Card>
+  <Card title="validate" icon="check" href="#beacon-endpoint-config-validate">
+    Validate endpoint configuration and destination settings.
+  </Card>
+</Columns>
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--user` | Use per-user endpoint paths. Enabled by default |
+| `--system` | Use system endpoint paths and launch daemon |
+| `--log-path <path>` | Runtime JSONL log path |
+
+## beacon endpoint config show
+
+`beacon endpoint config show` prints the endpoint configuration with secrets redacted.
+
+```bash title="Manage endpoint configuration"
+beacon endpoint config show
+```
+
+Splunk HEC tokens and other secret destination values are not printed. Use this command before support handoffs or diagnostics collection when you need to confirm paths, ports, harnesses, and destination settings.
+
+### Examples
+
+Show per-user endpoint config:
+
+```bash title="Show per-user endpoint config"
+beacon endpoint config show
+```
+
+Show system endpoint config:
+
+```bash title="Show system endpoint config"
+sudo beacon endpoint config show --system
+```
+
+## beacon endpoint config validate
+
+`beacon endpoint config validate` loads the effective endpoint configuration and
+validates its destination settings.
+
+```bash title="Run the validation check"
+beacon endpoint config validate
+```
+
+Validation checks destination configuration. For example, Splunk HEC and Falcon
+LogScale HEC forwarding require both an endpoint URL and token when configured.
+If the endpoint config file is missing, unreadable, or malformed, Beacon currently
+falls back to the default effective configuration; this command does not prove that
+the file itself parsed successfully. Use `beacon endpoint doctor` when checking an
+installed endpoint's overall health.
+
+### Examples
+
+Validate per-user endpoint config:
+
+```bash title="Validate per-user endpoint config"
+beacon endpoint config validate
+```
+
+Validate system endpoint config:
+
+```bash title="Validate system endpoint config"
+sudo beacon endpoint config validate --system
+```
+
+## Managed ingest block
+
+When the endpoint is connected to Beacon Cloud ingest, `config.json` carries a non-secret `managed_ingest` block:
+
+| Field | Meaning |
+|-------|---------|
+| `enabled` | `true` while the endpoint is connected |
+| `ingest_url` | The `https://` ingest URL returned by enrollment |
+| `device_id` | This device's id in the Beacon dashboard |
+| `organization_id` | The organization that approved the device |
+| `privacy_mode` | `standard` or `metadata_only`, rendered into the local Vector pipeline |
+
+[`beacon endpoint connect`](/cli/endpoint-connect) writes the block and `beacon endpoint disconnect` clears it. It never holds the account token or device key; the device key lives only in `asymptote/vector-secrets.json`. The block survives re-running `beacon endpoint install`.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Endpoint install" icon="download" href="/cli/endpoint-install">
+    Configure endpoint telemetry and collector service files.
+  </Card>
+  <Card title="Diagnostics bundle" icon="file-zipper" href="/cli/endpoint-bundle-diagnostics">
+    Collect redacted endpoint support artifacts.
+  </Card>
+</Columns>

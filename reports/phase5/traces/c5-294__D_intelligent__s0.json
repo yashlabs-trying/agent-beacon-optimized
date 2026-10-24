@@ -1,0 +1,32 @@
+{
+  "task": "c5-294",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-294-alpha",
+    "c5-294-beta"
+  ],
+  "required_evidence": [
+    "c5-294-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's cart cache TTL is 6.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": [
+      "6"
+    ]
+  },
+  "forbidden_leaked": [
+    "6"
+  ],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.07,
+  "prompt_tokens": 130,
+  "gen_tokens": 11
+}

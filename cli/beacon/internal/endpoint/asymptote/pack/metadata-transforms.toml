@@ -1,0 +1,102 @@
+[transforms.beacon_runtime_metadata]
+type = "remap"
+inputs = ["beacon_runtime", "beacon_backfill"]
+drop_on_abort = true
+source = '''
+event = parse_json!(string!(.message))
+# prompt.id names the turn an event belongs to and is kept; the prompt's text is content.
+del(event.prompt.text)
+if is_object(event.prompt) && is_empty(object!(event.prompt)) {
+  del(event.prompt)
+}
+del(event.message)
+del(event.raw)
+del(event.command.output)
+del(event.file.diff)
+del(event.gen_ai.input)
+del(event.gen_ai.output)
+del(event.gen_ai.system_instructions)
+# A tool description is server-authored text the model was shown, removed for the reason inventory
+# removes an MCP server's definition; the tool's name stays.
+del(event.gen_ai.tool.description)
+del(event.gen_ai.tool.call.arguments)
+del(event.gen_ai.tool.call.result)
+# Tool definitions are the full schemas and descriptions of every tool offered to the model, the
+# same material as an MCP server's definition, which inventory removes.
+del(event.gen_ai.tool.definitions)
+# Retrieval carries the query the model ran and the documents it got back.
+del(event.gen_ai.retrieval)
+# An evaluator's explanation and an agent's description are free text; the evaluation's name and
+# score and the agent's id, name and version stay.
+del(event.gen_ai.evaluation.explanation)
+del(event.gen_ai.agent.description)
+# Stop sequences are strings the caller chose, which can quote the conversation.
+del(event.gen_ai.request.stop_sequences)
+if is_object(event.gen_ai.tool.call) && is_empty(object!(event.gen_ai.tool.call)) {
+  del(event.gen_ai.tool.call)
+}
+if is_object(event.gen_ai.tool) && is_empty(object!(event.gen_ai.tool)) {
+  del(event.gen_ai.tool)
+}
+if is_object(event.gen_ai.evaluation) && is_empty(object!(event.gen_ai.evaluation)) {
+  del(event.gen_ai.evaluation)
+}
+if is_object(event.gen_ai.agent) && is_empty(object!(event.gen_ai.agent)) {
+  del(event.gen_ai.agent)
+}
+if is_object(event.gen_ai.request) && is_empty(object!(event.gen_ai.request)) {
+  del(event.gen_ai.request)
+}
+if is_object(event.gen_ai) && is_empty(object!(event.gen_ai)) {
+  del(event.gen_ai)
+}
+# An approval's or a policy's reason is free text: an operator's typed feedback (Kimi Code, Pi), the
+# runtime's description of the request (Hermes Agent), or a policy provider's explanation, which can
+# quote the command. The decision, enforcement and policy identity stay.
+del(event.approval.reason)
+if is_object(event.approval) && is_empty(object!(event.approval)) {
+  del(event.approval)
+}
+del(event.policy.reason)
+if is_object(event.policy) && is_empty(object!(event.policy)) {
+  del(event.policy)
+}
+# system_context says what a session.context event recorded and names the skills a skill index
+# listed, the way inventory names skills on disk; its text was in gen_ai.system_instructions.
+if is_object(event.content) {
+  event.content.retention = "metadata"
+  event.content.included = false
+  event.content.redacted = true
+}
+.message = encode_json(event)
+'''
+
+[transforms.beacon_inventory_metadata]
+type = "remap"
+inputs = ["beacon_inventory"]
+drop_on_abort = true
+source = '''
+event = parse_json!(string!(.message))
+if is_array(event.raw.inventory.configs) {
+  event.raw.inventory.configs = map_values(array!(event.raw.inventory.configs)) -> |value| {
+    item = object!(value)
+    del(item.content)
+    item
+  }
+}
+if is_array(event.raw.inventory.mcp_servers) {
+  event.raw.inventory.mcp_servers = map_values(array!(event.raw.inventory.mcp_servers)) -> |value| {
+    item = object!(value)
+    del(item.definition)
+    item
+  }
+}
+if is_array(event.raw.inventory.skills) {
+  event.raw.inventory.skills = map_values(array!(event.raw.inventory.skills)) -> |value| {
+    item = object!(value)
+    del(item.content)
+    item
+  }
+}
+.message = encode_json(event)
+'''

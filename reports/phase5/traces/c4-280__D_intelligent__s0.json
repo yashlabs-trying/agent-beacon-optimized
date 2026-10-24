@@ -1,0 +1,34 @@
+{
+  "task": "c4-280",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-280-gold",
+    "c4-280-d2",
+    "c4-280-d6",
+    "c4-280-d0",
+    "c4-280-d3",
+    "c4-280-d7",
+    "c4-280-d4",
+    "c4-280-d5"
+  ],
+  "required_evidence": [
+    "c4-280-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The reports retry count is 72.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.984,
+  "prompt_tokens": 231,
+  "gen_tokens": 10
+}

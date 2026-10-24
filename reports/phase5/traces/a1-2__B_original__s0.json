@@ -1,0 +1,28 @@
+{
+  "task": "a1-2",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-2-fixed",
+    "a1-2-failed"
+  ],
+  "required_evidence": [
+    "a1-2-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the notify cache TTL problem in the new environment, you should use a connection pool.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 11.909,
+  "agent_seconds": 1.262,
+  "prompt_tokens": 154,
+  "gen_tokens": 20
+}

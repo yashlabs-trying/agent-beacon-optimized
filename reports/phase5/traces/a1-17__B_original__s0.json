@@ -1,0 +1,28 @@
+{
+  "task": "a1-17",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-17-fixed",
+    "a1-17-failed"
+  ],
+  "required_evidence": [
+    "a1-17-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the export cache TTL problem in the new environment, you should add a bounded backoff mechanism. This approach will help in managing retries more effectively and avoid overwhelming the system with too many requests at once.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 32.949,
+  "agent_seconds": 3.378,
+  "prompt_tokens": 155,
+  "gen_tokens": 43
+}

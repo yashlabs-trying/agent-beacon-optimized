@@ -1,0 +1,80 @@
+---
+title: "Factory Droid"
+description: "Beacon support details for Factory Droid endpoint telemetry"
+---
+
+## Runtime overview
+
+Beacon supports Factory Droid through an OTLP HTTP launch environment, optional hook telemetry, and a local session-store sync for historical sessions.
+
+## Prerequisites
+
+Before enabling Factory Droid telemetry, make sure:
+
+- Factory Droid is installed and available as the `droid` executable for the user or managed endpoint.
+- `beacon endpoint install` has run so the local collector, shared endpoint config, and runtime log paths exist.
+- Droid's launch environment sets `OTEL_TELEMETRY_ENDPOINT=http://127.0.0.1:4318` through MDM or another customer-owned policy.
+- Optional hook telemetry is installed with `beacon endpoint hooks install --harness factory`.
+- Historical session telemetry can be synced from Factory's local session store with `beacon endpoint factory sync`.
+- Factory Droid is restarted after launch-environment or hook changes so new sessions use the updated settings.
+
+## Collection path
+
+Factory Droid can send OTLP HTTP telemetry to Beacon's local collector. Factory hooks can also invoke Beacon's hook adapter for richer runtime events where Factory exposes hook payloads. Beacon can also read committed Factory session records from `~/.factory/sessions` and convert them into endpoint events marked `harness.collection_method=poll`.
+
+## Discovery and status
+
+Beacon detects Factory Droid through the `droid` executable and validates `OTEL_TELEMETRY_ENDPOINT` in the effective launch environment.
+
+Use `beacon endpoint discover`, `beacon endpoint status`, or `beacon endpoint hooks status --harness factory` to inspect Factory Droid support.
+
+Use `beacon endpoint factory status` to inspect local Factory sessions and how much Beacon has synced.
+
+## Install or configuration support
+
+`beacon endpoint install` prepares the collector, shared endpoint config, and runtime log paths. Factory Droid's launch environment is managed by MDM or customer policy.
+
+Install optional Factory hooks separately:
+
+```bash title="Install optional Factory hooks separately"
+beacon endpoint hooks install --harness factory
+```
+
+`--harness droid` is also accepted for Factory Droid hook installs.
+
+Sync Factory's local session store separately:
+
+```bash title="Sync Factory session telemetry"
+beacon endpoint factory sync
+```
+
+For scheduled collection, run `beacon endpoint factory sync --watch`, or run one-shot `sync` from your scheduler. `--print` maps events without writing the runtime log or advancing the cursor.
+
+## Telemetry coverage
+
+| Area | Support |
+|------|---------|
+| Prompt telemetry | Supported through `UserPromptSubmit` hooks |
+| Agent responses | Supported live through the `Stop` hook. Droid's Stop payload carries no reply, so the hook reads the end of the session transcript it names and records the final assistant message as `agent.message` (`raw.factory.reply_message_id` names the record). It records nothing when the transcript has not caught up, ending on a tool call, a tool result or the prompt, and records each reply once. `beacon endpoint factory sync` recovers every committed assistant message |
+| Command, tool, and file telemetry | Supported for session, write/edit/create hook payloads, committed session tool calls/results, stop, session-end, and available OTLP telemetry |
+| Historical sessions | Supported through `beacon endpoint factory sync`, which reads `~/.factory/sessions` locally and offline |
+| Token usage | `sync` reads the running totals Factory keeps in each session's `.settings.json` and emits a `token.usage` event with only what they grew by since the last sync, so `beacon token-usage` sums to the session's final total. It counts the session's own `tokenUsage`; `inclusiveTokenUsage` is used only when `tokenUsage` is absent and no child session is listed, because it adds child sessions, which are synced on their own. A total that goes down is treated as a rewritten file and counts nothing. Factory credits are not USD, so they stay in `raw` (`factory_credits_delta`, `factory_credits_total`) rather than `cost_usd` |
+| Local JSONL and dashboard | Supported |
+| MDM deployment | Supported for the endpoint agent. Factory launch environment and user/project hooks are managed in the user's Droid context |
+
+## Deployment notes
+
+Factory Droid OTLP is controlled by Droid's launch environment. Set `OTEL_TELEMETRY_ENDPOINT=http://127.0.0.1:4318` through MDM or another customer-owned launch policy.
+
+Beacon discovers Droid and validates the endpoint, but it does not mutate shell profiles for Droid. Restart Factory Droid after installing or removing hooks so new sessions pick up the updated hook configuration.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Supported agent harnesses" icon="list-check" href="/runtimes">
+    Return to the runtime support overview.
+  </Card>
+  <Card title="Hooks" icon="plug" href="/cli/hooks">
+    Install, inspect, and uninstall runtime hook integrations.
+  </Card>
+</Columns>

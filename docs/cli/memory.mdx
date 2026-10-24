@@ -1,0 +1,316 @@
+---
+title: "beacon memory"
+description: "Evaluate traces, review project memory, and install approved Agent Skills"
+---
+
+## Overview
+
+`beacon memory` is the local review workflow for turning selected Beacon traces into
+approved project memory.
+
+The commands are grouped by resource:
+
+- `beacon memory list|show` for approved memory
+- `beacon memory evaluations run|list|show`
+- `beacon memory candidates list|show|create|approve|reject|supersede`
+- `beacon memory skills preview|install`
+
+All subcommands accept the common endpoint and project-scope flags:
+
+| Flag | Description |
+|------|-------------|
+| `--user` | Use per-user endpoint paths. Enabled by default |
+| `--system` | Use system endpoint paths |
+| `--log-path <path>` | Runtime JSONL log path |
+| `--project <path>` | Project path for memory scoping. Defaults to the trace's repository, then the current directory |
+| `--json` | Print machine-readable JSON |
+
+Beacon stores learning artifacts in `memory.db` next to the resolved endpoint base
+directory for the runtime log. The store is durable local state and is scoped by
+the resolved project ID, so approved memory for one repository is not automatically
+returned for another.
+
+Commands that start from a trace (`evaluations run` and `candidates create`) scope
+the result to the repository the trace recorded, so memory lands with the project the
+agent was working in rather than wherever you ran the command. A linked git worktree
+resolves to the same project as its main checkout. Pass `--project` to override.
+Commands that list or look up records use `--project` or the current directory.
+
+The repository comes from the trace's events, and not every event records one. A
+trace with no repository falls back to the current directory, so pass `--project`
+for it. A trace whose recorded path no longer exists, such as a removed worktree or a
+log copied from another machine, resolves to the nearest checkout above that path, or
+by the path alone when there is none, and can land in a different project from the one
+it came from; pass `--project` for that too.
+
+## Evaluate traces
+
+Preview selected traces and estimated evaluator calls without a network request:
+
+```bash
+beacon memory evaluations run --dry-run --limit 10
+```
+
+Evaluate one trace with TypeSafe Jev:
+
+```bash
+TYPESAFE_API_KEY=... beacon memory evaluations run \
+  --trace session:cursor:s1 \
+  --jev-model jev-latest
+```
+
+Useful flags:
+
+- `--trace <id>` evaluates one trace ID.
+- `--harness <name>` filters traces by harness.
+- `--since <rfc3339>` and `--until <rfc3339>` bound the trace window.
+- `--limit <n>` and `--page <n>` page through selected traces.
+- `--query <text>` or `-q <text>` searches trace text before evaluation.
+- `--evaluator <jev|subq>` selects the evaluator provider. It defaults to
+  `BEACON_EVALUATOR`, then `jev`.
+- `--jev-model <model>` selects the Jev model, such as `jev-latest` or a pinned version.
+- `--jev-endpoint <url>` overrides the TypeSafe System One endpoint.
+- `--jev-api-key <key>` overrides API key lookup.
+- `--subq-model <model>`, `--subq-endpoint <url>` and `--subq-api-key <key>` are the
+  same settings for SubQ.
+- `--cost-per-trace <usd>` changes the dry-run cost estimate, for either evaluator.
+  The earlier name `--jev-cost-per-trace` still works but is deprecated.
+- `--timeout <duration>` sets the evaluator request timeout.
+- `--json` prints machine-readable output.
+
+Each Jev setting is resolved from the flag first, then the environment, then the
+built-in default:
+
+- `--jev-api-key` defaults to `TYPESAFE_API_KEY`, then `BEACON_JEV_API_KEY`.
+- `--jev-endpoint` defaults to `BEACON_JEV_ENDPOINT`, then the hosted TypeSafe
+  endpoint `https://api.typesafe.ai/v1/systemone`.
+- `--jev-model` defaults to `BEACON_JEV_MODEL`, then `jev-latest`.
+
+This is how you point Beacon at a TypeSafe-compatible gateway. For example, to
+evaluate through Vercel AI Gateway with an AI Gateway API key:
+
+```bash
+export TYPESAFE_API_KEY=<AI Gateway API key>
+export BEACON_JEV_ENDPOINT=https://ai-gateway.vercel.sh/typesafe/v1/systemone
+export BEACON_JEV_MODEL=typesafe-ai/jev
+beacon memory evaluations run --limit 10
+```
+
+### SubQ
+
+[SubQ's Decisions API](https://docs.subq.ai/endpoints/decisions-api/) is the same
+System One contract (`model`, `state` and typed `noul` questions, answered with
+probabilities), so Beacon sends it the identical request. Select it with
+`--evaluator subq` or `BEACON_EVALUATOR=subq`:
+
+```bash
+export SUBQ_API_KEY=...
+beacon memory evaluations run --evaluator subq --trace session:cursor:s1
+```
+
+Each SubQ setting resolves the same way as the Jev ones:
+
+- `--subq-api-key` defaults to `SUBQ_API_KEY`, then `BEACON_SUBQ_API_KEY`.
+- `--subq-endpoint` defaults to `BEACON_SUBQ_ENDPOINT`, then
+  `https://api.subq.ai/v1/systemone`.
+- `--subq-model` defaults to `BEACON_SUBQ_MODEL`, then `subq-snap-preview`.
+
+SubQ bills input tokens only; the token counts it reports are stored with the
+evaluation. Evaluations record their provider and endpoint as `subq:<endpoint>`.
+
+Each completed evaluation stores a `score`, the plain mean of the three rubric
+probabilities. A trace becomes a review candidate only when both hold:
+
+- `task_success` is at least `0.50`. This is a precondition, so a trace the
+  evaluator judged as failed is never promoted, however high the other two
+  answers are.
+- `score` is at least `0.60`.
+
+Text output lists each completed evaluation that was not promoted with the
+reason, for example `Not promoted: eval_... (task_success 0.27 is below 0.50)`.
+
+Without `--trace`, the selection skips traces that are a single event with no
+session, such as OTLP metric samples. They carry nothing to learn from, and each
+fresh sample would otherwise sort above the real sessions and consume the run's
+Jev calls. `--limit` counts traces before the skip, so a run can select fewer
+sessions than the limit.
+
+Because each trace is scoped to its own repository, the `--json` result names a
+top-level `project` only when `--project` pinned every trace to one. Otherwise that
+field is absent, and each entry in `previews` and `evaluations` carries its own
+`project`.
+
+List and inspect stored evaluations:
+
+```bash
+beacon memory evaluations list --limit 25
+beacon memory evaluations show <evaluation-id>
+```
+
+## Write a candidate yourself
+
+Jev scores a trace; it does not read it. When you, or an agent acting for you, have
+read a trace and know the lesson, write the candidate directly. No evaluator is
+called, so this also works where external evaluation is not allowed:
+
+```bash
+beacon memory candidates create \
+  --trace session:claude_code:03d6d4a7-... \
+  --kind gotcha \
+  --title "Package smoke needs a warm cache" \
+  --applicability "when the first smoke run after a clean checkout fails" \
+  --body-file lesson.md
+```
+
+`--trace` is the trace the lesson came from; its events become the candidate's
+evidence. `--kind`, `--title`, and a body from `--body` or `--body-file` are required.
+`--applicability` and `--tag` take the same forms as on `candidates approve`, below;
+without tags Beacon records `beacon`, the kind, and the harness.
+
+The candidate waits for `candidates approve` like any other, and the same
+[lesson shape](/concepts/cross-harness-memory) applies. It has no
+`source_evaluation_id`, which is how you tell an authored candidate from a Jev-scored
+one in `candidates list --json`.
+
+## Review candidates
+
+List generated candidates:
+
+```bash
+beacon memory candidates list
+```
+
+Filter candidate review queues:
+
+```bash
+beacon memory candidates list --state candidate --kind workflow
+beacon memory candidates list -q "package smoke"
+```
+
+Inspect one candidate:
+
+```bash
+beacon memory candidates show <candidate-id>
+```
+
+TypeSafe Noul answers contain probabilities, not explanatory text. The candidate
+body therefore says that no lesson text was extracted; check the source trace
+before you approve it. A compatible internal evaluator using the legacy
+`questions` or `results` response shape can provide a stored `reason`.
+
+Candidate states are `candidate` (awaiting review), `approved`, `rejected`, and
+`superseded`.
+
+Approve a candidate into project memory:
+
+```bash
+beacon memory candidates approve <candidate-id> --reason "reviewed"
+```
+
+Because the evaluator scores traces without writing a lesson, approve with the lesson
+you wrote after reading the source trace. The reviewed fields go into the approved
+memory; the candidate keeps the evaluator's text so the review history shows what
+changed:
+
+```bash
+beacon memory candidates approve <candidate-id> \
+  --title "Build the embedded hooks binary before running cli/beacon tests" \
+  --kind workflow \
+  --applicability "when running go test in cli/beacon on a fresh checkout" \
+  --tag build --tag testing \
+  --reason "reviewed against trace events 14-19" \
+  --body-file lesson.md
+```
+
+| Flag | Description |
+|------|-------------|
+| `--title <text>` | Title for the approved memory |
+| `--body <text>` | Lesson text |
+| `--body-file <path>` | Read the lesson text from a file, or `-` for stdin. Cannot be combined with `--body` |
+| `--applicability <text>` | When the memory applies |
+| `--kind <kind>` | `workflow`, `correction`, `debugging_pattern`, `gotcha`, or `convention` |
+| `--tag <tag>` | Repeat or comma-separate. Replaces the candidate's tags |
+
+Each flag left out keeps the candidate's value.
+
+Reject or supersede candidates:
+
+```bash
+beacon memory candidates reject <candidate-id> --reason "too specific"
+beacon memory candidates supersede <candidate-id> --replacement <memory-id>
+```
+
+Approving creates an approved memory record for the resolved project. Rejecting and
+superseding preserve the review transition with the optional `--reason` so later
+reviews can explain why a candidate was not installed.
+
+## Read approved memory
+
+List and read approved memory for the resolved project. These are the same records the
+MCP memory tools return, for harnesses and scripts without MCP:
+
+```bash
+beacon memory list
+beacon memory list -q "package smoke" --kind workflow --json
+beacon memory show <memory-id>
+```
+
+`-q` matches every term against the memory ID, title, body, and kind. Superseded memory
+is not listed.
+
+## Install Agent Skills
+
+Preview the skill content without writing:
+
+```bash
+beacon memory skills preview <candidate-id>
+```
+
+Install the skill into the project:
+
+```bash
+beacon memory skills install <candidate-id>
+```
+
+Beacon writes:
+
+```text
+.agents/skills/<slug>/SKILL.md
+```
+
+Existing files are not overwritten unless you pass `--force`.
+
+Skill files include Beacon provenance under the frontmatter `metadata` map
+(`beacon_memory_id`, `beacon_candidate_id`, `beacon_memory_kind`, and `beacon_tags`), so
+future reviewers can trace the generated instruction back to the approved memory and
+source trace, and the file still validates against the Agent Skills specification. The
+skill description combines the memory's title and applicability, because harnesses use
+it to decide when to load the skill. Installation is a write
+to the current project or the path passed with `--project`; it is never triggered
+by endpoint hooks or MCP reads.
+
+## MCP retrieval
+
+`beacon mcp serve` exposes approved memory as read-only MCP tools:
+
+- `search_memory`
+- `get_memory`
+- `get_memory_context`
+
+These tools let future agents retrieve approved project knowledge regardless of which
+harness originally produced the trace.
+
+The local dashboard also includes a read-only Memory page showing evaluation,
+candidate, and approved-memory counts. Mutating actions still live in this CLI
+workflow.
+
+Sessions forwarded to Beacon Cloud can go through the same review over
+[Beacon Cloud MCP](/deployment/managed-mcp#memory), which keeps its own candidates and
+approved memory, separate from this local store. See
+[Memory in Beacon Cloud](/concepts/cross-harness-memory#memory-in-beacon-cloud).
+
+## Network boundary
+
+`beacon memory evaluations run` is the only command in this workflow that can call
+Jev, and only when it is not run with `--dry-run`. Beacon hooks and normal endpoint
+capture remain local-only and do not call Jev.

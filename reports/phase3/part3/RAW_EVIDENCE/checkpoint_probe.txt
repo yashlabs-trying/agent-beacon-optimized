@@ -1,0 +1,8 @@
+=== RUN   TestPhase3CCheckpointProbe
+P3C_PROBE scenario=no-readers/default-checkpoint writers=16 readers=0 write_p50=866 write_p95=1691 write_p99=2600 wn=5534 read_p99=0 rn=0 wal_bytes=4358992
+P3C_PROBE scenario=readers/default-checkpoint writers=16 readers=16 write_p50=1701 write_p95=315560 write_p99=1816090 wn=1050 read_p99=9413 rn=159957 wal_bytes=49654272
+P3C_PROBE scenario=readers/checkpoint-off writers=16 readers=16 write_p50=1913 write_p95=200841 write_p99=2374201 wn=983 read_p99=9574 rn=160921 wal_bytes=47244072
+P3C_PROBE scenario=readers/checkpoint-10000 writers=16 readers=16 write_p50=1717 write_p95=182729 write_p99=2502280 wn=879 read_p99=9707 rn=166717 wal_bytes=42151752
+--- PASS: TestPhase3CCheckpointProbe (21.55s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	21.557s

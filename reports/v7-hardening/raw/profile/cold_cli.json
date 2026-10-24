@@ -1,0 +1,1800 @@
+{
+  "source_commit": "7b605aa84f0f570ba265fbda17fe6d99e927b10e",
+  "fixture_sha256": "0c55552721e1ae0dedb979bd9eabdced6e03eeb440ca38e7bb7209d7013ad044",
+  "original_sha256": "a486ef9f9c1bdc6c5dd9c039aff5c38881ef6a68c63922c27a6f0d29963b3592",
+  "v7_sha256": "363791de23320c84be8220ad228c629539265645fa92dceeb80f10907ec44de5",
+  "rows": [
+    {
+      "task": "workflow-05",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 56293560,
+      "route": null
+    },
+    {
+      "task": "workflow-05",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 43903943,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-05",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 18136152,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-05",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 17511798,
+      "route": null
+    },
+    {
+      "task": "direct-06",
+      "category": "direct",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12587252,
+      "route": null
+    },
+    {
+      "task": "direct-06",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 40442133,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-06",
+      "category": "direct",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 13126796,
+      "route": null
+    },
+    {
+      "task": "direct-06",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 13526034,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-03",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13406607,
+      "route": null
+    },
+    {
+      "task": "conflict-03",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 39615234,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-03",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 12636888,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-03",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12161396,
+      "route": null
+    },
+    {
+      "task": "workflow-01",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12990424,
+      "route": null
+    },
+    {
+      "task": "workflow-01",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 34713265,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-01",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12073597,
+      "route": null
+    },
+    {
+      "task": "workflow-01",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 17515056,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-01",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13564088,
+      "route": null
+    },
+    {
+      "task": "conflict-01",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 38810412,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-01",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 13753413,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-01",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 15721053,
+      "route": null
+    },
+    {
+      "task": "uncertain-05",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13594443,
+      "route": null
+    },
+    {
+      "task": "uncertain-05",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 47640431,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-05",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 17209776,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-05",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 11169796,
+      "route": null
+    },
+    {
+      "task": "trust-03",
+      "category": "trust",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 15701906,
+      "route": null
+    },
+    {
+      "task": "trust-03",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 42750537,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-03",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 15985054,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-03",
+      "category": "trust",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 16006870,
+      "route": null
+    },
+    {
+      "task": "trust-01",
+      "category": "trust",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 19317810,
+      "route": null
+    },
+    {
+      "task": "trust-01",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 40481172,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-01",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 17099631,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-01",
+      "category": "trust",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 13777688,
+      "route": null
+    },
+    {
+      "task": "chain-08",
+      "category": "chain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13508092,
+      "route": null
+    },
+    {
+      "task": "chain-08",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 47333870,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-08",
+      "category": "chain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12492873,
+      "route": null
+    },
+    {
+      "task": "chain-08",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 17745027,
+      "route": "semantic"
+    },
+    {
+      "task": "temporal-08",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13374764,
+      "route": null
+    },
+    {
+      "task": "temporal-08",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 37914491,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-08",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 11039335,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-08",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14437590,
+      "route": null
+    },
+    {
+      "task": "trust-04",
+      "category": "trust",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 16140050,
+      "route": null
+    },
+    {
+      "task": "trust-04",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 40722885,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-04",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 15361085,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-04",
+      "category": "trust",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14090711,
+      "route": null
+    },
+    {
+      "task": "trust-06",
+      "category": "trust",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 11558543,
+      "route": null
+    },
+    {
+      "task": "trust-06",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 43427393,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-06",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 13025542,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-06",
+      "category": "trust",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14353086,
+      "route": null
+    },
+    {
+      "task": "chain-05",
+      "category": "chain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 15272731,
+      "route": null
+    },
+    {
+      "task": "chain-05",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 47896967,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-05",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14193074,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-05",
+      "category": "chain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 13310015,
+      "route": null
+    },
+    {
+      "task": "direct-04",
+      "category": "direct",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 10487829,
+      "route": null
+    },
+    {
+      "task": "direct-04",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 35231007,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-04",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14386967,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-04",
+      "category": "direct",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 10657547,
+      "route": null
+    },
+    {
+      "task": "direct-01",
+      "category": "direct",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 10012405,
+      "route": null
+    },
+    {
+      "task": "direct-01",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 35710931,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-01",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 13103809,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-01",
+      "category": "direct",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12714292,
+      "route": null
+    },
+    {
+      "task": "trust-02",
+      "category": "trust",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12812692,
+      "route": null
+    },
+    {
+      "task": "trust-02",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 36621017,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-02",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 12600571,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-02",
+      "category": "trust",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 10911635,
+      "route": null
+    },
+    {
+      "task": "temporal-02",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12715675,
+      "route": null
+    },
+    {
+      "task": "temporal-02",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 38555250,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-02",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 10487354,
+      "route": null
+    },
+    {
+      "task": "temporal-02",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 12848000,
+      "route": "lexical"
+    },
+    {
+      "task": "uncertain-02",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12225255,
+      "route": null
+    },
+    {
+      "task": "uncertain-02",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 45309200,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-02",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 10759720,
+      "route": null
+    },
+    {
+      "task": "uncertain-02",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 11242565,
+      "route": "semantic"
+    },
+    {
+      "task": "direct-07",
+      "category": "direct",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 10985468,
+      "route": null
+    },
+    {
+      "task": "direct-07",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 38099760,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-07",
+      "category": "direct",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12802332,
+      "route": null
+    },
+    {
+      "task": "direct-07",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 11369850,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-06",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12048508,
+      "route": null
+    },
+    {
+      "task": "temporal-06",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 36263488,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-06",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 12616442,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-06",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14186795,
+      "route": null
+    },
+    {
+      "task": "direct-02",
+      "category": "direct",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13773395,
+      "route": null
+    },
+    {
+      "task": "direct-02",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 135339982,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-02",
+      "category": "direct",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 15188237,
+      "route": null
+    },
+    {
+      "task": "direct-02",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 24124652,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-07",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12464890,
+      "route": null
+    },
+    {
+      "task": "workflow-07",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 36488179,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-07",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 11138473,
+      "route": null
+    },
+    {
+      "task": "workflow-07",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 12236991,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-05",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12283010,
+      "route": null
+    },
+    {
+      "task": "temporal-05",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 37795366,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-05",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 15661340,
+      "route": null
+    },
+    {
+      "task": "temporal-05",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 15385816,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-05",
+      "category": "trust",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13804433,
+      "route": null
+    },
+    {
+      "task": "trust-05",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 38816777,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-05",
+      "category": "trust",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 15618686,
+      "route": null
+    },
+    {
+      "task": "trust-05",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 13149144,
+      "route": "lexical"
+    },
+    {
+      "task": "chain-07",
+      "category": "chain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13194024,
+      "route": null
+    },
+    {
+      "task": "chain-07",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 48489752,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-07",
+      "category": "chain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12800727,
+      "route": null
+    },
+    {
+      "task": "chain-07",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 11160323,
+      "route": "semantic"
+    },
+    {
+      "task": "trust-08",
+      "category": "trust",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12350144,
+      "route": null
+    },
+    {
+      "task": "trust-08",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 40444065,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-08",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 15379222,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-08",
+      "category": "trust",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 13785690,
+      "route": null
+    },
+    {
+      "task": "trust-07",
+      "category": "trust",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 15286352,
+      "route": null
+    },
+    {
+      "task": "trust-07",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 37879716,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-07",
+      "category": "trust",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14425788,
+      "route": "lexical"
+    },
+    {
+      "task": "trust-07",
+      "category": "trust",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12794161,
+      "route": null
+    },
+    {
+      "task": "conflict-06",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12549061,
+      "route": null
+    },
+    {
+      "task": "conflict-06",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 41298169,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-06",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 11459599,
+      "route": null
+    },
+    {
+      "task": "conflict-06",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 13005568,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-05",
+      "category": "direct",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 15628988,
+      "route": null
+    },
+    {
+      "task": "direct-05",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 39032701,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-05",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 12571147,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-05",
+      "category": "direct",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 15411299,
+      "route": null
+    },
+    {
+      "task": "conflict-04",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 14223790,
+      "route": null
+    },
+    {
+      "task": "conflict-04",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 37454270,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-04",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 16422266,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-04",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 16233701,
+      "route": null
+    },
+    {
+      "task": "direct-03",
+      "category": "direct",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 16698511,
+      "route": null
+    },
+    {
+      "task": "direct-03",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 38743551,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-03",
+      "category": "direct",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14039107,
+      "route": null
+    },
+    {
+      "task": "direct-03",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14423457,
+      "route": "lexical"
+    },
+    {
+      "task": "chain-02",
+      "category": "chain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 11390813,
+      "route": null
+    },
+    {
+      "task": "chain-02",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 43538788,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-02",
+      "category": "chain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 11285059,
+      "route": null
+    },
+    {
+      "task": "chain-02",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 11816968,
+      "route": "semantic"
+    },
+    {
+      "task": "temporal-07",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 16495156,
+      "route": null
+    },
+    {
+      "task": "temporal-07",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 47429597,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-07",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 11880962,
+      "route": null
+    },
+    {
+      "task": "temporal-07",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 11647836,
+      "route": "lexical"
+    },
+    {
+      "task": "uncertain-07",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12256191,
+      "route": null
+    },
+    {
+      "task": "uncertain-07",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 47261218,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-07",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12876700,
+      "route": null
+    },
+    {
+      "task": "uncertain-07",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 13223750,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-01",
+      "category": "chain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12845908,
+      "route": null
+    },
+    {
+      "task": "chain-01",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 44242389,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-01",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 18701548,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-01",
+      "category": "chain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 15552878,
+      "route": null
+    },
+    {
+      "task": "workflow-06",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12877205,
+      "route": null
+    },
+    {
+      "task": "workflow-06",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 39872240,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-06",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14731526,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-06",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 11831377,
+      "route": null
+    },
+    {
+      "task": "conflict-07",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 11628612,
+      "route": null
+    },
+    {
+      "task": "conflict-07",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 38823472,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-07",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14606213,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-07",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14533089,
+      "route": null
+    },
+    {
+      "task": "workflow-08",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 17025402,
+      "route": null
+    },
+    {
+      "task": "workflow-08",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 43587839,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-08",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14451679,
+      "route": null
+    },
+    {
+      "task": "workflow-08",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 13933139,
+      "route": "lexical"
+    },
+    {
+      "task": "chain-06",
+      "category": "chain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12201014,
+      "route": null
+    },
+    {
+      "task": "chain-06",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 44570788,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-06",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 12707548,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-06",
+      "category": "chain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14488103,
+      "route": null
+    },
+    {
+      "task": "temporal-03",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12384738,
+      "route": null
+    },
+    {
+      "task": "temporal-03",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 42557562,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-03",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 13357987,
+      "route": null
+    },
+    {
+      "task": "temporal-03",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14173159,
+      "route": "lexical"
+    },
+    {
+      "task": "uncertain-08",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 11914125,
+      "route": null
+    },
+    {
+      "task": "uncertain-08",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 45220168,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-08",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14488283,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-08",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14479611,
+      "route": null
+    },
+    {
+      "task": "workflow-03",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13430272,
+      "route": null
+    },
+    {
+      "task": "workflow-03",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 37541231,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-03",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14480391,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-03",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12967401,
+      "route": null
+    },
+    {
+      "task": "conflict-02",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13637991,
+      "route": null
+    },
+    {
+      "task": "conflict-02",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 39153375,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-02",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 15574625,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-02",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12686477,
+      "route": null
+    },
+    {
+      "task": "temporal-04",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13635527,
+      "route": null
+    },
+    {
+      "task": "temporal-04",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 39818282,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-04",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 13876135,
+      "route": null
+    },
+    {
+      "task": "temporal-04",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14827980,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-01",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 13005643,
+      "route": null
+    },
+    {
+      "task": "temporal-01",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 36098032,
+      "route": "lexical"
+    },
+    {
+      "task": "temporal-01",
+      "category": "temporal",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12030890,
+      "route": null
+    },
+    {
+      "task": "temporal-01",
+      "category": "temporal",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 15502496,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-04",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 15062438,
+      "route": null
+    },
+    {
+      "task": "workflow-04",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 39360941,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-04",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14177184,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-04",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12328445,
+      "route": null
+    },
+    {
+      "task": "uncertain-01",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 14469363,
+      "route": null
+    },
+    {
+      "task": "uncertain-01",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 45748734,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-01",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 12919221,
+      "route": null
+    },
+    {
+      "task": "uncertain-01",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 13077989,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-04",
+      "category": "chain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 14631428,
+      "route": null
+    },
+    {
+      "task": "chain-04",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 50690465,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-04",
+      "category": "chain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 11825163,
+      "route": null
+    },
+    {
+      "task": "chain-04",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 15142969,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-06",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 12961306,
+      "route": null
+    },
+    {
+      "task": "uncertain-06",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 46589777,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-06",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 12816351,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-06",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 13017973,
+      "route": null
+    },
+    {
+      "task": "uncertain-03",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 15171944,
+      "route": null
+    },
+    {
+      "task": "uncertain-03",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 48626897,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-03",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 15774351,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-03",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14106475,
+      "route": null
+    },
+    {
+      "task": "uncertain-04",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 15899676,
+      "route": null
+    },
+    {
+      "task": "uncertain-04",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 49499191,
+      "route": "semantic"
+    },
+    {
+      "task": "uncertain-04",
+      "category": "uncertain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 11349406,
+      "route": null
+    },
+    {
+      "task": "uncertain-04",
+      "category": "uncertain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 14704564,
+      "route": "semantic"
+    },
+    {
+      "task": "conflict-05",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 15164290,
+      "route": null
+    },
+    {
+      "task": "conflict-05",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 40889119,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-05",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 15778950,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-05",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 14783251,
+      "route": null
+    },
+    {
+      "task": "workflow-02",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 15920271,
+      "route": null
+    },
+    {
+      "task": "workflow-02",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 46384594,
+      "route": "lexical"
+    },
+    {
+      "task": "workflow-02",
+      "category": "workflow",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 15547228,
+      "route": null
+    },
+    {
+      "task": "workflow-02",
+      "category": "workflow",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 15106503,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-08",
+      "category": "direct",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 27403572,
+      "route": null
+    },
+    {
+      "task": "direct-08",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 51847772,
+      "route": "lexical"
+    },
+    {
+      "task": "direct-08",
+      "category": "direct",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 24460781,
+      "route": null
+    },
+    {
+      "task": "direct-08",
+      "category": "direct",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 26061893,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-08",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 14500608,
+      "route": null
+    },
+    {
+      "task": "conflict-08",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 42009416,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-08",
+      "category": "conflict",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 24662036,
+      "route": "lexical"
+    },
+    {
+      "task": "conflict-08",
+      "category": "conflict",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 24461212,
+      "route": null
+    },
+    {
+      "task": "chain-03",
+      "category": "chain",
+      "arm": "original",
+      "pass": "first",
+      "elapsed_ns": 14299897,
+      "route": null
+    },
+    {
+      "task": "chain-03",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "first",
+      "elapsed_ns": 53035101,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-03",
+      "category": "chain",
+      "arm": "v7",
+      "pass": "repeat",
+      "elapsed_ns": 16165646,
+      "route": "semantic"
+    },
+    {
+      "task": "chain-03",
+      "category": "chain",
+      "arm": "original",
+      "pass": "repeat",
+      "elapsed_ns": 15145713,
+      "route": null
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "task": "c4-267",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-267-gold",
+    "c4-267-d5",
+    "c4-267-d3",
+    "c4-267-d1",
+    "c4-267-d6",
+    "c4-267-d4",
+    "c4-267-d7",
+    "c4-267-d2"
+  ],
+  "required_evidence": [
+    "c4-267-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The checkout cache TTL is 79 seconds.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.818,
+  "prompt_tokens": 231,
+  "gen_tokens": 11
+}

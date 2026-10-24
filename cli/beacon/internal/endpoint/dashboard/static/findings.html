@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Beacon | Self‑improving memory for coding agents</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="findings">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Local-only</p>
+        <h1>Findings</h1>
+      </div>
+      <nav class="nav-toggle" aria-label="Dashboard navigation">
+        <div class="nav-section">
+          <div class="nav-section-title">Overview</div>
+          <a class="active" aria-current="page" href="/findings.html">Findings</a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-parent">Analytics</div>
+          <a href="/tokens.html">Token Usage</a>
+          <a href="/overview.html">Agent Activity</a>
+          <a href="/memory.html">Memory</a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">Observe</div>
+          <a href="/inventory.html">Agent Inventory</a>
+          <a href="/">Agent Activity Sessions</a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">Control</div>
+          <a href="/detections.html">Detections</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <div class="findings-page-head">
+        <h1>Findings</h1>
+      </div>
+      <section class="panel">
+        <div class="section-head overview-head">
+          <div class="section-actions">
+            <label class="muted" for="min-severity">Min severity</label>
+            <select id="min-severity">
+              <option value="">all</option>
+              <option value="info">info</option>
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+              <option value="critical">critical</option>
+            </select>
+            <span id="findings-meta" class="muted"></span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Severity</th><th>Rule</th><th>Session</th><th>Reason</th><th>Evidence</th></tr>
+          </thead>
+          <tbody id="findings-rows"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

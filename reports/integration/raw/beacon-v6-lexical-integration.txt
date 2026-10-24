@@ -1,0 +1,14 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning
+cpu: Apple M5
+BenchmarkPhase1Lexical/n=100/rare-10    	      30	    286935 ns/op	    9750 B/op	     170 allocs/op
+BenchmarkPhase1Lexical/n=100/no-match-10         	      30	    271574 ns/op	   10532 B/op	     174 allocs/op
+BenchmarkPhase1Lexical/n=1000/rare-10            	      30	    293856 ns/op	    9728 B/op	     170 allocs/op
+BenchmarkPhase1Lexical/n=1000/no-match-10        	      30	    282100 ns/op	    9976 B/op	     173 allocs/op
+BenchmarkPhase1Lexical/n=5000/rare-10            	      30	    308212 ns/op	    9808 B/op	     170 allocs/op
+BenchmarkPhase1Lexical/n=5000/no-match-10        	      30	    324394 ns/op	   10063 B/op	     173 allocs/op
+BenchmarkPhase1Lexical/n=10000/rare-10           	      30	    317733 ns/op	    9824 B/op	     170 allocs/op
+BenchmarkPhase1Lexical/n=10000/no-match-10       	      30	    331006 ns/op	   10088 B/op	     173 allocs/op
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.927s

@@ -1,0 +1,873 @@
+package dashboard
+
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
+)
+
+func TestReadEventsSkipsMalformedLinesAndFilters(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeTestLog(t, path,
+		testEvent("2026-05-13T01:00:00Z", "cursor", "command.executed", "command", "repo-a"),
+		[]byte("{not json"),
+		testEvent("2026-05-13T01:01:00Z", "cursor", "file.modified", "file", "repo-b"),
+	)
+
+	result, err := ReadEvents(path, EventQuery{Action: "command.executed", Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents returned error: %v", err)
+	}
+	if result.MalformedLines != 1 {
+		t.Fatalf("MalformedLines = %d, want 1", result.MalformedLines)
+	}
+	if result.TotalMatched != 1 || len(result.Events) != 1 {
+		t.Fatalf("matched events = total %d len %d, want 1/1", result.TotalMatched, len(result.Events))
+	}
+	if result.Events[0].Event.Event.Action != "command.executed" {
+		t.Fatalf("unexpected event action: %s", result.Events[0].Event.Event.Action)
+	}
+}
+
+func TestReadEventsInfersMissingCategory(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	event := testSchemaEvent("2026-05-13T01:00:00Z", "codex_cli", "tool.invoked", "", "repo-a")
+	writeTestLog(t, path, marshalEvents(t, event)...)
+
+	result, err := ReadEvents(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents returned error: %v", err)
+	}
+	if len(result.Events) != 1 {
+		t.Fatalf("events length = %d, want 1", len(result.Events))
+	}
+	if got := result.Events[0].Event.Event.Category; got != "tool" {
+		t.Fatalf("Category = %q, want tool", got)
+	}
+}
+
+func TestReadEventsNormalizesMetricWithMissingAction(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	event := testSchemaEvent("2026-05-13T01:00:00Z", "cli", "", "metric", "")
+	event.Message = "droid.hook.invocations"
+	writeTestLog(t, path, marshalEvents(t, event)...)
+
+	result, err := ReadEvents(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents returned error: %v", err)
+	}
+	if len(result.Events) != 1 {
+		t.Fatalf("events length = %d, want 1", len(result.Events))
+	}
+	if got := result.Events[0].Event.Event.Action; got != "droid.hook.invocations" {
+		t.Fatalf("Action = %q, want droid.hook.invocations", got)
+	}
+}
+
+func TestReadEventsPromotesRawMetricName(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	event := testSchemaEvent("2026-05-13T01:00:00Z", "cli", "metric.observed", "metric", "")
+	event.Message = "fallback.metric"
+	event.Raw = map[string]interface{}{"metric_name": "droid.tool.execution_time"}
+	writeTestLog(t, path, marshalEvents(t, event)...)
+
+	result, err := ReadEvents(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents returned error: %v", err)
+	}
+	if len(result.Events) != 1 {
+		t.Fatalf("events length = %d, want 1", len(result.Events))
+	}
+	if got := result.Events[0].Event.Event.Action; got != "droid.tool.execution_time" {
+		t.Fatalf("Action = %q, want droid.tool.execution_time", got)
+	}
+}
+
+func TestBuildSummaryAggregatesSignals(t *testing.T) {
+	result := EventResult{
+		TotalMatched: 4,
+		Events: []EventRecord{
+			{Event: schema.Event{
+				Timestamp: "2026-05-13T01:00:00Z",
+				Event:     schema.EventInfo{Action: "command.executed", Category: "command"},
+				Severity:  schema.SeverityInfo,
+				Harness:   schema.HarnessInfo{Name: "cursor"},
+				Model:     "gpt-5.5",
+				Session:   &schema.SessionInfo{ID: "s1"},
+				Command:   &schema.CommandInfo{Command: "go test ./..."},
+			}},
+			{Event: schema.Event{
+				Timestamp: "2026-05-13T01:01:00Z",
+				Event:     schema.EventInfo{Action: "mcp.tool_invoked", Category: "mcp"},
+				Severity:  schema.SeverityHigh,
+				Harness:   schema.HarnessInfo{Name: "cursor"},
+				Model:     "claude-4-sonnet",
+				Session:   &schema.SessionInfo{ID: "s2"},
+				MCP:       &schema.MCPInfo{Server: "github", Tool: "get_issue"},
+			}, WazuhLevel: WazuhLevel("mcp.tool_invoked")},
+			{Event: schema.Event{
+				Timestamp: "2026-05-13T01:02:00Z",
+				Event:     schema.EventInfo{Action: "approval.denied", Category: "approval"},
+				Severity:  schema.SeverityMedium,
+				Harness:   schema.HarnessInfo{Name: "cursor"},
+				Session:   &schema.SessionInfo{ID: "s3"},
+				Approval:  &schema.ApprovalInfo{Decision: "denied"},
+			}, WazuhLevel: WazuhLevel("approval.denied")},
+			{Event: schema.Event{
+				Timestamp:  "2026-05-13T01:03:00Z",
+				Event:      schema.EventInfo{Action: "policy.blocked", Category: "approval"},
+				Severity:   schema.SeverityCritical,
+				Harness:    schema.HarnessInfo{Name: "cursor"},
+				Repository: "repo-a",
+				Policy:     &schema.PolicyInfo{Decision: "blocked", Name: "dangerous command"},
+			}},
+		},
+	}
+
+	summary := BuildSummary(result)
+	if summary.TotalEvents != 4 || summary.ActiveSessions != 3 {
+		t.Fatalf("summary totals = events %d sessions %d, want 4/3", summary.TotalEvents, summary.ActiveSessions)
+	}
+	if summary.CommandEvents != 1 || summary.MCPEvents != 1 {
+		t.Fatalf("signal counts = command %d mcp %d, want 1/1", summary.CommandEvents, summary.MCPEvents)
+	}
+	if summary.CountsByHarness["cursor"] != 4 {
+		t.Fatalf("cursor harness count = %d, want 4", summary.CountsByHarness["cursor"])
+	}
+	if summary.CountsByModel["gpt-5.5"] != 1 || summary.CountsByModel["claude-4-sonnet"] != 1 {
+		t.Fatalf("model counts = %#v, want gpt-5.5 and claude-4-sonnet", summary.CountsByModel)
+	}
+	if len(summary.TopHarnesses) == 0 || summary.TopHarnesses[0].Name != "cursor" {
+		t.Fatalf("top harnesses = %#v, want cursor first", summary.TopHarnesses)
+	}
+	if len(summary.TopModels) != 2 {
+		t.Fatalf("top models = %#v, want 2 models", summary.TopModels)
+	}
+	if summary.NeedsReviewEvents != 3 || summary.DeniedApprovalEvents != 1 || summary.PolicyBlockedEvents != 1 {
+		t.Fatalf("review counts = needs %d denied %d blocked %d, want 3/1/1", summary.NeedsReviewEvents, summary.DeniedApprovalEvents, summary.PolicyBlockedEvents)
+	}
+}
+
+func TestDashboardAPIsSurfaceVSCodeEvents(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		testSchemaEvent("2026-05-13T01:00:00Z", "vscode", "prompt.submitted", "prompt", "repo-a"),
+		testSchemaEvent("2026-05-13T01:01:00Z", "vscode_copilot", "tool.invoked", "tool", "repo-a"),
+		testSchemaEvent("2026-05-13T01:02:00Z", "vscode", "file.modified", "file", "repo-a"),
+	}
+	events[1].Tool = &schema.ToolInfo{Name: "runCommand"}
+	events[2].File = &schema.FileInfo{Path: "main.go", Operation: "modify", Language: "go"}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	handler, err := Handler(Options{UserMode: true, LogPath: path})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/summary", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("summary status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	var summary Summary
+	if err := json.Unmarshal(rec.Body.Bytes(), &summary); err != nil {
+		t.Fatalf("unmarshal summary: %v", err)
+	}
+	if summary.CountsByHarness["vscode"] != 2 || summary.CountsByHarness["vscode_copilot"] != 1 {
+		t.Fatalf("VS Code harness counts = %#v", summary.CountsByHarness)
+	}
+	if summary.PromptEvents != 1 || summary.ToolEvents != 1 || summary.FileEvents != 1 {
+		t.Fatalf("signal counts = prompt %d tool %d file %d", summary.PromptEvents, summary.ToolEvents, summary.FileEvents)
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/events?harness=vscode", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("events status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	var result EventResult
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatalf("unmarshal events: %v", err)
+	}
+	if result.TotalMatched != 3 {
+		t.Fatalf("vscode filtered events = %d, want 3", result.TotalMatched)
+	}
+}
+
+func TestReadEventsFreeTextSearchMatchesStructuredFields(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		testSchemaEvent("2026-05-13T01:00:00Z", "cursor", "command.executed", "command", "repo-a"),
+		testSchemaEvent("2026-05-13T01:01:00Z", "cursor", "file.modified", "file", "repo-b"),
+		testSchemaEvent("2026-05-13T01:02:00Z", "cursor", "mcp.tool_invoked", "mcp", "repo-c"),
+		testSchemaEvent("2026-05-13T01:03:00Z", "cursor", "approval.denied", "approval", "repo-d"),
+		testSchemaEvent("2026-05-13T01:04:00Z", "cursor", "prompt.submitted", "prompt", "repo-e"),
+	}
+	events[0].Command = &schema.CommandInfo{Command: "go test ./internal/endpoint/dashboard"}
+	events[0].Session = &schema.SessionInfo{ID: "session-command"}
+	events[1].File = &schema.FileInfo{Path: "cmd/server.go", Operation: "write", Language: "go"}
+	events[2].MCP = &schema.MCPInfo{Server: "github", Tool: "get_issue"}
+	events[3].Approval = &schema.ApprovalInfo{Decision: "denied", Reason: "dangerous shell"}
+	events[3].Message = "approval blocked for review"
+	events[4].Prompt = &schema.PromptInfo{Text: "summarize local telemetry"}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	for _, query := range []string{"dashboard", "cmd/server.go", "github get_issue", "dangerous shell", "session-command", "repo-c", "blocked review", "summarize telemetry"} {
+		result, err := ReadEvents(path, EventQuery{Q: query, Limit: 10})
+		if err != nil {
+			t.Fatalf("ReadEvents(%q) returned error: %v", query, err)
+		}
+		if result.TotalMatched != 1 {
+			t.Fatalf("ReadEvents(%q) matched %d events, want 1", query, result.TotalMatched)
+		}
+	}
+}
+
+func TestReadEventsSecurityFilters(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		testSchemaEvent("2026-05-13T01:00:00Z", "cursor", "command.executed", "command", "repo-a"),
+		testSchemaEvent("2026-05-13T01:01:00Z", "cursor", "mcp.tool_invoked", "mcp", "repo-b"),
+		testSchemaEvent("2026-05-13T01:02:00Z", "cursor", "approval.denied", "approval", "repo-c"),
+		testSchemaEvent("2026-05-13T01:03:00Z", "cursor", "policy.blocked", "approval", "repo-d"),
+	}
+	events[0].Severity = schema.SeverityHigh
+	events[1].MCP = &schema.MCPInfo{Server: "github", Tool: "get_issue"}
+	events[2].Approval = &schema.ApprovalInfo{Decision: "denied", Reason: "blocked command"}
+	events[3].Policy = &schema.PolicyInfo{Name: "shell guard", Decision: "blocked", Reason: "unsafe"}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	cases := []struct {
+		name  string
+		query EventQuery
+		want  string
+	}{
+		{name: "severity", query: EventQuery{Severity: "high", Limit: 10}, want: "command.executed"},
+		{name: "category", query: EventQuery{Category: "mcp", Limit: 10}, want: "mcp.tool_invoked"},
+		{name: "mcp", query: EventQuery{MCP: "github", Limit: 10}, want: "mcp.tool_invoked"},
+		{name: "decision", query: EventQuery{Decision: "denied", Limit: 10}, want: "approval.denied"},
+		{name: "policy", query: EventQuery{Policy: "shell guard", Limit: 10}, want: "policy.blocked"},
+		{name: "wazuh", query: EventQuery{WazuhLevel: "10", Policy: "shell guard", Limit: 10}, want: "policy.blocked"},
+		{name: "review", query: EventQuery{Review: "true", Action: "tool.failed", Limit: 10}, want: ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := ReadEvents(path, tc.query)
+			if err != nil {
+				t.Fatalf("ReadEvents returned error: %v", err)
+			}
+			if tc.want == "" {
+				if result.TotalMatched != 0 {
+					t.Fatalf("matched %d events, want 0", result.TotalMatched)
+				}
+				return
+			}
+			if result.TotalMatched != 1 || result.Events[0].Event.Event.Action != tc.want {
+				t.Fatalf("matched %d action %q, want 1 %q", result.TotalMatched, result.Events[0].Event.Event.Action, tc.want)
+			}
+		})
+	}
+}
+
+func TestReadEventsFiltersByModel(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		testSchemaEvent("2026-05-13T01:00:00Z", "cursor", "prompt.submitted", "prompt", "repo-a"),
+		testSchemaEvent("2026-05-13T01:01:00Z", "claude_code", "prompt.submitted", "prompt", "repo-b"),
+	}
+	events[0].Model = "claude-4-sonnet"
+	events[1].Model = "gpt-5.5"
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	result, err := ReadEvents(path, EventQuery{Model: "sonnet", Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents returned error: %v", err)
+	}
+	if result.TotalMatched != 1 || result.Events[0].Event.Model != "claude-4-sonnet" {
+		t.Fatalf("matched %d model %q, want 1 claude-4-sonnet", result.TotalMatched, result.Events[0].Event.Model)
+	}
+	if got := result.Filters["model"]; got != "sonnet" {
+		t.Fatalf("model filter = %q, want sonnet", got)
+	}
+}
+
+func TestReadEventsFiltersBySessionState(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		testSchemaEvent("2026-05-13T01:00:00Z", "cursor", "session.started", "session", "repo-a"),
+		testSchemaEvent("2026-05-13T01:01:00Z", "cursor", "agent.session.ended", "session", "repo-a"),
+		testSchemaEvent("2026-05-13T01:02:00Z", "cursor", "session.started", "session", "repo-a"),
+		testSchemaEvent("2026-05-13T01:03:00Z", "cursor", "prompt.submitted", "prompt", "repo-a"),
+		testSchemaEvent("2026-05-13T01:04:00Z", "cursor", "tool.invoked", "tool", "repo-a"),
+	}
+	events[0].Session = &schema.SessionInfo{ID: "empty-session"}
+	events[1].Session = &schema.SessionInfo{ID: "empty-session"}
+	events[1].Message = "agent session ended"
+	events[2].Session = &schema.SessionInfo{ID: "captured-session"}
+	events[3].Session = &schema.SessionInfo{ID: "captured-session"}
+	events[3].Prompt = &schema.PromptInfo{Text: "Investigate the dashboard"}
+	events[4].Session = &schema.SessionInfo{ID: "tool-only-session"}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	empty, err := ReadEvents(path, EventQuery{SessionState: "empty", Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents empty returned error: %v", err)
+	}
+	if empty.TotalMatched != 2 {
+		t.Fatalf("empty matched %d events, want lifecycle-only session's 2 events", empty.TotalMatched)
+	}
+	for _, record := range empty.Events {
+		if record.Event.Session == nil || record.Event.Session.ID != "empty-session" {
+			t.Fatalf("empty result included session %#v, want only empty-session", record.Event.Session)
+		}
+	}
+
+	captured, err := ReadEvents(path, EventQuery{SessionState: "captured", Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents captured returned error: %v", err)
+	}
+	if captured.TotalMatched != 3 {
+		t.Fatalf("captured matched %d events, want non-empty sessions' 3 events", captured.TotalMatched)
+	}
+	for _, record := range captured.Events {
+		if record.Event.Session == nil || record.Event.Session.ID == "empty-session" {
+			t.Fatalf("captured result included empty session event %#v", record.Event.Session)
+		}
+	}
+
+	all, err := ReadEvents(path, EventQuery{SessionState: "all", Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents all returned error: %v", err)
+	}
+	if all.TotalMatched != 5 {
+		t.Fatalf("all matched %d events, want no session-state filter", all.TotalMatched)
+	}
+}
+
+func TestReadSessionsGroupsEventsBySession(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		testSchemaEvent("2026-05-13T01:00:00Z", "cursor", "prompt.submitted", "prompt", "repo-a"),
+		testSchemaEvent("2026-05-13T01:01:00Z", "cursor", "command.executed", "command", "repo-a"),
+		testSchemaEvent("2026-05-13T01:02:00Z", "claude_code", "tool.failed", "tool", "repo-b"),
+		testSchemaEvent("2026-05-13T01:03:00Z", "cursor", "inventory.heartbeat", "inventory", "repo-c"),
+	}
+	events[0].Session = &schema.SessionInfo{ID: "session-a", WorkingDirectory: "/tmp/repo-a"}
+	events[0].Prompt = &schema.PromptInfo{Text: "Investigate the dashboard"}
+	events[1].Session = &schema.SessionInfo{ID: "session-a", WorkingDirectory: "/tmp/repo-a"}
+	events[1].Command = &schema.CommandInfo{Command: "go test ./..."}
+	events[2].Session = &schema.SessionInfo{ID: "session-b"}
+	events[2].Severity = schema.SeverityHigh
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	result, err := ReadSessions(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadSessions returned error: %v", err)
+	}
+	if result.EventsMatched != 4 || result.TotalSessions != 2 || len(result.Sessions) != 2 {
+		t.Fatalf("sessions result = matched %d total %d len %d, want 4/2/2", result.EventsMatched, result.TotalSessions, len(result.Sessions))
+	}
+	if result.Sessions[0].ID != "session-b" || result.Sessions[0].EventCount != 1 || result.Sessions[0].ReviewCount != 1 {
+		t.Fatalf("newest session = %#v, want high-risk session-b", result.Sessions[0])
+	}
+	if result.Sessions[1].ID != "session-a" || result.Sessions[1].EventCount != 2 || result.Sessions[1].CommandCount != 1 || result.Sessions[1].PromptCount != 1 {
+		t.Fatalf("older session = %#v, want aggregated session-a", result.Sessions[1])
+	}
+	if result.Sessions[1].WorkingDir != "/tmp/repo-a" || result.Sessions[1].LastArtifact != "go test ./..." {
+		t.Fatalf("session metadata = dir %q artifact %q", result.Sessions[1].WorkingDir, result.Sessions[1].LastArtifact)
+	}
+	if result.Sessions[1].OriginalPrompt != "Investigate the dashboard" {
+		t.Fatalf("original prompt = %q, want first submitted prompt", result.Sessions[1].OriginalPrompt)
+	}
+}
+
+func TestReadSessionsCountsEachEventInOneActivityCategory(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	event := testSchemaEvent("2026-05-13T01:00:00Z", "cursor", "tool.completed", "tool", "repo-a")
+	event.Session = &schema.SessionInfo{ID: "session-a"}
+	event.Tool = &schema.ToolInfo{Name: "Shell"}
+	event.Command = &schema.CommandInfo{Command: "go test ./..."}
+	event.File = &schema.FileInfo{Path: "main.go", Operation: "modify"}
+	event.MCP = &schema.MCPInfo{Server: "filesystem", Tool: "write_file"}
+	event.Approval = &schema.ApprovalInfo{Decision: "approved"}
+	writeTestLog(t, path, marshalEvents(t, event)...)
+
+	result, err := ReadSessions(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadSessions returned error: %v", err)
+	}
+	if len(result.Sessions) != 1 {
+		t.Fatalf("sessions length = %d, want 1", len(result.Sessions))
+	}
+	session := result.Sessions[0]
+	if session.EventCount != 1 || session.ToolCount != 1 {
+		t.Fatalf("session counts = events %d tools %d, want 1/1", session.EventCount, session.ToolCount)
+	}
+	if session.CommandCount != 0 || session.FileCount != 0 || session.MCPCount != 0 || session.ApprovalCount != 0 {
+		t.Fatalf("one tool event counted in multiple activity categories: %#v", session)
+	}
+}
+
+func TestRecurringSessionsNormalizePromptHarnessAndRepository(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		recurringTestEvent("2026-05-13T01:00:00Z", "session-a", "  Investigate The Dashboard  ", " Claude ", "  Repo-A ", "Alice"),
+		recurringTestEvent("2026-05-13T01:01:00Z", "session-b", "investigate the dashboard", "claude_code", "repo-a", " alice "),
+	}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	result, err := ReadSessions(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadSessions returned error: %v", err)
+	}
+	for _, session := range result.Sessions {
+		if !session.IsRecurring || session.RecurrenceCount != 2 {
+			t.Fatalf("session %#v, want recurring count 2", session)
+		}
+	}
+}
+
+func TestRecurringSessionsRequireSameRepositoryAndHarness(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		recurringTestEvent("2026-05-13T01:00:00Z", "base", "same prompt", "cursor", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T01:01:00Z", "other-repo", "same prompt", "cursor", "repo-b", "alice"),
+		recurringTestEvent("2026-05-13T01:02:00Z", "other-harness", "same prompt", "codex_cli", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T01:03:00Z", "other-user", "same prompt", "cursor", "repo-a", "bob"),
+	}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	result, err := ReadSessions(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadSessions returned error: %v", err)
+	}
+	for _, session := range result.Sessions {
+		if session.IsRecurring || session.RecurrenceCount != 0 {
+			t.Fatalf("session %#v must not recur across repository or harness", session)
+		}
+	}
+}
+
+func TestRecurringSessionsExcludeMissingAndBlankPrompts(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	missing := recurringTestEvent("2026-05-13T01:00:00Z", "missing", "", "cursor", "repo-a", "alice")
+	missing.Prompt = nil
+	missing.Message = ""
+	blank := recurringTestEvent("2026-05-13T01:01:00Z", "blank", " \t ", "cursor", "repo-a", "alice")
+	writeTestLog(t, path, marshalEvents(t, missing, blank)...)
+
+	result, err := ReadSessions(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadSessions returned error: %v", err)
+	}
+	for _, session := range result.Sessions {
+		if session.IsRecurring || session.RecurrenceCount != 0 {
+			t.Fatalf("session %#v with no captured prompt must not recur", session)
+		}
+	}
+}
+
+func TestRecurringSessionsCompareMissingHarnessAndRepositoryConsistently(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		recurringTestEvent("2026-05-13T01:00:00Z", "session-a", "same prompt", "", "", "alice"),
+		recurringTestEvent("2026-05-13T01:01:00Z", "session-b", "same prompt", "  ", "  ", "alice"),
+	}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	result, err := ReadSessions(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadSessions returned error: %v", err)
+	}
+	for _, session := range result.Sessions {
+		if !session.IsRecurring || session.RecurrenceCount != 2 {
+			t.Fatalf("session %#v, want missing harness/repository recurring count 2", session)
+		}
+	}
+}
+
+func TestRecurringSessionsCountsTwoAndMoreOccurrences(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		recurringTestEvent("2026-05-13T01:00:00Z", "pair-a", "pair", "cursor", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T01:01:00Z", "pair-b", "pair", "cursor", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T02:00:00Z", "triple-a", "triple", "cursor", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T02:01:00Z", "triple-b", "triple", "cursor", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T02:02:00Z", "triple-c", "triple", "cursor", "repo-a", "alice"),
+	}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	result, err := ReadSessions(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadSessions returned error: %v", err)
+	}
+	for _, session := range result.Sessions {
+		want := 2
+		if strings.HasPrefix(session.ID, "triple-") {
+			want = 3
+		}
+		if !session.IsRecurring || session.RecurrenceCount != want {
+			t.Fatalf("session %q recurrence = %t/%d, want true/%d", session.ID, session.IsRecurring, session.RecurrenceCount, want)
+		}
+	}
+}
+
+func TestRecurringSessionsRespectInclusiveDateRange(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		recurringTestEvent("2026-05-13T09:59:59Z", "before", "bounded", "cursor", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T10:00:00Z", "lower-bound", "bounded", "cursor", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T11:00:00Z", "upper-bound", "bounded", "cursor", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T11:00:01Z", "after", "bounded", "cursor", "repo-a", "alice"),
+	}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+	since, _ := time.Parse(time.RFC3339, "2026-05-13T10:00:00Z")
+	until, _ := time.Parse(time.RFC3339, "2026-05-13T11:00:00Z")
+
+	result, err := ReadSessions(path, EventQuery{Since: since, Until: until, Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadSessions returned error: %v", err)
+	}
+	if result.TotalSessions != 2 {
+		t.Fatalf("total sessions = %d, want the two boundary sessions", result.TotalSessions)
+	}
+	for _, session := range result.Sessions {
+		if !session.IsRecurring || session.RecurrenceCount != 2 {
+			t.Fatalf("boundary session %#v, want recurring count 2", session)
+		}
+	}
+}
+
+func TestRecurringClassificationPrecedesResultLimit(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		recurringTestEvent("2026-05-13T01:00:00Z", "session-a", "limited", "cursor", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T01:01:00Z", "session-b", "limited", "cursor", "repo-a", "alice"),
+		recurringTestEvent("2026-05-13T01:02:00Z", "session-c", "limited", "cursor", "repo-a", "alice"),
+	}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	result, err := ReadSessions(path, EventQuery{SessionState: "recurring", Limit: 1})
+	if err != nil {
+		t.Fatalf("ReadSessions returned error: %v", err)
+	}
+	if result.TotalSessions != 3 || len(result.Sessions) != 1 || !result.Truncated {
+		t.Fatalf("limited result = total %d returned %d truncated %t, want 3/1/true", result.TotalSessions, len(result.Sessions), result.Truncated)
+	}
+	if !result.Sessions[0].IsRecurring || result.Sessions[0].RecurrenceCount != 3 {
+		t.Fatalf("limited row %#v, want recurring count 3", result.Sessions[0])
+	}
+
+	filtered, err := ReadSessions(path, EventQuery{SessionState: "recurring", Session: "session-a", Limit: 1})
+	if err != nil {
+		t.Fatalf("ReadSessions filtered to one group member returned error: %v", err)
+	}
+	if filtered.TotalSessions != 1 || filtered.Sessions[0].RecurrenceCount != 3 {
+		t.Fatalf("filtered row = total %d %#v, want one row with group count 3", filtered.TotalSessions, filtered.Sessions)
+	}
+}
+
+func TestSessionClassificationsAreMutuallyExclusive(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	recurringA := recurringTestEvent("2026-05-13T01:00:00Z", "recurring-a", "repeat", "cursor", "repo-a", "alice")
+	recurringB := recurringTestEvent("2026-05-13T01:01:00Z", "recurring-b", "repeat", "cursor", "repo-a", "alice")
+	captured := recurringTestEvent("2026-05-13T01:02:00Z", "captured", "unique", "cursor", "repo-a", "alice")
+	emptyLifecycle := testSchemaEvent("2026-05-13T01:03:00Z", "cursor", "session.started", "session", "repo-a")
+	emptyLifecycle.Session = &schema.SessionInfo{ID: "empty-lifecycle"}
+	emptyMetric := testSchemaEvent("2026-05-13T01:04:00Z", "cursor", "token.usage", "metric", "repo-a")
+	emptyMetric.Session = &schema.SessionInfo{ID: "empty-metric"}
+	writeTestLog(t, path, marshalEvents(t, recurringA, recurringB, captured, emptyLifecycle, emptyMetric)...)
+
+	want := map[string]map[string]bool{
+		"recurring": {"recurring-a": true, "recurring-b": true},
+		"captured":  {"captured": true},
+		"empty":     {"empty-lifecycle": true, "empty-metric": true},
+		"":          {"recurring-a": true, "recurring-b": true, "captured": true, "empty-lifecycle": true, "empty-metric": true},
+	}
+	for state, wantIDs := range want {
+		result, err := ReadSessions(path, EventQuery{SessionState: state, Limit: 10})
+		if err != nil {
+			t.Fatalf("ReadSessions state %q returned error: %v", state, err)
+		}
+		got := map[string]bool{}
+		for _, session := range result.Sessions {
+			got[session.ID] = true
+		}
+		if !reflect.DeepEqual(got, wantIDs) {
+			t.Fatalf("state %q sessions = %#v, want %#v", state, got, wantIDs)
+		}
+	}
+}
+
+func TestHandlerSessionDetailReturnsRawEventsInTimelineOrder(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	events := []schema.Event{
+		testSchemaEvent("2026-05-13T01:01:00Z", "cursor", "command.executed", "command", "repo-a"),
+		testSchemaEvent("2026-05-13T01:00:00Z", "cursor", "prompt.submitted", "prompt", "repo-a"),
+		testSchemaEvent("2026-05-13T01:02:00Z", "cursor", "file.modified", "file", "repo-a"),
+	}
+	events[0].Session = &schema.SessionInfo{ID: "session-a"}
+	events[0].Command = &schema.CommandInfo{Command: "go test ./..."}
+	events[1].Session = &schema.SessionInfo{ID: "session-a"}
+	events[1].Prompt = &schema.PromptInfo{Text: "Investigate the dashboard"}
+	events[2].Session = &schema.SessionInfo{ID: "session-b"}
+	writeTestLog(t, path, marshalEvents(t, events...)...)
+
+	handler, err := Handler(Options{LogPath: path, UserMode: true})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/session?id=session-a", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var detail SessionDetail
+	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("decode session detail: %v", err)
+	}
+	if detail.Session.ID != "session-a" || len(detail.Events) != 2 {
+		t.Fatalf("detail session=%q events=%d, want session-a/2", detail.Session.ID, len(detail.Events))
+	}
+	if detail.Events[0].Event.Event.Action != "prompt.submitted" || detail.Events[1].Event.Event.Action != "command.executed" {
+		t.Fatalf("actions = %q, %q; want chronological prompt then command", detail.Events[0].Event.Event.Action, detail.Events[1].Event.Event.Action)
+	}
+	if len(detail.Events[0].RawEvent) == 0 || !json.Valid(detail.Events[0].RawEvent) {
+		t.Fatalf("raw_event missing or invalid: %s", string(detail.Events[0].RawEvent))
+	}
+}
+
+func TestReadEventsFiltersByUntil(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeTestLog(t, path,
+		testEvent("2026-05-13T01:00:00Z", "cursor", "prompt.submitted", "prompt", "repo-a"),
+		testEvent("2026-05-13T02:00:00Z", "cursor", "command.executed", "command", "repo-b"),
+	)
+	until, err := time.Parse(time.RFC3339, "2026-05-13T01:30:00Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := ReadEvents(path, EventQuery{Until: until, Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents returned error: %v", err)
+	}
+	if result.TotalMatched != 1 || result.Events[0].Event.Event.Action != "prompt.submitted" {
+		t.Fatalf("matched %d action %q, want prompt.submitted", result.TotalMatched, result.Events[0].Event.Event.Action)
+	}
+	if got := result.Filters["until"]; got != "2026-05-13T01:30:00Z" {
+		t.Fatalf("until filter = %q, want RFC3339 value", got)
+	}
+}
+
+func TestReadEventsIncludesRotatedArchives(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeTestLog(t, path+".2",
+		testEvent("2026-05-13T01:00:00Z", "cursor", "command.executed", "command", "repo-a"),
+	)
+	writeTestLog(t, path+".1",
+		testEvent("2026-05-13T01:01:00Z", "cursor", "file.modified", "file", "repo-b"),
+	)
+	writeTestLog(t, path,
+		testEvent("2026-05-13T01:02:00Z", "cursor", "prompt.submitted", "prompt", "repo-c"),
+	)
+
+	result, err := ReadEvents(path, EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatalf("ReadEvents returned error: %v", err)
+	}
+	if result.TotalMatched != 3 || len(result.Events) != 3 {
+		t.Fatalf("matched events = total %d len %d, want 3/3", result.TotalMatched, len(result.Events))
+	}
+	wantIDs := []string{"line-1", "archive-1-line-1", "archive-2-line-1"}
+	for i, want := range wantIDs {
+		if result.Events[i].ID != want {
+			t.Fatalf("event %d ID = %q, want %q", i, result.Events[i].ID, want)
+		}
+	}
+}
+
+func TestFindEventCanReadOutsideTailWindow(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	lines := make([][]byte, 0, maxEventLimit+1)
+	lines = append(lines, testEvent("2026-05-13T01:00:00Z", "cursor", "command.executed", "command", "repo-a"))
+	for i := 0; i < maxEventLimit; i++ {
+		lines = append(lines, testEvent("2026-05-13T01:01:00Z", "cursor", "file.modified", "file", "repo-b"))
+	}
+	writeTestLog(t, path, lines...)
+
+	record, ok, err := FindEvent(path, "line-1")
+	if err != nil {
+		t.Fatalf("FindEvent returned error: %v", err)
+	}
+	if !ok || record.Event.Event.Action != "command.executed" {
+		t.Fatalf("FindEvent returned ok=%t action=%q, want line-1 command.executed", ok, record.Event.Event.Action)
+	}
+}
+
+func TestFindEventCanReadRotatedArchive(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeTestLog(t, path+".1",
+		testEvent("2026-05-13T01:00:00Z", "cursor", "command.executed", "command", "repo-a"),
+		testEvent("2026-05-13T01:01:00Z", "cursor", "file.modified", "file", "repo-b"),
+	)
+
+	record, ok, err := FindEvent(path, "archive-1-line-2")
+	if err != nil {
+		t.Fatalf("FindEvent returned error: %v", err)
+	}
+	if !ok || record.Event.Event.Action != "file.modified" {
+		t.Fatalf("FindEvent returned ok=%t action=%q, want archive-1-line-2 file.modified", ok, record.Event.Event.Action)
+	}
+}
+
+func TestHandlerEventEndpointOmitsRawAndSetsSecurityHeaders(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeTestLog(t, path, testEvent("2026-05-13T01:00:00Z", "cursor", "prompt.submitted", "prompt", "repo-a"))
+
+	handler, err := Handler(Options{LogPath: path, UserMode: true})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/event?id=line-1", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Content-Security-Policy"); got == "" {
+		t.Fatal("Content-Security-Policy header missing")
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("Cache-Control = %q, want no-store", got)
+	}
+	var response map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if _, ok := response["raw"]; ok {
+		t.Fatal("event response unexpectedly included raw JSONL bytes")
+	}
+}
+
+func TestHandlerEventsEndpoint(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeTestLog(t, path, testEvent("2026-05-13T01:00:00Z", "cursor", "prompt.submitted", "prompt", "repo-a"))
+
+	handler, err := Handler(Options{LogPath: path, UserMode: true})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/events?action=prompt.submitted", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var result EventResult
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(result.Events) != 1 {
+		t.Fatalf("events len = %d, want 1", len(result.Events))
+	}
+}
+
+func TestHandlerEventsEndpointParsesModelFilter(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.jsonl")
+	event := testSchemaEvent("2026-05-13T01:00:00Z", "cursor", "prompt.submitted", "prompt", "repo-a")
+	event.Model = "gpt-5.5"
+	writeTestLog(t, path, marshalEvents(t, event)...)
+
+	handler, err := Handler(Options{LogPath: path, UserMode: true})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/events?model=gpt-5.5", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var result EventResult
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(result.Events) != 1 || result.Events[0].Event.Model != "gpt-5.5" {
+		t.Fatalf("events len/model = %d/%q, want 1/gpt-5.5", len(result.Events), result.Events[0].Event.Model)
+	}
+}
+
+func TestValidateLoopbackAddr(t *testing.T) {
+	if err := ValidateLoopbackAddr("127.0.0.1:8765"); err != nil {
+		t.Fatalf("loopback address rejected: %v", err)
+	}
+	if err := ValidateLoopbackAddr("0.0.0.0:8765"); err == nil {
+		t.Fatal("expected non-loopback address to be rejected")
+	}
+}
+
+func writeTestLog(t *testing.T, path string, lines ...[]byte) {
+	t.Helper()
+	var data []byte
+	for _, line := range lines {
+		data = append(data, line...)
+		data = append(data, '\n')
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatalf("write test log: %v", err)
+	}
+}
+
+func testEvent(ts, harness, action, category, repo string) []byte {
+	event := testSchemaEvent(ts, harness, action, category, repo)
+	data, _ := json.Marshal(event)
+	return data
+}
+
+func testSchemaEvent(ts, harness, action, category, repo string) schema.Event {
+	return schema.Event{
+		Timestamp:     ts,
+		Vendor:        schema.Vendor,
+		Product:       schema.Product,
+		SchemaVersion: schema.SchemaVersion,
+		Event:         schema.EventInfo{Kind: "agent_runtime", Action: action, Category: category},
+		Severity:      schema.SeverityInfo,
+		Endpoint:      schema.EndpointInfo{OS: "darwin"},
+		Harness:       schema.HarnessInfo{Name: harness},
+		Repository:    repo,
+		Message:       action,
+	}
+}
+
+func recurringTestEvent(ts, id, prompt, harness, repo, user string) schema.Event {
+	event := testSchemaEvent(ts, harness, "prompt.submitted", "prompt", repo)
+	event.Session = &schema.SessionInfo{ID: id}
+	event.Prompt = &schema.PromptInfo{Text: prompt}
+	event.User = schema.UserInfo{Name: user}
+	return event
+}
+
+func marshalEvents(t *testing.T, events ...schema.Event) [][]byte {
+	t.Helper()
+	lines := make([][]byte, 0, len(events))
+	for _, event := range events {
+		data, err := json.Marshal(event)
+		if err != nil {
+			t.Fatalf("marshal event: %v", err)
+		}
+		lines = append(lines, data)
+	}
+	return lines
+}

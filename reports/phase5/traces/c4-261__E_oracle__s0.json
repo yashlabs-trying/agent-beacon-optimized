@@ -1,0 +1,27 @@
+{
+  "task": "c4-261",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-261-gold"
+  ],
+  "required_evidence": [
+    "c4-261-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "13",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.259,
+  "prompt_tokens": 120,
+  "gen_tokens": 3
+}

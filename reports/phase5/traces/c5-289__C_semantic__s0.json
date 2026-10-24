@@ -1,0 +1,28 @@
+{
+  "task": "c5-289",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-289-alpha",
+    "c5-289-beta"
+  ],
+  "required_evidence": [
+    "c5-289-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's scheduler rate limit is 29.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.498,
+  "prompt_tokens": 132,
+  "gen_tokens": 12
+}

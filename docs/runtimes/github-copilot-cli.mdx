@@ -1,0 +1,91 @@
+---
+title: "GitHub Copilot CLI"
+description: "Beacon support details for GitHub Copilot CLI endpoint telemetry"
+---
+
+## Runtime overview
+
+Beacon supports GitHub Copilot CLI through MDM-managed OpenTelemetry export to the local OTLP HTTP receiver, plus offline polling of Copilot's local session records.
+
+## Prerequisites
+
+Before enabling GitHub Copilot CLI telemetry, make sure:
+
+- GitHub Copilot CLI is installed and available as the `copilot` executable for the user or managed endpoint.
+- `beacon endpoint install` has run so the local collector, endpoint config, and runtime log path exist.
+- The Copilot CLI launch environment sets `COPILOT_OTEL_ENABLED=true`.
+- The Copilot CLI launch environment sets `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318` or `COPILOT_OTEL_ENDPOINT=http://127.0.0.1:4318`.
+- Copilot CLI is restarted after launch-environment changes so new sessions use the updated settings.
+- For local session backfill, Copilot CLI has written sessions under `$COPILOT_HOME/session-state` (default `~/.copilot/session-state`).
+
+## Collection path
+
+GitHub Copilot CLI exports OTLP HTTP telemetry to Beacon's local collector. Beacon normalizes Copilot spans into endpoint events for prompt submission, session activity, tool invocation, and approval-like permission activity.
+
+Beacon can also read committed session records from `$COPILOT_HOME/session-state` (default `~/.copilot/session-state`) through [`beacon endpoint copilot sync`](/cli/endpoint-copilot). Polling backfills assistant text, complete tool results, command and file activity, and Copilot's persisted token usage. Every event from that path is marked `harness.collection_method=poll`, so readers can tell it was observed after Copilot committed the record rather than during the live tool call.
+
+Copilot CLI metrics are filtered from the local runtime JSONL log by default so endpoint timelines stay focused on user and agent activity. Use `--include-runtime-metrics` during install or repair only when you need low-level Copilot metrics for troubleshooting.
+
+## Discovery and status
+
+Beacon detects GitHub Copilot CLI through the `copilot` executable or `$COPILOT_HOME/config.json` (default `~/.copilot/config.json`). Use `beacon endpoint discover` or `beacon endpoint status` to confirm that Copilot CLI is present and exporting to Beacon's local OTLP HTTP receiver.
+
+Use `beacon endpoint copilot status` to inspect local session files and see how far the poll cursor has collected them.
+
+Beacon reports Copilot CLI telemetry as configured only when `COPILOT_OTEL_ENABLED` is truthy and the effective OTLP endpoint points to `localhost` or `127.0.0.1`. If `COPILOT_OTEL_FILE_EXPORTER_PATH` is configured, Beacon reports Copilot as misconfigured because the file exporter bypasses the local OTLP collector.
+
+## Install or configuration support
+
+`beacon endpoint install` prepares the collector, endpoint config, and runtime log paths. Copilot CLI telemetry is configured outside Beacon through MDM, shell profile management, or another customer-owned launch policy.
+
+Do not add Copilot CLI to the `--harness` list. If `copilot`, `copilot_cli`, or `github_copilot` is passed to `beacon endpoint install --harness` or `beacon endpoint repair --harness`, Beacon reports that Copilot CLI telemetry is MDM-managed instead of writing Copilot configuration directly.
+
+Configure Copilot CLI's launch environment to export to the local OTLP HTTP receiver:
+
+```bash title="Configure Copilot CLI's launch environment to export to the local OTLP HTTP receiver"
+export COPILOT_OTEL_ENABLED="true"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://127.0.0.1:4318"
+```
+
+If your deployment intentionally captures GenAI message content from Copilot telemetry, also configure:
+
+```bash title="If your deployment intentionally captures GenAI message content from Copilot telemetry, also configure"
+export OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="true"
+```
+
+For a one-command local validation flow, see [Test GitHub Copilot CLI telemetry](/guides/local-testing/events#4-test-github-copilot-cli-telemetry).
+
+## Telemetry coverage
+
+| Area | Support |
+|------|---------|
+| Prompt telemetry | Supported from Copilot chat spans over OTLP HTTP and from local session polling |
+| Assistant text | Supported from local session polling |
+| Command, tool, and file telemetry | OTLP covers live tool and approval-like activity. Polling reconstructs complete tool calls/results, commands, and file reads or writes from session records |
+| Approvals | Supported from live OTLP permission activity. Polling does not synthesize approval decisions |
+| Token usage | Supported from local session polling. Assistant message output tokens are recorded directly; shutdown model totals are differenced for input, cache, and reasoning usage |
+| Cost | Supported from local session polling for sessions started on or after 2026-06-01, when Copilot billing moved to AI credits. The shutdown's session-wide `totalNanoAiu` is differenced and recorded once as `gen_ai.usage.cost_usd` (10^9 nano-AIU = one AI credit = US$0.01). Earlier sessions were billed per premium request and record no cost. See [Token usage](/cli/token-usage) |
+| Local JSONL and dashboard | Supported after events reach the local runtime log |
+| MDM deployment | Supported for the endpoint agent. Copilot launch-environment configuration stays under MDM or customer policy control |
+
+## Deployment notes
+
+Copilot CLI currently exports OTLP over HTTP, not gRPC. Point it at Beacon's HTTP receiver, usually `http://127.0.0.1:4318`, or the custom `--otlp-http-port` used by your endpoint install.
+
+Beacon validates the effective Copilot environment but does not write Copilot shell profiles or `~/.copilot/config.json`. Keep Copilot CLI outside the default Beacon harness list, and deploy its environment settings with the same MDM or shell-management mechanism you use to launch Copilot.
+
+To backfill local session records, schedule `beacon endpoint copilot sync` in the logged-in user's context or leave it running with `--watch`. Nothing sweeps on its own.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Supported agent harnesses" icon="list-check" href="/runtimes">
+    Return to the runtime support overview.
+  </Card>
+  <Card title="Endpoint install" icon="download" href="/cli/endpoint-install">
+    Configure the local collector before enabling Copilot CLI export.
+  </Card>
+  <Card title="beacon endpoint copilot" icon="clock-rotate-left" href="/cli/endpoint-copilot">
+    Backfill local Copilot CLI session records.
+  </Card>
+</Columns>

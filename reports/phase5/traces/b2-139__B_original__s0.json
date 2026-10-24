@@ -1,0 +1,27 @@
+{
+  "task": "b2-139",
+  "suite": "B",
+  "category": "B2_ambiguity",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "b2-139-default"
+  ],
+  "required_evidence": [
+    "b2-139-default"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The 'qa' environment is used.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 11.069,
+  "agent_seconds": 1.118,
+  "prompt_tokens": 127,
+  "gen_tokens": 9
+}

@@ -1,0 +1,10 @@
+=== RUN   TestPhase3ARetrievalLexical
+P3A_RETRIEVAL_FIXTURE dataset=beacon-v6-phase3-retrieval-context-v1 topics=12 queries=48
+P3A_RETRIEVAL method=lexical category=ALL n=48 R@1=0.1667 R@5=0.1667 MRR=0.1667 NDCG@5=0.1344 p50_us=544 p95_us=983
+P3A_RETRIEVAL method=lexical category=identifier n=12 R@1=0.6667 R@5=0.6667 MRR=0.6667 NDCG@5=0.5377 p50_us=525 p95_us=734
+P3A_RETRIEVAL method=lexical category=paraphrase n=12 R@1=0.0000 R@5=0.0000 MRR=0.0000 NDCG@5=0.0000 p50_us=535 p95_us=983
+P3A_RETRIEVAL method=lexical category=synonym n=12 R@1=0.0000 R@5=0.0000 MRR=0.0000 NDCG@5=0.0000 p50_us=533 p95_us=1448
+P3A_RETRIEVAL method=lexical category=hard_negative n=12 R@1=0.0000 R@5=0.0000 MRR=0.0000 NDCG@5=0.0000 p50_us=558 p95_us=886
+--- PASS: TestPhase3ARetrievalLexical (0.05s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.055s

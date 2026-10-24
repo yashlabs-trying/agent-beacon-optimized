@@ -1,0 +1,81 @@
+---
+title: "beacon cloud"
+description: "Configure Beacon telemetry for provider-managed cloud agents"
+---
+
+## Overview
+
+`beacon cloud` prints setup helpers for provider-managed cloud agent
+environments. Supported flows capture Claude Code or Cursor cloud agent
+telemetry and upload the cloud session's `runtime.jsonl` to customer-managed
+Google Cloud Storage or Amazon S3.
+
+For complete walkthroughs, see [Claude Code Cloud Agents](/runtimes/claude-code-cloud-agents)
+and [Cursor Cloud Agents](/runtimes/cursor-cloud-agents).
+
+## Commands
+
+<span id="beacon-cloud-claude-web-print-setup" />
+<span id="beacon-cloud-claude-web-print-hooks" />
+<span id="beacon-cloud-cursor-print-setup" />
+<span id="beacon-cloud-cursor-print-hooks" />
+<span id="beacon-cloud-gcs-setup" />
+<span id="beacon-cloud-s3-setup" />
+
+<Columns cols={2}>
+  <Card title="beacon cloud claude-web print-setup" icon="cloud" href="/cli/cloud-claude-web-print-setup">
+    Print a Claude Code cloud environment setup script.
+  </Card>
+  <Card title="beacon cloud claude-web print-hooks" icon="plug" href="/cli/cloud-claude-web-print-hooks">
+    Print Claude hook settings for a cloud sandbox.
+  </Card>
+  <Card title="beacon cloud cursor print-setup" icon="cloud" href="/cli/cloud-cursor-print-setup">
+    Print a Cursor cloud agent binary setup script.
+  </Card>
+  <Card title="beacon cloud cursor print-hooks" icon="plug" href="/cli/cloud-cursor-print-hooks">
+    Print Cursor project hook settings to commit for cloud agents.
+  </Card>
+  <Card title="beacon cloud gcs setup" icon="database" href="/cli/cloud-gcs-setup">
+    Create or print self-serve GCS setup commands for cloud-agent telemetry.
+  </Card>
+  <Card title="beacon cloud s3 setup" icon="database" href="/cli/cloud-s3-setup">
+    Create or print self-serve S3 setup commands for cloud-agent telemetry.
+  </Card>
+</Columns>
+
+## Object storage setup note
+
+The GCS helper creates or validates a bucket, creates a dedicated uploader
+service account, grants object upload access, creates a service-account key, and
+prints the `BEACON_CLOUD_GCS_*` environment variables for cloud agents. The S3
+helper creates or validates a bucket, blocks public access, creates a dedicated
+IAM user, grants prefix-scoped `s3:PutObject`, creates one access key, and
+prints the `BEACON_CLOUD_S3_*` and AWS credential variables.
+
+<Warning>
+  These self-serve flows pass a scoped Google service-account key or AWS access
+  key into the provider-managed cloud agent environment. Use them for
+  proof-of-concept testing and prototyping. For production enterprise deployments, use
+  [Beacon Cloud](/deployment/managed) or contact Beacon about secure
+  forwarding in customer-managed infrastructure.
+</Warning>
+
+## Related
+
+<Columns cols={2}>
+  <Card title="beacon cloud gcs setup" icon="database" href="/cli/cloud-gcs-setup">
+    Create or print self-serve GCS setup commands for cloud-agent telemetry.
+  </Card>
+  <Card title="beacon cloud s3 setup" icon="database" href="/cli/cloud-s3-setup">
+    Create or print self-serve S3 setup commands for cloud-agent telemetry.
+  </Card>
+  <Card title="Claude Code Cloud Agents" icon="cloud" href="/runtimes/claude-code-cloud-agents">
+    Configure Claude Code cloud agent telemetry and object-storage upload end to end.
+  </Card>
+  <Card title="Cursor Cloud Agents" icon="cloud" href="/runtimes/cursor-cloud-agents">
+    Configure Cursor cloud agent telemetry and GCS or S3 upload end to end.
+  </Card>
+  <Card title="Log forwarding" icon="database" href="/log-forwarding">
+    Compare direct cloud-agent uploads with local endpoint object-storage forwarding.
+  </Card>
+</Columns>

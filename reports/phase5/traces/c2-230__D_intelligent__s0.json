@@ -1,0 +1,27 @@
+{
+  "task": "c2-230",
+  "suite": "C",
+  "category": "C2_workflow",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c2-230-order"
+  ],
+  "required_evidence": [
+    "c2-230-order"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The second step in the scheduler runbook order is migrate.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.929,
+  "prompt_tokens": 127,
+  "gen_tokens": 13
+}

@@ -1,0 +1,27 @@
+{
+  "task": "b4-176",
+  "suite": "B",
+  "category": "B4_decision",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "b4-176-good"
+  ],
+  "required_evidence": [
+    "b4-176-good"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The recommended approach for a new notify change is to use additive migrations.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 20.644,
+  "agent_seconds": 1.417,
+  "prompt_tokens": 119,
+  "gen_tokens": 15
+}

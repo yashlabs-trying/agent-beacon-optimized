@@ -1,0 +1,22 @@
+=== RUN   TestSelectContext_NoOpWhenDisabled
+--- PASS: TestSelectContext_NoOpWhenDisabled (0.00s)
+=== RUN   TestSelectContext_Supersession
+--- PASS: TestSelectContext_Supersession (0.00s)
+=== RUN   TestSelectContext_FalseNewerCorrectionRejected
+--- PASS: TestSelectContext_FalseNewerCorrectionRejected (0.00s)
+=== RUN   TestSelectContext_InjectionDefense
+--- PASS: TestSelectContext_InjectionDefense (0.00s)
+=== RUN   TestSelectContext_InjectionMixedRetainsFact
+--- PASS: TestSelectContext_InjectionMixedRetainsFact (0.00s)
+=== RUN   TestSelectContext_UnresolvedConflictPreserved
+--- PASS: TestSelectContext_UnresolvedConflictPreserved (0.00s)
+=== RUN   TestSelectContext_BudgetPrefersVerified
+--- PASS: TestSelectContext_BudgetPrefersVerified (0.00s)
+=== RUN   TestPhase4CMemoryHistory
+    phase4c_history_test.go:44: HISTORY n=10 kept=fact-9 superseded=9 elapsed=782.861µs
+    phase4c_history_test.go:44: HISTORY n=50 kept=fact-49 superseded=49 elapsed=12.616215ms
+    phase4c_history_test.go:44: HISTORY n=100 kept=fact-99 superseded=99 elapsed=46.740055ms
+    phase4c_history_test.go:56: HISTORY untrusted-correction kept=v
+--- PASS: TestPhase4CMemoryHistory (0.06s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.072s

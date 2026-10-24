@@ -1,0 +1,18 @@
+Collected 2026-10-22 during Phase 1. Available disk and used memory are point-in-time values.
+
+Windows laptop / Ubuntu WSL2:
+Linux 6.18.33.2-microsoft-standard-WSL2 x86_64
+Ubuntu 26.04 LTS
+8 logical CPUs; 7.6 GiB RAM; 937 GiB free on / at inspection
+go version go1.27.3 linux/amd64
+git version 2.53.0
+Python 3.14.4
+
+Apple Silicon Mac over authenticated SSH:
+macOS 26.6.2 (25G83); Apple M5; 16 GiB unified memory
+332 GiB free on data volume at inspection
+go version go1.27.3 darwin/arm64
+git version 2.50.1 (Apple Git-155)
+System Python 3.9.6; dedicated neural venv Python 3.12
+Ollama 0.40.6; local qwen2.5-coder:1.5b and qwen2.5-coder:7b
+PyTorch MPS available and used by the neural sidecar

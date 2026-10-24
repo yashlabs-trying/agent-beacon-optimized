@@ -1,0 +1,21 @@
+{
+  "name": "@asymptote-labs/cline-beacon",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Beacon endpoint telemetry adapter for Cline",
+  "type": "module",
+  "scripts": {
+    "check": "bun ../shared/sync-safe-clone.ts --check src/beacon.ts && bun build --no-bundle src/beacon.ts >/dev/null && cmp src/beacon.ts ../../cli/beacon/internal/endpoint/hooks/assets/cline/beacon.ts",
+    "sync": "bun ../shared/sync-safe-clone.ts src/beacon.ts && cp src/beacon.ts ../../cli/beacon/internal/endpoint/hooks/assets/cline/beacon.ts",
+    "test": "bun test src/beacon.test.ts"
+  },
+  "exports": {
+    ".": "./src/beacon.ts"
+  },
+  "files": [
+    "src/"
+  ],
+  "peerDependencies": {
+    "@cline/sdk": "*"
+  }
+}

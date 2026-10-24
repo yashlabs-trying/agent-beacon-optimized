@@ -1,0 +1,27 @@
+{
+  "task": "c4-269",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-269-gold"
+  ],
+  "required_evidence": [
+    "c4-269-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The cart page size is 75 rows.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 14.949,
+  "agent_seconds": 1.682,
+  "prompt_tokens": 121,
+  "gen_tokens": 11
+}

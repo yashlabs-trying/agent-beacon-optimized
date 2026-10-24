@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "dataset_id": "beacon-v6-phase3-retrieval-context-v1",
+  "status": "locked_unrun",
+  "project_id": "phase3-heldout-retrieval",
+  "design": "12 topics; each expands to primary, same-evidence duplicate, independent support, and close decoy memories; four queries per topic. Primary or duplicate satisfies ranking gold. Primary plus support are the two required distinct findings for context retention.",
+  "expansion_rule": "For each topic ID T, create memory IDs T-primary, T-duplicate, T-support, T-decoy from the named text fields. Primary and duplicate share evidence ID T-primary and finding ID T-primary; support has evidence/finding ID T-support; decoy has evidence/finding ID T-decoy. Query IDs are T-identifier, T-paraphrase, T-synonym, T-hard_negative. Ranking gold IDs are T-primary and T-duplicate. Context required finding IDs are T-primary and T-support.",
+  "topics": [
+    {
+      "id": "auth_refresh",
+      "primary": "For AUTH-401-EXP, refresh the OAuth access token after a 401 caused by expiry, then retry the protected request once.",
+      "support": "Invalidate the in-process bearer-token cache after refresh so later requests cannot reuse the expired token.",
+      "duplicate": "An expired OAuth bearer token must be refreshed before the failed protected request is retried once.",
+      "decoy": "For TLS-CERT-EXP, renew the server certificate and restart its listener before accepting new HTTPS connections.",
+      "queries": {
+        "identifier": "AUTH-401-EXP remediation",
+        "paraphrase": "A protected API call is rejected because its bearer credential aged out. What should the client do?",
+        "synonym": "How should a client recover from an expired OAuth access credential?",
+        "hard_negative": "A 401 from an expired bearer token requires credential refresh, not a TLS certificate restart."
+      }
+    },
+    {
+      "id": "wal_checkpoint",
+      "primary": "For WAL-CHECK-17, checkpoint the SQLite write-ahead log after the snapshot transaction commits and before copying the database file.",
+      "support": "Run integrity_check on the restored SQLite copy before serving memory searches.",
+      "duplicate": "Checkpoint SQLite WAL after snapshot commit and before copying the database for WAL-CHECK-17.",
+      "decoy": "For SNAPSHOT-ROTATE-17, rotate old backup archives only after a new archive passes checksum verification.",
+      "queries": {
+        "identifier": "WAL-CHECK-17 snapshot copy",
+        "paraphrase": "What sequence makes a SQLite file copy include recently committed WAL writes?",
+        "synonym": "How do we flush the write-ahead log before taking a database-file backup?",
+        "hard_negative": "Before copying a SQLite database, synchronize its WAL; rotating backup archives is a different step."
+      }
+    },
+    {
+      "id": "queue_idempotency",
+      "primary": "For MSG-REDO-23, persist an idempotency key with the queue message result before acknowledging delivery.",
+      "support": "A redelivered message with the same key returns the recorded result without repeating the side effect.",
+      "duplicate": "Record the queue result under MSG-REDO-23 before ack so duplicate delivery does not repeat the operation.",
+      "decoy": "For CACHE-EVICT-23, discard stale cache entries after their TTL but allow the underlying operation to run again.",
+      "queries": {
+        "identifier": "MSG-REDO-23 duplicate delivery",
+        "paraphrase": "A broker redelivers work after an acknowledgment is lost. How do we prevent the side effect twice?",
+        "synonym": "What durable deduplication rule should a message consumer use on replay?",
+        "hard_negative": "Prevent duplicate queue side effects with a persisted key, rather than merely expiring a cache item."
+      }
+    },
+    {
+      "id": "schema_rollback",
+      "primary": "For DB-MIGRATE-31, keep the prior schema reader compatible until all writers finish the new-column backfill.",
+      "support": "If migration validation fails, stop new writers and restore the prior reader before retrying backfill.",
+      "duplicate": "Maintain old-reader compatibility during DB-MIGRATE-31 while new writers backfill the added column.",
+      "decoy": "For IMAGE-ROLLBACK-31, keep the previous container image digest for a fast application deployment rollback.",
+      "queries": {
+        "identifier": "DB-MIGRATE-31 backfill",
+        "paraphrase": "How can readers stay safe while a newly added database column is filled in?",
+        "synonym": "Which compatibility window is needed for a rolling schema migration?",
+        "hard_negative": "The rollback concerns schema readers during backfill, not switching the application container image."
+      }
+    },
+    {
+      "id": "dst_schedule",
+      "primary": "For TZ-DST-42, store the scheduled instant in UTC together with the user's IANA time zone and resolve ambiguous local times explicitly.",
+      "support": "On display, convert from the stored UTC instant using the saved zone rather than a fixed numeric offset.",
+      "duplicate": "Resolve TZ-DST-42 ambiguous local appointment times and preserve both UTC instant and IANA zone.",
+      "decoy": "For CLOCK-SKEW-42, compare signed request timestamps with a bounded server-clock tolerance.",
+      "queries": {
+        "identifier": "TZ-DST-42 appointment",
+        "paraphrase": "How should a calendar store a meeting during the repeated hour when clocks move back?",
+        "synonym": "What representation survives daylight-saving transitions for user appointments?",
+        "hard_negative": "An ambiguous local calendar hour needs an IANA zone and UTC instant, not request-signature skew tolerance."
+      }
+    },
+    {
+      "id": "rate_limit",
+      "primary": "For HTTP-429-53, honor Retry-After and cap retries when the server rejects a request for rate limiting.",
+      "support": "Use a jittered delay when Retry-After is absent so clients do not synchronize on the next attempt.",
+      "duplicate": "Respect Retry-After for HTTP-429-53 and limit the number of rate-limit retries.",
+      "decoy": "For SOCKET-IDLE-53, set a connection idle timeout before abandoning a stalled TCP socket.",
+      "queries": {
+        "identifier": "HTTP-429-53 retry policy",
+        "paraphrase": "An API returns too many requests with a wait hint. How should the client retry?",
+        "synonym": "How do we back off after service throttling without a retry stampede?",
+        "hard_negative": "A rate-limit response with Retry-After is different from an idle TCP socket timeout."
+      }
+    },
+    {
+      "id": "embedding_version",
+      "primary": "For EMBED-MODEL-64, store the embedding model revision beside each vector and rebuild vectors whose revision differs.",
+      "support": "Keep mismatched vectors out of ANN search until the replacement embedding has committed.",
+      "duplicate": "EMBED-MODEL-64 requires revision-tagged vectors and re-embedding after a model update.",
+      "decoy": "For FTS-SCHEMA-64, rebuild the lexical index after its tokenizer or indexed-column layout changes.",
+      "queries": {
+        "identifier": "EMBED-MODEL-64 vector refresh",
+        "paraphrase": "How do we prevent vectors made by an old neural encoder from mixing with new ones?",
+        "synonym": "What migration is needed when the semantic model revision changes?",
+        "hard_negative": "A neural model revision requires vector regeneration, not only an FTS tokenizer rebuild."
+      }
+    },
+    {
+      "id": "request_cancellation",
+      "primary": "For CANCEL-REQ-75, pass the parent request context into every outbound call and cancel child work when the request ends.",
+      "support": "A canceled request must close its response body and release its worker goroutine before returning.",
+      "duplicate": "Propagate CANCEL-REQ-75 cancellation from the incoming request through downstream calls and child workers.",
+      "decoy": "For WORKER-DRAIN-75, let a background batch finish during planned process shutdown before stopping its queue consumer.",
+      "queries": {
+        "identifier": "CANCEL-REQ-75 downstream call",
+        "paraphrase": "A client disconnects while a service waits on another API. How should its work stop?",
+        "synonym": "How can request-scoped cancellation prevent orphaned network calls and goroutines?",
+        "hard_negative": "Stop work when the caller cancels; do not confuse this with graceful batch draining at shutdown."
+      }
+    },
+    {
+      "id": "checksum_recovery",
+      "primary": "For ARTIFACT-SHA-86, reject a downloaded build artifact when its SHA-256 differs from the signed manifest entry.",
+      "support": "Retry from a trusted mirror only after recording the mismatch and discard the corrupt temporary file.",
+      "duplicate": "ARTIFACT-SHA-86 rejects an artifact with a digest that does not match the signed release manifest.",
+      "decoy": "For SIGNATURE-KEY-86, rotate a compromised signing key and publish a new trusted public-key chain.",
+      "queries": {
+        "identifier": "ARTIFACT-SHA-86 mismatch",
+        "paraphrase": "A fetched binary has different bytes from its signed manifest digest. What is the safe response?",
+        "synonym": "How should a release downloader handle an integrity hash mismatch?",
+        "hard_negative": "A corrupt artifact digest requires rejecting that file, not automatically rotating the signing key."
+      }
+    },
+    {
+      "id": "cursor_pagination",
+      "primary": "For PAGE-CURSOR-97, encode the last stable sort key and record ID into the next-page cursor.",
+      "support": "Apply the same filter and ordering on the next page so concurrent inserts do not duplicate or skip older rows.",
+      "duplicate": "PAGE-CURSOR-97 resumes pagination from the previous page's stable key and ID.",
+      "decoy": "For PAGE-OFFSET-97, jump to a numbered page using an offset when the dataset is immutable.",
+      "queries": {
+        "identifier": "PAGE-CURSOR-97 next page",
+        "paraphrase": "How can scrolling through changing results avoid repeating or missing records?",
+        "synonym": "Which keyset pagination state should a continuation token preserve?",
+        "hard_negative": "Use a stable last-key cursor for mutable results, not a numeric offset for a fixed dataset."
+      }
+    },
+    {
+      "id": "build_cache",
+      "primary": "For BUILD-CACHE-108, include the lockfile digest in the CI cache key so dependency changes invalidate the old layer.",
+      "support": "Verify the restored cache metadata matches the active toolchain before starting compilation.",
+      "duplicate": "BUILD-CACHE-108 keys CI dependencies by lockfile digest to avoid reusing stale packages.",
+      "decoy": "For SEARCH-CACHE-108, increment the memory generation when approved records change so cached retrieval is refreshed.",
+      "queries": {
+        "identifier": "BUILD-CACHE-108 lockfile",
+        "paraphrase": "CI keeps compiling with old packages after dependency versions change. Which cache key should change?",
+        "synonym": "How do we invalidate a dependency build layer after a lockfile edit?",
+        "hard_negative": "A lockfile digest belongs in the build cache key, not the memory search generation."
+      }
+    },
+    {
+      "id": "lease_expiry",
+      "primary": "For LEASE-EXP-119, a worker must renew its distributed lease before expiry and stop writes when renewal fails.",
+      "support": "Fence stale lease holders with a monotonically increasing token on each protected write.",
+      "duplicate": "LEASE-EXP-119 stops writes after a failed lease renewal and uses fencing for stale owners.",
+      "decoy": "For SQL-LOCK-119, wait for SQLite's busy timeout when a local transaction holds the write lock.",
+      "queries": {
+        "identifier": "LEASE-EXP-119 renewal",
+        "paraphrase": "A distributed worker loses ownership while still running. How should it prevent stale writes?",
+        "synonym": "What lease-renewal and fencing rule protects work across nodes?",
+        "hard_negative": "A lost distributed lease needs fencing and write cessation, not a local SQLite lock wait."
+      }
+    }
+  ]
+}

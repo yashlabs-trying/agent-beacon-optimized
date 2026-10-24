@@ -1,0 +1,28 @@
+{
+  "task": "c5-282",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-282-alpha",
+    "c5-282-beta"
+  ],
+  "required_evidence": [
+    "c5-282-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's search rate limit is 43.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.068,
+  "prompt_tokens": 132,
+  "gen_tokens": 12
+}

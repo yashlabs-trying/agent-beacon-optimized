@@ -1,0 +1,76 @@
+---
+title: "Claude Cowork"
+description: "Beacon support details for Claude Cowork endpoint telemetry"
+---
+
+## Runtime overview
+
+Beacon supports Claude Cowork through admin-configured OpenTelemetry from Anthropic's service.
+
+## Prerequisites
+
+Before enabling Claude Cowork telemetry, make sure:
+
+- You have Claude organization admin access to configure OpenTelemetry export.
+- Beacon has a durable collector endpoint that Claude Cowork can reach; production setups should use public HTTPS.
+- You have run `beacon endpoint integrations claude-cowork print-config` to get the exact OTLP settings for the Claude admin console.
+- You can validate arrival with `beacon endpoint integrations claude-cowork validate` after Cowork activity is generated.
+- Your content handling expectations match what Claude Cowork emits through OTLP.
+
+## Collection path
+
+Claude Cowork exports OTLP telemetry from Anthropic's service to a
+customer-managed collector endpoint. After events reach Beacon's collector,
+Beacon applies the shared Claude normalizer, writes canonical endpoint events to
+the runtime JSONL log, and makes them available in the local dashboard.
+
+Cowork can be opened from Claude Desktop while the task itself runs on
+Anthropic's remote infrastructure. When Anthropic reports
+`cowork.surface=remote`, Beacon records `origin=cloud`. The event's endpoint
+hostname and operating system still identify the machine running the Beacon
+collector, not the remote Cowork execution host.
+
+## Discovery and status
+
+Beacon treats Claude Cowork as an admin-configured source because telemetry is enabled in Claude organization settings rather than local endpoint settings.
+
+Use `beacon endpoint integrations claude-cowork status` to report whether Claude Cowork is detected and whether Cowork events have been observed in the endpoint runtime log.
+
+## Install or configuration support
+
+Claude Cowork is configured in Claude organization settings, not by `beacon endpoint install`.
+
+Use `beacon endpoint integrations claude-cowork print-config` to print the OTLP settings needed for the Claude admin console, then use `beacon endpoint integrations claude-cowork validate` to confirm events are arriving.
+
+Claude Cowork is not hook-based.
+
+## Telemetry coverage
+
+| Area | Support |
+|------|---------|
+| Prompt and assistant response telemetry | Retained in canonical GenAI input and output message fields when emitted through Cowork OTLP |
+| Command, tool, and file telemetry | Tool parameters and results normalize into canonical command, tool, and file fields |
+| Approval telemetry | Cowork tool decisions normalize into observed approval requests, allows, and denials |
+| MCP telemetry | MCP connections and tool calls include canonical server and tool names |
+| Model and usage telemetry | Model, token usage, and runtime-reported cost normalize into `gen_ai.usage` |
+| Session and runtime telemetry | Session, API, hook lifecycle, refusal, and error records remain available for investigation |
+| User and origin context | Cowork's source-provided user identifier is preserved; remote Cowork surfaces are marked as cloud execution |
+| Local JSONL and dashboard | Supported after events reach the collector |
+| MDM deployment | Uses a durable customer-managed HTTPS collector endpoint rather than local MDM hook config |
+
+## Deployment notes
+
+Production Cowork telemetry should use a public HTTPS collector endpoint, not a laptop or ngrok tunnel.
+
+For testing, validate whether Cowork events have reached the runtime log before expecting them in the dashboard or downstream SIEM.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Supported agent harnesses" icon="list-check" href="/runtimes">
+    Return to the runtime support overview.
+  </Card>
+  <Card title="Claude Cowork commands" icon="plug" href="/cli/claude-cowork">
+    Print config, check status, and validate Cowork telemetry.
+  </Card>
+</Columns>

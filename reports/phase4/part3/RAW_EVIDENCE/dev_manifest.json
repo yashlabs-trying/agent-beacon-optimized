@@ -1,0 +1,15 @@
+{
+  "dataset_id": "beacon-phase4c-intelligent-dev-v1",
+  "split": "development",
+  "file": "phase4c_dev_v1.json",
+  "sha256": "511B4C3081BECA3F642A6C2281AF5C6166089B05B3922F411B5DB7B2FB293CEF",
+  "cases": 35,
+  "hash_rule": "SHA-256 of file bytes after CRLF-to-LF normalization",
+  "by_category": {
+    "contradiction": 11,
+    "ambiguity": 8,
+    "adversarial": 6,
+    "decision": 6,
+    "control": 4
+  }
+}

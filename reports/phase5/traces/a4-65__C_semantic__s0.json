@@ -1,0 +1,28 @@
+{
+  "task": "a4-65",
+  "suite": "A",
+  "category": "A4_recovery",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a4-65-stale",
+    "a4-65-durable"
+  ],
+  "required_evidence": [
+    "a4-65-durable"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "37 messages",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.247,
+  "prompt_tokens": 146,
+  "gen_tokens": 4
+}

@@ -1,0 +1,25 @@
+{
+  "task": "a3-43",
+  "suite": "A",
+  "category": "A3_knowledge_transfer",
+  "difficulty": "medium",
+  "arm": "A_none",
+  "seed": 0,
+  "retrieved_ids": [],
+  "required_evidence": [
+    "a3-43-conv"
+  ],
+  "evidence_recall": 0.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 1.126,
+  "prompt_tokens": 112,
+  "gen_tokens": 8
+}

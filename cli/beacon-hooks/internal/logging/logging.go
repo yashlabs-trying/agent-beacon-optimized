@@ -1,0 +1,782 @@
+package logging
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	osuser "os/user"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/config"
+	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve"
+	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve/activesession"
+	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve/filelock"
+	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve/shareauto"
+)
+
+// endpointSequence numbers the endpoint events emitted by this hook process, in the order
+// they are written.
+var endpointSequence asymptoteobserve.Sequencer
+
+const (
+	defaultEndpointRotateBytes    = 10 * 1024 * 1024
+	defaultEndpointRotateArchives = 5
+	// endpointRuntimeFileMode is the shared (system-mode) log's mode. A log inside the current
+	// user's home is private instead; asymptoteobserve.RuntimeLogModes decides, identically in all
+	// three writers.
+	endpointRuntimeFileMode = asymptoteobserve.SharedRuntimeLogFileMode
+)
+
+// Logger provides structured JSON logging for hook events
+type Logger struct {
+	hookName  string
+	logFile   string
+	sessionID string
+	platform  string
+}
+
+// NewLoggerForPlatform creates a logger for a specific hook and platform
+func NewLoggerForPlatform(hookName, platform string) *Logger {
+	config.EnsureStateDir(platform)
+	return &Logger{hookName: hookName, logFile: config.GetLogFile(platform), platform: platform}
+}
+
+// NewSessionLogger creates a logger that writes to a per-session log file.
+// Log file path: ~/.beacon/{platform}/logs/{session_id}.log
+func NewSessionLogger(hookName, platform, sessionID string) *Logger {
+	config.EnsureSessionLogDir(platform)
+	return &Logger{
+		hookName:  hookName,
+		logFile:   config.GetSessionLogFile(platform, sessionID),
+		sessionID: sessionID,
+		platform:  platform,
+	}
+}
+
+func (l *Logger) formatEntry(level, message string, fields ...interface{}) map[string]interface{} {
+	entry := map[string]interface{}{
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"hook":      l.hookName,
+		"level":     level,
+		"message":   message,
+	}
+
+	if l.sessionID != "" {
+		entry["session_id"] = l.sessionID
+	}
+
+	// Add additional fields
+	for i := 0; i < len(fields)-1; i += 2 {
+		if key, ok := fields[i].(string); ok {
+			entry[key] = fields[i+1]
+		}
+	}
+
+	return entry
+}
+
+func (l *Logger) write(entry map[string]interface{}) {
+	data, err := json.Marshal(entry)
+	if err != nil {
+		return
+	}
+
+	f, err := os.OpenFile(l.logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer func() {
+		if cerr := f.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "logging: failed to close log file %s: %v\n", l.logFile, cerr)
+		}
+	}()
+
+	if _, err := f.Write(data); err != nil {
+		fmt.Fprintf(os.Stderr, "logging: failed to write log entry to %s: %v\n", l.logFile, err)
+		return
+	}
+	if _, err := f.WriteString("\n"); err != nil {
+		fmt.Fprintf(os.Stderr, "logging: failed to write newline to %s: %v\n", l.logFile, err)
+		return
+	}
+}
+
+// EndpointEvent writes an event whose action the runtime named for us, which is the normal case
+// on this path: a hook or plugin fires for a specific lifecycle event and the action follows from
+// which one. Callers that instead derive an action from an adjacent observation must use
+// EndpointEventWithFidelity and say so.
+func (l *Logger) EndpointEvent(action, category, severity, message string, fields map[string]interface{}) error {
+	return l.EndpointEventWithFidelity(action, category, severity, message, asymptoteobserve.FidelityObserved, fields)
+}
+
+// EndpointEventWithFidelity is EndpointEvent with an explicit event.fidelity. It exists for the
+// handful of hook paths that report an action the payload did not contain -- synthesizing an
+// approval from a pre-tool notification, for instance -- so those events are distinguishable from
+// the ones a runtime actually reported.
+func (l *Logger) EndpointEventWithFidelity(action, category, severity, message, fidelity string, fields map[string]interface{}) error {
+	path := endpointLogPath()
+	if path == "" {
+		return nil
+	}
+	if severity == "" {
+		severity = "info"
+	}
+	event := l.baseEndpointEvent(action, category, severity, message, fidelity)
+	for key, value := range fields {
+		if value == nil {
+			continue
+		}
+		event[key] = value
+	}
+	normalizeEventModel(event)
+	attachDerivedTrace(event)
+	if err := writeEndpointJSON(path, event); err != nil {
+		fmt.Fprintf(os.Stderr, "logging: failed to write endpoint event to %s: %v\n", path, err)
+		reportEndpointWriteFailure(os.Stderr, l.platform, path, err)
+		return err
+	}
+	recordActiveSession(event)
+	l.requestShareOnce(event)
+	return nil
+}
+
+// requestShareOnce writes one session.share_requested event for the event's session when the person
+// turned auto-share on for its working directory (`beacon share auto enable`). It is the first event
+// of the session the hooks see -- SessionStart where the runtime has one -- and never more than one
+// per session, deduplicated under a lock in the active-session record.
+//
+// The event is only written to the local runtime log. Beacon Cloud forwarding ships it like any
+// other line, and beacon.sh publishes the session when it receives it; without forwarding it is an
+// inert record. Nothing here touches the network. It is event.fidelity=inferred because Beacon
+// originated it: no runtime reported a share request.
+func (l *Logger) requestShareOnce(event map[string]interface{}) {
+	info, _ := event["event"].(map[string]interface{})
+	if action, _ := info["action"].(string); action == asymptoteobserve.ActionShareRequested {
+		return
+	}
+	session, _ := event["session"].(map[string]interface{})
+	harness, _ := event["harness"].(map[string]interface{})
+	if session == nil || harness == nil {
+		return
+	}
+	id, _ := session["id"].(string)
+	dir, _ := session["working_directory"].(string)
+	name, _ := harness["name"].(string)
+	if id == "" || dir == "" || name == "" {
+		return
+	}
+	decision := shareauto.ForHook(shareauto.DefaultPath(), dir)
+	if !decision.Enabled {
+		return
+	}
+	recordPath := activesession.DefaultPath()
+	markedAt := time.Now()
+	first, err := activesession.MarkShareRequested(recordPath, name, id, markedAt)
+	if err != nil || !first {
+		return
+	}
+	fields := map[string]interface{}{
+		"session": map[string]interface{}{"id": id, "working_directory": dir},
+	}
+	if visibility := decision.Visibility; visibility == "public" || visibility == "direct" || visibility == "private" {
+		fields["share"] = map[string]interface{}{"visibility": visibility}
+	}
+	if repo, _ := event["repository"].(string); repo != "" {
+		fields["repository"] = repo
+	}
+	if branch, _ := event["branch"].(string); branch != "" {
+		fields["branch"] = branch
+	}
+	if err := l.EndpointEventWithFidelity(asymptoteobserve.ActionShareRequested, "session", "info", "Auto-share requested for this session", asymptoteobserve.FidelityInferred, fields); err != nil {
+		// The request was not written (a read-only log, a sandbox): take the mark back so the next
+		// hook of the session asks again, rather than leave the session marked and never requested.
+		// Like the rest of this path it stays silent and never fails the hook.
+		_ = activesession.UnmarkShareRequested(recordPath, name, id, markedAt)
+	}
+}
+
+// recordActiveSession notes the event's session as the one its runtime is running in its working
+// directory, for `beacon share --current`. It is a local file write and never fails the hook: the
+// record is a convenience, the event above is what matters. Nothing here touches the network.
+func recordActiveSession(event map[string]interface{}) {
+	session, _ := event["session"].(map[string]interface{})
+	harness, _ := event["harness"].(map[string]interface{})
+	if session == nil || harness == nil {
+		return
+	}
+	id, _ := session["id"].(string)
+	dir, _ := session["working_directory"].(string)
+	name, _ := harness["name"].(string)
+	if id == "" || dir == "" || name == "" {
+		return
+	}
+	// Silent on failure: stderr is shown to the person on some runtimes, and a missing record
+	// only means `beacon share --current` falls back to the newest session in the directory.
+	_ = activesession.Record(activesession.DefaultPath(), name, id, dir, time.Now())
+}
+
+// reportedWriteFailures remembers which runtime log paths this process has already explained a
+// write failure for, so the explanation is printed once per path rather than once per event. One
+// hook invocation can emit several events -- a post-tool hook records the tool result, the file
+// edit and the command in turn -- and a runtime that shows hook stderr to the person at the
+// keyboard would otherwise repeat the same paragraph for each.
+var reportedWriteFailures sync.Map
+
+// reportEndpointWriteFailure explains, on stderr, that an endpoint event was not recorded and what
+// to do about it.
+//
+// The one-line error above it names the path and the errno, which is enough for someone reading a
+// log and not enough for someone watching a hook fail: "read-only file system" from inside an
+// agent's sandbox reads like a broken disk, not like a runtime that confines its hooks.
+//
+// The exit status is deliberately not changed. Every hook path exits 0 (see the policy seam and
+// the per-runtime deny notes in cmd/policy.go), and on the Claude-shaped hook contract DeepSeek
+// Harness and several others reproduce, exit 2 is a *block*: it would refuse the tool call, erase
+// the prompt, or -- on Stop -- keep the agent running, on every event, for as long as the log stays
+// unwritable. A telemetry write that failed must never become a control decision, so the failure is
+// made loud here, on the stream a runtime shows or logs for a hook, and detectable from outside by
+// `beacon endpoint doctor`, which is where an operator can act on it.
+func reportEndpointWriteFailure(w io.Writer, platform, path string, err error) {
+	if w == nil || err == nil {
+		return
+	}
+	if _, already := reportedWriteFailures.LoadOrStore(path, true); already {
+		return
+	}
+	fmt.Fprintf(w, "beacon-hooks: this event was NOT recorded: cannot write the Beacon runtime log %s (%v).\n", path, err)
+	if asymptoteobserve.NormalizeHarnessName(platform) == dshHarnessName {
+		// DeepSeek Harness runs hook commands sandboxed to the session's working directory in
+		// every sandbox mode except danger-full-access, and its sandbox policy has no writable-path
+		// allow-list, so a log under the user's home is unreachable from a hook by design (#605).
+		fmt.Fprintln(w, "beacon-hooks: DeepSeek Harness runs hooks inside the session sandbox, which can write only the session workspace unless the sandbox mode is danger-full-access; if this session is sandboxed, that is the cause and live hook capture is off for it.")
+		fmt.Fprintln(w, "beacon-hooks: run `beacon endpoint dsh sync` outside the harness to backfill this session from DeepSeek's own session store, and `beacon endpoint doctor` to check hook capture.")
+		return
+	}
+	fmt.Fprintln(w, "beacon-hooks: check that this user can write that path (the hook may be running in a sandbox that confines writes), then run `beacon endpoint doctor`.")
+}
+
+// dshHarnessName is DeepSeek Harness's canonical harness.name.
+const dshHarnessName = "deepseek_harness"
+
+// normalizeEventModel canonicalizes event["model"] in place, the way the harness name is
+// canonicalized in baseEndpointEvent and for the same reason: every token report groups by this
+// field, so one model reported under two spellings is two rows in the BY MODEL rollup.
+//
+// It runs after the caller's fields are merged rather than inside each mapper because every hook
+// platform sets fields["model"] from its own payload -- Cline reads modelId, OpenCode reads a
+// nested model object, the shared path reads "model" -- and normalizing in one place is what
+// keeps a new mapper from quietly reintroducing the split.
+//
+// The provider prefix that normalizing removes is not dropped: it is recorded as
+// gen_ai.provider.name when the runtime did not already report one, so "anthropic/claude-..."
+// loses nothing by being canonicalized. An existing provider always wins, since the runtime
+// naming its own provider is a better source than a prefix parsed out of a model string.
+func normalizeEventModel(event map[string]interface{}) {
+	raw, ok := event["model"].(string)
+	if !ok || strings.TrimSpace(raw) == "" {
+		return
+	}
+	name, provider := asymptoteobserve.SplitModelProvider(raw)
+	event["model"] = name
+	if provider == "" {
+		return
+	}
+	genAI, _ := event["gen_ai"].(map[string]interface{})
+	if genAI == nil {
+		genAI = map[string]interface{}{}
+	}
+	providerBlock, _ := genAI["provider"].(map[string]interface{})
+	if providerBlock == nil {
+		providerBlock = map[string]interface{}{}
+	}
+	if existing, _ := providerBlock["name"].(string); strings.TrimSpace(existing) != "" {
+		return
+	}
+	providerBlock["name"] = provider
+	genAI["provider"] = providerBlock
+	event["gen_ai"] = genAI
+}
+
+func (l *Logger) baseEndpointEvent(action, category, severity, message, fidelity string) map[string]interface{} {
+	hostname, _ := os.Hostname()
+	userName := os.Getenv("USER")
+	user := map[string]interface{}{
+		"name": userName,
+	}
+	if uid := firstEnv("BEACON_CLOUD_USER_ID_HASH", "BEACON_CLOUD_USER_ID"); uid != "" {
+		user["uid"] = uid
+	} else if current, err := osuser.Current(); err == nil {
+		user["uid"] = current.Uid
+		if userName == "" {
+			user["name"] = current.Username
+		}
+	}
+	// Both blocks are assembled before the event literal so the provenance keys can be omitted
+	// rather than written empty. This path builds raw maps instead of the shared Event struct, so
+	// it does not get `omitempty` for free, and an empty "collection_method" on every event would
+	// be both noise in the log and a value a consumer could mistake for a real one.
+	eventBlock := map[string]interface{}{
+		"kind":     "agent_runtime",
+		"action":   action,
+		"category": category,
+	}
+	if fidelity != "" {
+		eventBlock["fidelity"] = fidelity
+	}
+	harnessBlock := map[string]interface{}{
+		// Normalized rather than written raw. The OTLP path already reports the canonical name
+		// for the same session, so emitting the raw --platform value here recorded one session
+		// under two names -- splitting it for any query or SIEM detection that groups by
+		// harness.name. The flag itself is unchanged, so existing installs are fixed without
+		// having their settings.json rewritten.
+		"name": asymptoteobserve.NormalizeHarnessName(l.platform),
+	}
+	// Derived from --platform rather than from the normalized name above, because the flag is what
+	// records which integration shape is installed. The two differ for VS Code, whose hook and
+	// OTLP telemetry share a harness name.
+	if method := asymptoteobserve.CollectionMethodForPlatform(l.platform); method != "" {
+		harnessBlock["collection_method"] = method
+	}
+	event := map[string]interface{}{
+		"timestamp": asymptoteobserve.FormatTimestamp(time.Now()),
+		// Emission order within this hook invocation. One invocation can emit several
+		// events (a post-tool hook records the tool result, the file edit and the command
+		// in turn), and on a coarse clock those can land on the same nanosecond -- the
+		// counter is what still separates them. It restarts at 1 in every hook process,
+		// which is why it is a tiebreaker under the timestamp rather than an ordering key
+		// of its own; see asymptoteobserve.Event.Sequence.
+		"sequence":       endpointSequence.Next(),
+		"vendor":         "beacon",
+		"product":        "endpoint-agent",
+		"schema_version": "1.0",
+		"event":          eventBlock,
+		"severity":       severity,
+		"endpoint": map[string]interface{}{
+			"hostname": hostname,
+			"os":       runtime.GOOS,
+		},
+		"user":    user,
+		"harness": harnessBlock,
+		"message": asymptoteobserve.CleanString(message, asymptoteobserve.DefaultStringLimit, true),
+	}
+	if origin := firstEnv("BEACON_ORIGIN"); origin != "" {
+		event["origin"] = origin
+	}
+	if run := cloudRunFields(); len(run) > 0 {
+		event["run"] = run
+	}
+	if l.sessionID != "" {
+		event["session"] = map[string]interface{}{"id": l.sessionID}
+	}
+	return event
+}
+
+func attachDerivedTrace(event map[string]interface{}) {
+	if event == nil {
+		return
+	}
+	session, _ := event["session"].(map[string]interface{})
+	sessionID, _ := session["id"].(string)
+	if strings.TrimSpace(sessionID) == "" {
+		return
+	}
+	trace, _ := event["trace"].(map[string]interface{})
+	if trace == nil {
+		trace = map[string]interface{}{}
+	}
+	if id, _ := trace["id"].(string); strings.TrimSpace(id) == "" {
+		harness, _ := event["harness"].(map[string]interface{})
+		harnessName, _ := harness["name"].(string)
+		if traceID := asymptoteobserve.DerivedTraceIDForSession(harnessName, sessionID); traceID != "" {
+			trace["id"] = traceID
+		}
+	}
+	if spanID, _ := trace["span_id"].(string); strings.TrimSpace(spanID) == "" {
+		if callID := endpointToolCallID(event); callID != "" {
+			trace["span_id"] = callID
+		}
+	}
+	if len(trace) > 0 {
+		event["trace"] = trace
+	}
+}
+
+func endpointToolCallID(event map[string]interface{}) string {
+	genAI, _ := event["gen_ai"].(map[string]interface{})
+	tool, _ := genAI["tool"].(map[string]interface{})
+	call, _ := tool["call"].(map[string]interface{})
+	id, _ := call["id"].(string)
+	return strings.TrimSpace(id)
+}
+
+func cloudRunFields() map[string]interface{} {
+	run := map[string]interface{}{}
+	if provider := firstEnv("BEACON_RUN_PROVIDER"); provider != "" {
+		run["provider"] = provider
+	}
+	if runID := firstEnv("BEACON_RUN_ID", "CLAUDE_CODE_REMOTE_SESSION_ID"); runID != "" {
+		run["run_id"] = runID
+	}
+	if attempt := firstEnv("BEACON_RUN_ATTEMPT"); attempt != "" {
+		run["run_attempt"] = attempt
+	}
+	if workflow := firstEnv("BEACON_RUN_WORKFLOW"); workflow != "" {
+		run["workflow"] = workflow
+	}
+	if job := firstEnv("BEACON_RUN_JOB"); job != "" {
+		run["job"] = job
+	}
+	if eventName := firstEnv("BEACON_RUN_EVENT_NAME"); eventName != "" {
+		run["event_name"] = eventName
+	}
+	if commit := firstEnv("BEACON_RUN_COMMIT"); commit != "" {
+		run["commit"] = commit
+	}
+	if repository := firstEnv("BEACON_RUN_REPOSITORY"); repository != "" {
+		run["repository"] = repository
+	}
+	if branch := firstEnv("BEACON_RUN_BRANCH"); branch != "" {
+		run["branch"] = branch
+	}
+	if pr := firstEnv("BEACON_RUN_PR"); pr != "" {
+		run["pr"] = pr
+	}
+	if prNumber := firstEnv("BEACON_RUN_PR_NUMBER"); prNumber != "" {
+		run["pr_number"] = prNumber
+	}
+	if actor := firstEnv("BEACON_RUN_ACTOR"); actor != "" {
+		run["actor"] = actor
+	}
+	if ephemeral := firstEnv("BEACON_RUN_EPHEMERAL"); ephemeral != "" {
+		if value, err := strconv.ParseBool(ephemeral); err == nil {
+			run["ephemeral"] = value
+		}
+	}
+	return run
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+// writeEndpointJSON appends one endpoint event to the runtime log. A variable so a test can make one
+// write fail.
+var writeEndpointJSON = writeEndpointJSONFile
+
+func writeEndpointJSONFile(path string, event map[string]interface{}) error {
+	_, dirMode, _ := asymptoteobserve.RuntimeLogModes(path)
+	if err := os.MkdirAll(filepath.Dir(path), dirMode); err != nil {
+		return err
+	}
+	data, err := json.Marshal(sanitizeEndpointMap(event))
+	if err != nil {
+		return err
+	}
+	if len(data) > 64*1024 {
+		event["field_truncated"] = true
+		event["raw"] = nil
+		event["message"] = truncateEndpoint(fmt.Sprint(event["message"]), 1024)
+		data, err = json.Marshal(sanitizeEndpointMap(event))
+		if err != nil {
+			return err
+		}
+	}
+	if len(data) > 64*1024 {
+		compactEndpointContent(event)
+		data, err = json.Marshal(sanitizeEndpointMap(event))
+		if err != nil {
+			return err
+		}
+	}
+	if len(data) > 64*1024 {
+		event = minimalEndpointEvent(event)
+		data, err = json.Marshal(sanitizeEndpointMap(event))
+		if err != nil {
+			return err
+		}
+	}
+	if len(data) > 64*1024 {
+		return fmt.Errorf("endpoint event exceeds 64 KiB after metadata fallback")
+	}
+	// Stamped last, over the bytes that are actually about to be written, so
+	// none of the size fallbacks above can leave the ID describing an event that
+	// no longer exists.
+	if data, err = withEndpointEventID(event, data); err != nil {
+		return err
+	}
+	return appendEndpointJSONL(path, append(data, '\n'), defaultEndpointRotateBytes, defaultEndpointRotateArchives)
+}
+
+// withEndpointEventID fills event.id on an event assembled as a map and returns
+// its re-marshalled line. line must be the marshalled form of event with no ID
+// on it, which is what EventIDForLine is derived from.
+func withEndpointEventID(event map[string]interface{}, line []byte) ([]byte, error) {
+	info, ok := event["event"].(map[string]interface{})
+	if !ok {
+		return line, nil
+	}
+	if id, _ := info["id"].(string); strings.TrimSpace(id) != "" {
+		return line, nil
+	}
+	info["id"] = asymptoteobserve.EventIDForLine(line)
+	data, err := json.Marshal(sanitizeEndpointMap(event))
+	if err != nil {
+		return nil, err
+	}
+	// An event already at the size limit keeps its bytes and goes without an ID:
+	// the limit is a hard contract, and refusing to write an event over forty
+	// bytes of identity would be the worse trade.
+	if len(data) > 64*1024 {
+		return line, nil
+	}
+	return data, nil
+}
+
+func compactEndpointContent(event map[string]interface{}) {
+	if file, ok := event["file"].(map[string]interface{}); ok {
+		delete(file, "diff")
+	}
+	if command, ok := event["command"].(map[string]interface{}); ok {
+		delete(command, "output")
+	}
+	if genAI, ok := event["gen_ai"].(map[string]interface{}); ok {
+		delete(genAI, "input")
+		delete(genAI, "output")
+		if tool, ok := genAI["tool"].(map[string]interface{}); ok {
+			if call, ok := tool["call"].(map[string]interface{}); ok {
+				delete(call, "arguments")
+				delete(call, "result")
+			}
+		}
+	}
+	if content, ok := event["content"].(map[string]interface{}); ok {
+		content["included"] = false
+		content["truncated"] = true
+	}
+}
+
+func minimalEndpointEvent(event map[string]interface{}) map[string]interface{} {
+	out := map[string]interface{}{"field_truncated": true}
+	for _, key := range []string{
+		"timestamp", "sequence", "vendor", "product", "schema_version", "event", "severity",
+		"endpoint", "user", "harness", "origin", "run", "session", "trace",
+		"error", "tool", "file", "command", "mcp", "approval", "policy",
+		"content", "destination", "health", "model", "repository",
+		"branch", "message",
+	} {
+		if value, ok := event[key]; ok && value != nil {
+			out[key] = value
+		}
+	}
+	if genAI, ok := event["gen_ai"].(map[string]interface{}); ok {
+		summary := map[string]interface{}{}
+		for _, key := range []string{"operation", "usage", "response", "provider"} {
+			if value := genAI[key]; value != nil {
+				summary[key] = value
+			}
+		}
+		if tool, ok := genAI["tool"].(map[string]interface{}); ok {
+			toolSummary := map[string]interface{}{"name": tool["name"], "type": tool["type"]}
+			if call, ok := tool["call"].(map[string]interface{}); ok {
+				toolSummary["call"] = map[string]interface{}{"id": call["id"]}
+			}
+			summary["tool"] = toolSummary
+		}
+		if len(summary) > 0 {
+			out["gen_ai"] = summary
+		}
+	}
+	out["message"] = truncateEndpoint(fmt.Sprint(out["message"]), 1024)
+	return out
+}
+
+// EndpointLogConfigured reports whether this process has a runtime log to write to. Without one,
+// EndpointEvent records nothing and returns nil, so a caller reporting what it recorded checks this
+// rather than reading a nil error as a write.
+func EndpointLogConfigured() bool {
+	return endpointLogPath() != ""
+}
+
+func endpointLogPath() string {
+	if path := firstEnv("BEACON_ENDPOINT_LOG", "BEACON_CLOUD_LOG_PATH", "BEACON_LOG_PATH", "BEACON_RUNTIME_LOG"); path != "" {
+		return path
+	}
+	if os.Getenv("BEACON_ENDPOINT_MODE") == "" {
+		return ""
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".beacon", "endpoint", "logs", "runtime.jsonl")
+}
+
+func redactEndpointString(value string) string {
+	return asymptoteobserve.RedactString(value)
+}
+
+func sanitizeEndpointMap(input map[string]interface{}) map[string]interface{} {
+	return asymptoteobserve.SanitizeMap(input, asymptoteobserve.PrivacyOptions{
+		RedactSecrets: true,
+		StringLimit:   asymptoteobserve.DefaultStringLimit,
+	})
+}
+
+func sanitizeEndpointSlice(input []interface{}) []interface{} {
+	return asymptoteobserve.SanitizeSlice(input, asymptoteobserve.PrivacyOptions{
+		RedactSecrets: true,
+		StringLimit:   asymptoteobserve.DefaultStringLimit,
+	})
+}
+
+func truncateEndpoint(value string, limit int) string {
+	return asymptoteobserve.TruncateString(value, limit)
+}
+
+// Keep this rotation and file-mode contract mirrored with the endpoint CLI and beaconjson exporter.
+func appendEndpointJSONL(path string, line []byte, rotateBytes int64, rotateArchives int) error {
+	_, dirMode, _ := asymptoteobserve.RuntimeLogModes(path)
+	if err := os.MkdirAll(filepath.Dir(path), dirMode); err != nil {
+		return err
+	}
+	lock, err := openEndpointRuntimeFileAs(path+".lock", path, os.O_CREATE|os.O_RDWR)
+	if err != nil {
+		return err
+	}
+	held, err := filelock.Exclusive(lock)
+	if err != nil {
+		_ = lock.Close()
+		return err
+	}
+	// Unlock before closing: LIFO defer ordering means the close listed first runs last.
+	defer lock.Close()
+	defer held.Release()
+	if asymptoteobserve.IsDuplicateEndpointEvent(path, line, asymptoteobserve.EndpointDuplicateWindow) {
+		return nil
+	}
+	// A hook usually runs as the person at the keyboard, and on a system-mode log it may not rename
+	// or delete anything in the directory: the directory is root-owned 0755 on POSIX, and on Windows
+	// its ACL gives ordinary users no right to add, rename or delete entries -- the rights that would
+	// let one redirect a SYSTEM write. Rotation is the privileged writers' job there. The refusal
+	// comes at the first step, so nothing has moved, and the event is appended past the size limit
+	// rather than lost; the collector rotates at its next write.
+	if err := rotateEndpointLogIfNeeded(path, rotateBytes, rotateArchives, int64(len(line))); err != nil && !errors.Is(err, fs.ErrPermission) {
+		return err
+	}
+	f, err := openEndpointRuntimeFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write(line)
+	return err
+}
+
+func openEndpointRuntimeFile(path string, flag int) (*os.File, error) {
+	return openEndpointRuntimeFileAs(path, path, flag)
+}
+
+// openEndpointRuntimeFileAs opens path (the log or its lock) with the mode logPath calls for, and
+// settles its mode through asymptoteobserve.OpenRuntimeLogFile: a new file gets that mode
+// whatever the umask, an existing one is only ever narrowed toward it, by its owner, and root never
+// follows a symlink or opens anything but a regular file there.
+func openEndpointRuntimeFileAs(path, logPath string, flag int) (*os.File, error) {
+	return asymptoteobserve.OpenRuntimeLogFile(path, logPath, flag)
+}
+
+func rotateEndpointLogIfNeeded(path string, maxSize int64, archives int, nextWriteBytes int64) error {
+	if maxSize <= 0 {
+		return nil
+	}
+	if archives < 1 {
+		archives = defaultEndpointRotateArchives
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if info.Size() == 0 || info.Size()+nextWriteBytes <= maxSize {
+		return nil
+	}
+	if err := removeOverflowEndpointArchives(path, archives); err != nil {
+		return err
+	}
+	for i := archives - 1; i >= 1; i-- {
+		from := path + fmt.Sprintf(".%d", i)
+		to := path + fmt.Sprintf(".%d", i+1)
+		if err := os.Rename(from, to); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	if err := os.Rename(path, path+".1"); err != nil {
+		return err
+	}
+	asymptoteobserve.TightenPrivateRuntimeLogArchives(path, archives)
+	return nil
+}
+
+func removeOverflowEndpointArchives(path string, archives int) error {
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	prefix := base + "."
+	for _, entry := range entries {
+		name := entry.Name()
+		suffix, ok := strings.CutPrefix(name, prefix)
+		if !ok {
+			continue
+		}
+		index, err := strconv.Atoi(suffix)
+		if err != nil || index < archives {
+			continue
+		}
+		if err := os.Remove(filepath.Join(dir, name)); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+// Debug logs a debug message
+func (l *Logger) Debug(message string, fields ...interface{}) {
+	entry := l.formatEntry("debug", message, fields...)
+	l.write(entry)
+}
+
+// Info logs an info message
+func (l *Logger) Info(message string, fields ...interface{}) {
+	entry := l.formatEntry("info", message, fields...)
+	l.write(entry)
+}
+
+// Warn logs a warning message
+func (l *Logger) Warn(message string, fields ...interface{}) {
+	entry := l.formatEntry("warn", message, fields...)
+	l.write(entry)
+}
+
+// Error logs an error message and also writes to stderr
+func (l *Logger) Error(message string, fields ...interface{}) {
+	entry := l.formatEntry("error", message, fields...)
+	l.write(entry)
+	fmt.Fprintf(os.Stderr, "[%s] ERROR: %s\n", l.hookName, message)
+}

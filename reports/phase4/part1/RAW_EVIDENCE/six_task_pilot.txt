@@ -1,0 +1,18 @@
+retry_after/none: success=True tools=8 ids=[] seconds=15.186
+retry_after/original: success=True tools=8 ids=['retry_after-distractor', 'retry_after-current'] seconds=14.238
+retry_after/v6: success=True tools=8 ids=['retry_after-distractor', 'retry_after-current'] seconds=13.597
+stable_cursor/none: success=True tools=8 ids=[] seconds=10.928
+stable_cursor/original: success=True tools=8 ids=['stable_cursor-distractor', 'stable_cursor-current'] seconds=10.858
+stable_cursor/v6: success=True tools=8 ids=['stable_cursor-distractor', 'stable_cursor-current'] seconds=10.402
+event_dedup/none: success=False tools=8 ids=[] seconds=9.519
+event_dedup/original: success=True tools=8 ids=['event_dedup-distractor', 'event_dedup-current'] seconds=15.763
+event_dedup/v6: success=True tools=8 ids=['event_dedup-distractor', 'event_dedup-current'] seconds=15.862
+utc_conversion/none: success=False tools=8 ids=[] seconds=13.735
+utc_conversion/original: success=True tools=8 ids=['utc_conversion-distractor', 'utc_conversion-current'] seconds=17.021
+utc_conversion/v6: success=True tools=8 ids=['utc_conversion-distractor', 'utc_conversion-current'] seconds=17.602
+lease_fence/none: success=True tools=8 ids=[] seconds=14.693
+lease_fence/original: success=True tools=8 ids=['lease_fence-distractor', 'lease_fence-current'] seconds=15.156
+lease_fence/v6: success=True tools=8 ids=['lease_fence-distractor', 'lease_fence-current'] seconds=14.818
+cache_key/none: success=True tools=8 ids=[] seconds=14.14
+cache_key/original: success=True tools=8 ids=['cache_key-distractor', 'cache_key-current'] seconds=14.758
+cache_key/v6: success=True tools=8 ids=['cache_key-distractor', 'cache_key-current'] seconds=17.807

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "lock_date_local": "2026-10-22 Asia/Kolkata",
+  "verified_integration_head": "209a987bc96c29b5e5d811a794d0357f20214463",
+  "status": "locked_unrun",
+  "hash_rule": "SHA-256 of file bytes after CRLF-to-LF normalization; any content change requires a new dataset ID and manifest",
+  "datasets": [
+    {"file":"retrieval_context_v1.json","dataset_id":"beacon-v6-phase3-retrieval-context-v1","sha256":"FADF313E35F7E41FBC21CFB180FE88075EAC6485B6FAD851AA2CBD8F9503114A","records":"12 topics, 48 queries, 48 expanded memories"},
+    {"file":"contradiction_v1.json","dataset_id":"beacon-v6-phase3-contradiction-v1","sha256":"B3B4CAC0A7E8CC072482E8C35344F9239AFA7B4EA6C255861B2037FFB1448E84","records":"24 pairs: 12 conflict, 12 non-conflict"},
+    {"file":"agent_tasks_v1.json","dataset_id":"beacon-v6-phase3-agent-tasks-v1","sha256":"409195B01ED6E2DB55BCDF4EF5D8710DEEEDFBFFE5320EB4D5722215AB0DC530","records":"6 new objective Python tasks"}
+  ]
+}

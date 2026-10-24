@@ -1,0 +1,1421 @@
+package lifecycle
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/atomicfile"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/brewpath"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/codexsession"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/asymptote"
+	endpointcollector "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/collector"
+	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/diagnostics"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/harness"
+	endpointinventory "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/inventory"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/selfupdate"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/service"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/sysacl"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/writer"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hermessession"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/version"
+)
+
+var (
+	writeCollectorConfig = endpointcollector.WriteConfig
+	// collectorReadyTimeout is how long Install waits for a started collector to answer on all of
+	// its ports. A variable so tests of a collector that exits on start need not wait it out.
+	collectorReadyTimeout = 10 * time.Second
+	// portReleaseTimeout is how long preflight waits for a busy collector port to be released,
+	// which covers a collector that is still shutting down from a previous uninstall or repair.
+	portReleaseTimeout   = 10 * time.Second
+	saveEndpointConfig   = endpointconfig.Save
+	appendInstallEvent   = writer.AppendEvent
+	detectUpdaterInstall = selfupdate.DetectInstall
+	removeUpdaterJob     = func() {
+		updater := service.UpdaterManager{}
+		_ = updater.Unload()
+		updater.RemoveUnits()
+	}
+	// newInventoryJob and removeInventoryJob are the seams tests replace so Install, Uninstall
+	// and Repair can be exercised without touching launchd or systemd.
+	newInventoryJob = func(userMode bool, kind service.Kind) inventoryJobController {
+		return service.InventoryManager{UserMode: userMode, Kind: kind, Env: inventoryJobEnv(userMode)}
+	}
+	removeInventoryJob = func(userMode bool) {
+		job := newInventoryJob(userMode, service.KindAuto)
+		_ = job.Unload()
+		job.RemoveUnits()
+	}
+	// removeScriptForwarders is the seam for the S3, GCS and Falcon forwarders the package
+	// helpers install, so tests can see whether an uninstall reaches them without touching
+	// /Library.
+	removeScriptForwarders = service.RemoveScriptForwarders
+	// scriptForwarderStatuses is the seam for reading those forwarders' state in GetStatus.
+	scriptForwarderStatuses = service.ScriptForwarderStatuses
+	// reconcileManagedForwarder is the seam for the Beacon Cloud forwarder reconcile, so tests can
+	// see whether Install reaches it without a connected endpoint or a service manager.
+	reconcileManagedForwarder = func(userMode bool, logPath string) (asymptote.ReconcileResult, error) {
+		return asymptote.ReconcileForwarder(asymptote.ReconcileOptions{UserMode: userMode, LogPath: logPath})
+	}
+)
+
+// inventoryJobController is what lifecycle needs from service.InventoryManager.
+type inventoryJobController interface {
+	Supported() bool
+	UnsupportedReason() string
+	UnitPath() (string, error)
+	UnitPaths() []string
+	WriteUnit(program, logPath string) (string, error)
+	Load() error
+	Unload() error
+	RemoveUnits()
+	Status() service.Status
+}
+
+// InventoryJobOptions drives ReconcileInventoryJob.
+type InventoryJobOptions struct {
+	UserMode bool
+	Kind     service.Kind
+	// Program is the beacon binary the scheduler invokes.
+	Program string
+	// LogPath pins the runtime log the inventory log sits beside; empty means the mode's default.
+	LogPath string
+	// Load activates the schedule after writing the unit. False writes the unit only (--no-start).
+	Load bool
+}
+
+// InventoryJobResult reports what ReconcileInventoryJob did.
+type InventoryJobResult struct {
+	Enabled  bool   `json:"enabled"`
+	UnitPath string `json:"unit_path,omitempty"`
+	Loaded   bool   `json:"loaded"`
+	Removed  bool   `json:"removed"`
+	// Skipped names why no job was installed on a host without a scheduler.
+	Skipped string `json:"skipped,omitempty"`
+}
+
+// ReconcileInventoryJob makes the scheduled inventory job match the endpoint config for the
+// mode: installed and loaded when `inventory_heartbeat.enabled` is true or absent (the default),
+// removed when it is false. It runs on every install, repair and package upgrade, which is how
+// an endpoint installed before the job existed gets it without anyone doing anything.
+func ReconcileInventoryJob(opts InventoryJobOptions) (InventoryJobResult, error) {
+	return reconcileInventoryJobWith(newInventoryJob(opts.UserMode, opts.Kind), opts)
+}
+
+func reconcileInventoryJobWith(job inventoryJobController, opts InventoryJobOptions) (InventoryJobResult, error) {
+	result := InventoryJobResult{Enabled: inventoryEnabledFromConfigFile(endpointconfig.ConfigPath(opts.UserMode))}
+	if !job.Supported() {
+		result.Skipped = job.UnsupportedReason()
+		return result, nil
+	}
+	if !result.Enabled {
+		_ = job.Unload()
+		job.RemoveUnits()
+		result.Removed = true
+		return result, nil
+	}
+	path, err := job.WriteUnit(opts.Program, opts.LogPath)
+	if err != nil {
+		return result, err
+	}
+	result.UnitPath = path
+	if opts.Load {
+		if err := job.Load(); err != nil {
+			return result, err
+		}
+		result.Loaded = true
+	}
+	return result, nil
+}
+
+// inventoryJobEnv is the environment written into a per-user inventory job. launchd and systemd
+// start the job without the user's shell environment, so a variable exported in a shell profile
+// that moves a runtime's user directory -- CODEX_HOME, HERMES_HOME, CLINE_DIR, GEMINI_CLI_HOME,
+// CLAUDE_CONFIG_DIR, or one in inventoryJobPathEnv or inventoryJobNameEnv -- would not reach it,
+// and the scheduled scan would inventory the default directory while the runtime reads the moved
+// one. Each value is taken from the install's shell, so a relative path still means the directory
+// it named at install time:
+//   - CODEX_HOME must name an existing directory, as Codex requires; otherwise nothing is recorded.
+//   - HERMES_HOME is trimmed and expanded as Hermes does, and HERMES_DATA_DIR_SUFFIX is recorded as
+//     it is. HERMES_HOME is recorded before profiles are applied, so the job still follows a later
+//     `hermes profile use`.
+//   - CLINE_DIR is used whenever it is non-empty after trimming, as Cline uses it.
+//   - GEMINI_CLI_HOME is used whenever it is non-empty, as Gemini CLI uses it.
+//   - CLAUDE_CONFIG_DIR is used whenever it is non-empty after trimming, as Claude Code uses it.
+//   - The rest are recorded whenever they are set, even to an empty value, because Oh My Pi's
+//     OMP_PROFILE and OMO's agent-directory overrides treat a set-but-empty variable differently
+//     from an unset one. See inventoryJobPathValue for how a path is recorded.
+//
+// A variable that is unset records nothing, and the job falls back to the default as before.
+// System mode records nothing: this process's environment is root's, not the console user's.
+func inventoryJobEnv(userMode bool) map[string]string {
+	if !userMode {
+		return nil
+	}
+	env := map[string]string{}
+	if os.Getenv("CODEX_HOME") != "" {
+		if dir, err := codexsession.HomeDir(""); err == nil {
+			env["CODEX_HOME"] = dir
+		}
+	}
+	if dir, err := hermessession.HomeOverride(""); err == nil && dir != "" {
+		env["HERMES_HOME"] = dir
+	}
+	if suffix := os.Getenv("HERMES_DATA_DIR_SUFFIX"); suffix != "" {
+		env["HERMES_DATA_DIR_SUFFIX"] = suffix
+	}
+	if value := strings.TrimSpace(os.Getenv("CLINE_DIR")); value != "" {
+		if dir, err := filepath.Abs(value); err == nil {
+			env["CLINE_DIR"] = dir
+		}
+	}
+	if value := os.Getenv("GEMINI_CLI_HOME"); value != "" {
+		if dir, err := filepath.Abs(value); err == nil {
+			env["GEMINI_CLI_HOME"] = dir
+		}
+	}
+	if value := strings.TrimSpace(os.Getenv("CLAUDE_CONFIG_DIR")); value != "" {
+		if dir, err := filepath.Abs(value); err == nil {
+			env["CLAUDE_CONFIG_DIR"] = dir
+		}
+	}
+	for _, name := range inventoryJobPathEnv {
+		if value, ok := os.LookupEnv(name); ok {
+			env[name] = inventoryJobPathValue(value)
+		}
+	}
+	for _, name := range inventoryJobNameEnv {
+		if value, ok := os.LookupEnv(name); ok {
+			env[name] = value
+		}
+	}
+	if len(env) == 0 {
+		return nil
+	}
+	return env
+}
+
+// inventoryJobPathEnv are the variables naming a directory that the inventory scan resolves
+// through a runtime's own path rules (inventory's *UserDir helpers, and the hooks installers'
+// *PathForHome resolvers it calls), beyond the ones inventoryJobEnv resolves itself.
+var inventoryJobPathEnv = []string{
+	"KIRO_HOME",
+	"KIMI_CODE_HOME",
+	"DSH_HOME",
+	"OH_PERSISTENCE_DIR",
+	"OPENCLAW_STATE_DIR",
+	"XDG_CONFIG_HOME",              // Muse, and VS Code on Linux
+	"PI_CODING_AGENT_DIR",          // Pi, Oh My Pi's default profile, and OMO's last fallback
+	"OMO_CODING_AGENT_DIR",         // OMO
+	"SENPI_CODING_AGENT_DIR",       // OMO's legacy name
+	"PRIME_AGENT_CODING_AGENT_DIR", // Prime Agent
+}
+
+// inventoryJobNameEnv are the variables the inventory scan reads as names rather than paths, so
+// they are recorded exactly as set: Oh My Pi's config directory name under the home directory and
+// its active profile.
+var inventoryJobNameEnv = []string{"PI_CONFIG_DIR", "OMP_PROFILE", "PI_PROFILE"}
+
+// inventoryJobPathValue is how one inventoryJobPathEnv value is recorded. A relative path is made
+// absolute against the install's working directory, after trimming, which every resolver that
+// trims ignores. Anything else is recorded exactly as set: an absolute path already means the same
+// thing in the job, an empty value means what unset does, and a leading `~` is left for each
+// resolver to expand against the same HOME the job runs with, as it did at install time.
+func inventoryJobPathValue(value string) string {
+	path := strings.TrimSpace(value)
+	if path == "" || filepath.IsAbs(path) || path == "~" || strings.HasPrefix(path, "~/") || strings.HasPrefix(path, `~\`) {
+		return value
+	}
+	if abs, err := filepath.Abs(path); err == nil {
+		return abs
+	}
+	return value
+}
+
+// inventoryEnabledFromConfigFile reads only the inventory_heartbeat.enabled key. A missing or
+// unreadable config, or an absent key, means enabled: the job is on by default.
+func inventoryEnabledFromConfigFile(path string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return true
+	}
+	var partial struct {
+		Inventory *endpointconfig.Inventory `json:"inventory_heartbeat"`
+	}
+	if err := json.Unmarshal(data, &partial); err != nil || partial.Inventory == nil || partial.Inventory.Enabled == nil {
+		return true
+	}
+	return *partial.Inventory.Enabled
+}
+
+// DefaultInventoryJobProgram is the binary the scheduled job should run: this one. Under the
+// package postinstall that is /opt/beacon/bin/beacon; under Homebrew it is the keg's binary.
+func DefaultInventoryJobProgram(userMode bool) string {
+	if exe, err := os.Executable(); err == nil {
+		return stableProgramPath(exe)
+	}
+	if !userMode {
+		return selfupdate.SystemBeaconPath()
+	}
+	return "beacon"
+}
+
+// stableProgramPath keeps the scheduled unit pointing at a path that survives upgrades: a Homebrew
+// binary's linked <prefix>/bin/beacon rather than its versioned keg, which `brew upgrade` deletes.
+func stableProgramPath(exe string) string { return brewpath.Stable(exe) }
+
+// InventoryHeartbeatStatus is the status view of the scheduled inventory job.
+type InventoryHeartbeatStatus struct {
+	Enabled       bool           `json:"enabled"`
+	Scheduled     bool           `json:"scheduled"`
+	Interval      string         `json:"interval"`
+	Job           service.Status `json:"job"`
+	LastEmittedAt string         `json:"last_emitted_at,omitempty"`
+	LogPath       string         `json:"log_path"`
+}
+
+func inventoryHeartbeatStatus(requestedUserMode bool, logPath string) InventoryHeartbeatStatus {
+	cfg := loadOrDefault(requestedUserMode, logPath)
+	job := newInventoryJob(requestedUserMode, service.KindAuto).Status()
+	status := InventoryHeartbeatStatus{
+		Enabled:   endpointconfig.InventoryConfig(cfg).Enabled,
+		Scheduled: job.Loaded,
+		Interval:  service.InventoryInterval().String(),
+		Job:       job,
+		LogPath:   endpointinventory.LogPath(cfg.LogPath, requestedUserMode),
+	}
+	if state, err := endpointinventory.ReadState(endpointinventory.StatePathForLog(cfg.LogPath, requestedUserMode)); err == nil {
+		status.LastEmittedAt = state.LastEmittedAt
+	}
+	return status
+}
+
+type InstallOptions struct {
+	UserMode bool
+	LogPath  string
+	// Harnesses lists the OTLP runtimes whose settings install writes. nil means unspecified
+	// and falls back to the config default (Claude Code and Codex); a non-nil empty list means
+	// configure none. A caller that resolved an explicit selection must pass it non-nil, or a
+	// selection with no OTLP runtime silently configures the default ones (#640).
+	Harnesses []string
+	GRPCPort  int
+	HTTPPort  int
+	// HealthPort is the collector health_check port. Zero derives it from the OTLP ports
+	// (endpointconfig.DeriveHealthCheckPort), which keeps 13133 for the default ports.
+	HealthPort                int
+	CollectorPath             string
+	StartService              bool
+	IncludeRuntimeMetrics     bool
+	IncludeCodexSpans         bool
+	ClaudeCaptureModelContext bool
+	SplunkHEC                 *endpointconfig.SplunkHEC
+	FalconHEC                 *endpointconfig.FalconHEC
+	// ServiceKind selects the service manager. Empty auto-detects: launchd on macOS,
+	// systemd when it is PID 1, otherwise a supervised child process.
+	ServiceKind service.Kind
+}
+
+type UninstallOptions struct {
+	UserMode    bool
+	LogPath     string
+	KeepLogs    bool
+	KeepConfig  bool
+	KeepUpdater bool
+	// KeepForwarders leaves the package-helper forwarders (S3, GCS, Falcon) running. Repair
+	// sets it: it uninstalls and reinstalls the endpoint, and nothing in Install puts those
+	// forwarders back.
+	KeepForwarders bool
+	// KeepManagedIngest leaves the Beacon Cloud forwarder, its config, its Vector checkpoints and
+	// its credentials in place. Repair sets it: Install re-renders that config in place instead,
+	// and nothing short of a re-connect, which rotates the device key, could bring it back.
+	KeepManagedIngest bool
+}
+
+type InstallResult struct {
+	ConfigPath          string   `json:"config_path"`
+	CollectorConfigPath string   `json:"collector_config_path"`
+	PlistPath           string   `json:"plist_path"`
+	LogPath             string   `json:"log_path"`
+	ManifestPath        string   `json:"manifest_path"`
+	HarnessConfigPaths  []string `json:"harness_config_paths,omitempty"`
+	// The linger fields report the optional logout-persistence step, so a caller can tell a
+	// fully persistent install from one that collects only until this user logs out. Flat rather
+	// than nested, matching how Manifest already records the same outcome.
+	LingerApplicable  bool   `json:"linger_applicable,omitempty"`
+	LingerEnabled     bool   `json:"linger_enabled,omitempty"`
+	LingerDetail      string `json:"linger_detail,omitempty"`
+	LingerRemediation string `json:"linger_remediation,omitempty"`
+	// The scheduled inventory job is reconciled on every install; a host without a scheduler
+	// reports why in InventoryJobDetail and the install still succeeds.
+	InventoryJobPath   string `json:"inventory_job_path,omitempty"`
+	InventoryJobDetail string `json:"inventory_job_detail,omitempty"`
+	// ManagedForwarder reports the Beacon Cloud forwarder reconcile. It never fails the install:
+	// a config Vector rejects leaves the running forwarder on its old one and is reported here.
+	ManagedForwarder *asymptote.ReconcileResult `json:"managed_forwarder,omitempty"`
+}
+
+type Status struct {
+	Version string `json:"version"`
+	// Edition is set only for a build that is not the default edition (see version.Edition).
+	Edition       string                        `json:"edition,omitempty"`
+	ConfigPath    string                        `json:"config_path"`
+	LogPath       string                        `json:"log_path"`
+	RuntimeLog    RuntimeLogSource              `json:"runtime_log"`
+	Collector     endpointcollector.Status      `json:"collector"`
+	Service       service.Status                `json:"service"`
+	Harnesses     []harness.Harness             `json:"harnesses"`
+	Diagnostics   []diagnostics.Check           `json:"diagnostics"`
+	LastEvent     string                        `json:"last_event,omitempty"`
+	Destinations  DestinationStatus             `json:"destinations"`
+	ManagedIngest asymptote.ManagedIngestStatus `json:"managed_ingest"`
+	// InventoryHeartbeat follows the requested mode, like ManagedIngest: each mode has its own job.
+	InventoryHeartbeat InventoryHeartbeatStatus `json:"inventory_heartbeat"`
+	// ScriptForwarders are the S3, GCS and Falcon forwarders the package helpers install, one entry
+	// per forwarder that is set up on this machine.
+	ScriptForwarders []service.Status `json:"script_forwarders,omitempty"`
+}
+
+type DestinationStatus struct {
+	SplunkHEC ConfiguredStatus `json:"splunk_hec"`
+	FalconHEC ConfiguredStatus `json:"falcon_hec"`
+}
+
+type ConfiguredStatus struct {
+	Configured bool   `json:"configured"`
+	Endpoint   string `json:"endpoint,omitempty"`
+	Index      string `json:"index,omitempty"`
+	Source     string `json:"source,omitempty"`
+	Sourcetype string `json:"sourcetype,omitempty"`
+}
+
+type RuntimeLogSource struct {
+	RequestedUserMode bool   `json:"requested_user_mode"`
+	EffectiveUserMode bool   `json:"effective_user_mode"`
+	RequestedLogPath  string `json:"requested_log_path"`
+	EffectiveLogPath  string `json:"effective_log_path"`
+	Reason            string `json:"reason,omitempty"`
+	Warning           string `json:"warning,omitempty"`
+}
+
+type Manifest struct {
+	CreatedAt      string   `json:"created_at"`
+	UserMode       bool     `json:"user_mode"`
+	Files          []string `json:"files"`
+	Backups        []string `json:"backups,omitempty"`
+	HarnessConfigs []string `json:"harness_configs,omitempty"`
+	ServiceLabel   string   `json:"service_label"`
+	LogPath        string   `json:"log_path"`
+	// LingerEnabled and LingerDetail record whether a systemd --user unit was made to survive
+	// logout. Recorded rather than silently attempted, so status and doctor can report the gap
+	// instead of the user discovering it after their next logout. Absent on other backends.
+	LingerEnabled bool   `json:"linger_enabled,omitempty"`
+	LingerDetail  string `json:"linger_detail,omitempty"`
+}
+
+type fileSnapshot struct {
+	Existed bool
+	Data    []byte
+	Mode    os.FileMode
+}
+
+// serviceController is the part of service.Manager that rollback uses.
+//
+// Narrow on purpose: rollback's decision about a running service is the branch worth testing, and
+// without a seam here it can only be reached by driving a real install to fail against a real
+// service manager. service.Manager satisfies this as-is.
+type serviceController interface {
+	Unload() error
+	Load() error
+}
+
+type installRollback struct {
+	// InventoryJob and InventoryLoaded let a failed install unload the scheduled inventory job
+	// it started, so the scheduler is not left registered against rolled-back config.
+	// InventoryWasLoaded records a job that was already scheduled before this install began; a
+	// reinstall that re-enabled it and then failed must bring it back, exactly like the collector.
+	InventoryJob       inventoryJobController
+	InventoryLoaded    bool
+	InventoryWasLoaded bool
+	Manager            serviceController
+	ServiceLoaded      bool
+	// ServiceWasRunning records whether a collector was already up when this install began.
+	//
+	// It decides what rollback owes the machine. Unloading is right for a service this transaction
+	// created -- leaving a half-installed endpoint registered would be worse. It is wrong for one
+	// that was already running: a failed upgrade of a healthy endpoint would then stop and disable
+	// it, and on systemd the disable survives reboot, so a machine that was collecting fine before
+	// the attempt is left collecting nothing afterwards.
+	ServiceWasRunning bool
+	files             []string
+	snapshots         map[string]fileSnapshot
+}
+
+func newInstallRollback(manager service.Manager) *installRollback {
+	return &installRollback{
+		Manager:   manager,
+		snapshots: map[string]fileSnapshot{},
+	}
+}
+
+func (r *installRollback) Track(path string) {
+	if r == nil || path == "" {
+		return
+	}
+	if _, ok := r.snapshots[path]; ok {
+		return
+	}
+	r.snapshots[path] = snapshotFile(path)
+	r.files = append(r.files, path)
+}
+
+func (r *installRollback) Rollback(manifest Manifest) {
+	if r == nil {
+		rollback(manifest)
+		return
+	}
+	// Stop first, always, and while the service state on disk still describes the process this
+	// install started.
+	//
+	// Ordering is the whole of it. The supervised backend's "unit file" *is* its pidfile, and that
+	// file is one of the tracked files below -- so restoring it puts back the pid from before the
+	// install, which by then names a process that has already been terminated. Unloading after the
+	// restore would therefore look up a dead pid, stop nothing, and leave the collector this failed
+	// install started running on the new config, holding the ports, with a second one spawned
+	// beside it.
+	if r.ServiceLoaded {
+		_ = r.Manager.Unload()
+	}
+	if r.InventoryLoaded && r.InventoryJob != nil && !r.InventoryWasLoaded {
+		_ = r.InventoryJob.Unload()
+	}
+
+	restoreBackups(manifest.Backups)
+	for i := len(r.files) - 1; i >= 0; i-- {
+		path := r.files[i]
+		restoreFile(path, r.snapshots[path])
+	}
+
+	// Bring back a service that was running before this install, now that the configuration it was
+	// running is back on disk. A collector reads its config at startup, so this has to come after
+	// the restore to be worth doing at all.
+	//
+	// Without it a failed reinstall of a healthy endpoint would leave the machine with the service
+	// stopped and, on systemd, disabled -- surviving reboot. The upgrade would not merely fail, it
+	// would end collection. A service this install created has no such claim: nothing was running
+	// before, and leaving a half-installed endpoint registered is worse than leaving it absent.
+	//
+	// Best-effort. If it does not come back, the endpoint is no worse off than the failure that
+	// brought us here, and the install error the caller receives is the more useful signal.
+	if r.ServiceLoaded && r.ServiceWasRunning {
+		_ = r.Manager.Load()
+	}
+	// Same claim for the inventory job: its unit file has just been restored to what was scheduled
+	// before, so re-loading it puts the schedule back rather than leaving it stopped and, on
+	// systemd, disabled across reboot.
+	if r.InventoryLoaded && r.InventoryWasLoaded && r.InventoryJob != nil {
+		_ = r.InventoryJob.Load()
+	}
+}
+
+func Install(opts InstallOptions) (InstallResult, error) {
+	cfg := buildConfig(opts)
+	if err := preflight(cfg, opts.StartService, opts.ServiceKind); err != nil {
+		return InstallResult{}, err
+	}
+	manager := service.Manager{UserMode: cfg.UserMode, Kind: opts.ServiceKind}
+	collectorBinary, err := endpointcollector.ResolveBinary(cfg.Collector.BinaryPath)
+	if err != nil {
+		return InstallResult{}, err
+	}
+	if err := endpointcollector.CheckComponents(collectorBinary); err != nil {
+		return InstallResult{}, err
+	}
+
+	manifest := Manifest{
+		CreatedAt:    time.Now().UTC().Format(time.RFC3339),
+		UserMode:     cfg.UserMode,
+		ServiceLabel: manager.Label(),
+		LogPath:      cfg.LogPath,
+	}
+
+	// Make the log directory writable by the people whose sessions this endpoint captures, before
+	// anything writes to it.
+	//
+	// A no-op on POSIX, where the file mode carries the same guarantee. On Windows a system-mode
+	// log lives under %ProgramData%, which denies ordinary users write access -- and hooks run as
+	// the console user. Skipping this produces an install where every visible signal is healthy
+	// (the service runs, status and doctor agree) and nothing the agent does is ever recorded,
+	// because all of those describe the collector rather than the hooks exporting to it.
+	//
+	// Only for system mode: a user-mode log lives in that user's own profile, which they can
+	// already write, and widening its ACL would hand their prompt text to every interactive
+	// account on the machine.
+	//
+	// Before that, the machine-wide directory itself. On Windows %ProgramData%\Beacon is created --
+	// or, when it already exists, reset -- with Administrators as owner and a protected ACL that
+	// gives ordinary users read and execute only. It holds the config the SYSTEM collector reads and
+	// the hooks binary every user's agent runs, and %ProgramData% lets any user create a
+	// subdirectory, so a directory found here may have been made by someone else before Beacon was
+	// installed. A no-op elsewhere, where root ownership carries the same guarantee.
+	if !cfg.UserMode {
+		root := sysacl.SystemRoot(endpointconfig.SystemBaseDir())
+		if err := sysacl.SecureSystemTree(root, filepath.Dir(cfg.LogPath)); err != nil {
+			return InstallResult{}, fmt.Errorf("secure %s: %w", root, err)
+		}
+		if err := writer.EnsureSystemLogWritable(cfg.LogPath); err != nil {
+			return InstallResult{}, fmt.Errorf("prepare the log directory: %w", err)
+		}
+	}
+
+	tx := newInstallRollback(manager)
+	tx.Track(cfg.Collector.ConfigPath)
+	manifest.Files = append(manifest.Files, cfg.Collector.ConfigPath)
+	if err := writeCollectorConfig(cfg); err != nil {
+		tx.Rollback(manifest)
+		return InstallResult{}, err
+	}
+
+	plistPath, err := manager.UnitPath()
+	if err != nil {
+		tx.Rollback(manifest)
+		return InstallResult{}, err
+	}
+	tx.Track(plistPath)
+	manifest.Files = append(manifest.Files, plistPath)
+	if _, err := manager.WriteUnit(collectorBinary, cfg.Collector.ConfigPath); err != nil {
+		tx.Rollback(manifest)
+		return InstallResult{}, err
+	}
+
+	configPath := endpointconfig.ConfigPath(cfg.UserMode)
+	tx.Track(configPath)
+	manifest.Files = append(manifest.Files, configPath)
+	if _, err := saveEndpointConfig(cfg); err != nil {
+		tx.Rollback(manifest)
+		return InstallResult{}, err
+	}
+
+	// The scheduled inventory job is on by default and reconciled on every install, which is
+	// how a package upgrade turns it on for an endpoint installed before it existed. The unit is
+	// tracked for rollback but kept out of the manifest, like the updater's, and a host with no
+	// scheduler does not fail the install: it is reported and the endpoint still collects.
+	inventoryJob := newInventoryJob(cfg.UserMode, opts.ServiceKind)
+	for _, path := range inventoryJob.UnitPaths() {
+		tx.Track(path)
+	}
+	tx.InventoryJob = inventoryJob
+	tx.InventoryWasLoaded = inventoryJob.Status().Loaded
+	inventoryResult, inventoryErr := reconcileInventoryJobWith(inventoryJob, InventoryJobOptions{
+		UserMode: cfg.UserMode,
+		Kind:     opts.ServiceKind,
+		Program:  DefaultInventoryJobProgram(cfg.UserMode),
+		LogPath:  cfg.LogPath,
+		Load:     opts.StartService,
+	})
+	tx.InventoryLoaded = inventoryResult.Loaded
+	inventoryDetail := inventoryResult.Skipped
+	if inventoryErr != nil {
+		// Written but not enabled is not installed: report the failure, not the unit path.
+		inventoryResult.UnitPath = ""
+		inventoryDetail = "scheduled inventory job: " + inventoryErr.Error()
+	}
+
+	harnessPaths, err := configureHarnesses(cfg)
+	manifest.HarnessConfigs = harnessPaths
+	manifest.Backups = discoverBackups(harnessPaths)
+	if err != nil {
+		tx.Rollback(manifest)
+		return InstallResult{}, err
+	}
+	// Declared out here so the outcome survives the StartService block and reaches the result.
+	// A --no-start install never reaches the attempt, and reports the zero value: not applicable.
+	var lingerOutcome service.LingerOutcome
+	if opts.StartService {
+		// Restart when something is already running, rather than Load.
+		//
+		// Load is a no-op on a live service in every backend: `systemctl enable --now` does not
+		// restart an active unit, launchd's bootstrap refuses an already-bootstrapped label, and the
+		// supervised backend returns early on a live pid. That is correct for a first install and
+		// wrong for every subsequent one, because by this point the install has already rewritten
+		// the collector config and, during a package upgrade, the package manager has already
+		// replaced the collector binary underneath the running process.
+		//
+		// Without this, `apt install ./beacon.deb` over an older version left the previous
+		// collector serving OTLP -- holding a deleted inode, ignoring the new config -- while the
+		// install reported success and the ports answered. The endpoint looked healthy and was a
+		// version behind until the machine rebooted. The same path made `endpoint install
+		// --splunk-hec-endpoint ...` write a destination that never took effect.
+		// Read once and remember it. The same answer decides two things: whether to restart rather
+		// than load now, and whether rollback is allowed to unload later. Asking twice would risk
+		// the two decisions disagreeing about the state they are reasoning about.
+		wasRunning := manager.Status().Running
+		tx.ServiceWasRunning = wasRunning
+		// Note where the collector's log ends before starting it, so a failed start can quote
+		// what this start wrote rather than whatever an earlier run left in the same file.
+		collectorLog := manager.CollectorLog()
+		collectorLogOffset := endpointcollector.LogSize(collectorLog.Path)
+		if wasRunning {
+			if err := manager.Restart(); err != nil {
+				tx.Rollback(manifest)
+				return InstallResult{}, err
+			}
+		} else if err := manager.Load(); err != nil {
+			tx.Rollback(manifest)
+			return InstallResult{}, err
+		}
+		tx.ServiceLoaded = true
+		// A systemd --user unit is torn down when the user logs out unless linger is set, so
+		// without this a user-mode install silently stops collecting at logout. launchd has no
+		// equivalent: its gui/<uid> domain persists for the login session on its own.
+		//
+		// Best-effort and non-fatal: enabling linger needs privileges a plain user may not
+		// have, and refusing to install over it would be worse than collecting until logout.
+		// The outcome is recorded so status and doctor can report the gap rather than leaving
+		// the user to discover it after their next logout.
+		lingerOutcome = manager.EnableLingerIfNeeded()
+		if lingerOutcome.Applicable {
+			manifest.LingerEnabled = lingerOutcome.Enabled
+			manifest.LingerDetail = lingerOutcome.Detail
+		}
+		if err := endpointcollector.WaitUntilReady(cfg, collectorReadyTimeout); err != nil {
+			tx.Rollback(manifest)
+			return InstallResult{}, collectorStartError(err, collectorLog, collectorLogOffset)
+		}
+	}
+	tx.Track(manifestPath(cfg.UserMode))
+	manifestPath, err := writeManifest(cfg.UserMode, manifest)
+	if err != nil {
+		tx.Rollback(manifest)
+		return InstallResult{}, err
+	}
+	event := schema.NewEvent(schema.NewEventOptions{
+		Action:       "telemetry.enabled",
+		Category:     "telemetry",
+		Severity:     schema.SeverityInfo,
+		AgentVersion: version.GetVersion(),
+		Harness:      schema.HarnessInfo{Name: "endpoint"},
+		Message:      "Beacon endpoint local telemetry configured",
+	})
+	event.Destination = installDestination(cfg)
+	if _, err := appendInstallEvent(event, writer.Options{Path: cfg.LogPath, UserMode: cfg.UserMode}); err != nil {
+		tx.Rollback(manifest)
+		return InstallResult{}, err
+	}
+	// Bring a connected endpoint's Beacon Cloud forwarder config up to this version's pack, in
+	// place and without re-enrolling. After everything else, so it can never be the reason an
+	// install rolls back; and only when services are started, since it may restart the forwarder
+	// (the macOS package installs with --no-start and runs `beacon endpoint asymptote reconcile`
+	// itself once the collector is back).
+	var managedForwarder *asymptote.ReconcileResult
+	if opts.StartService {
+		reconciled, err := reconcileManagedForwarder(cfg.UserMode, cfg.LogPath)
+		if err != nil && reconciled.Warning == "" {
+			reconciled.Warning = err.Error()
+		}
+		managedForwarder = &reconciled
+	}
+	return InstallResult{
+		ManagedForwarder:    managedForwarder,
+		ConfigPath:          configPath,
+		CollectorConfigPath: cfg.Collector.ConfigPath,
+		PlistPath:           plistPath,
+		LogPath:             cfg.LogPath,
+		ManifestPath:        manifestPath,
+		HarnessConfigPaths:  harnessPaths,
+		LingerApplicable:    lingerOutcome.Applicable,
+		LingerEnabled:       lingerOutcome.Enabled,
+		LingerDetail:        lingerOutcome.Detail,
+		LingerRemediation:   lingerOutcome.Remediation,
+		InventoryJobPath:    inventoryResult.UnitPath,
+		InventoryJobDetail:  inventoryDetail,
+	}, nil
+}
+
+// Uninstall removes the endpoint and reports what it could not remove.
+//
+// Every step used to discard its error and the function could only return nil, so
+// `beacon endpoint uninstall --system` without privileges printed "Endpoint service, config, and
+// managed files removed." and exited 0 while the systemd unit stayed enabled -- the collector came
+// back at the next reboot, after the operator had been told it was gone.
+//
+// Removal still continues past a failure rather than stopping at the first one: a partial uninstall
+// that removes what it can is more useful than one that abandons the job halfway, and the caller
+// needs to hear about every leftover, not just the first. The failures are collected and returned
+// together.
+func Uninstall(opts UninstallOptions) error {
+	cfg := loadOrDefault(opts.UserMode, opts.LogPath)
+	// Refuse a system uninstall we cannot carry out, instead of half-doing it and reporting
+	// success. Install has always had this gate; uninstall never did, which is the asymmetry that
+	// let an unprivileged removal look like it worked.
+	if !cfg.UserMode && !HasSystemPrivileges() {
+		return fmt.Errorf("removing a system endpoint needs root: rerun with sudo, or pass --user to remove a user-mode install")
+	}
+
+	var problems []string
+	fail := func(what string, err error) {
+		if err != nil && !os.IsNotExist(err) {
+			problems = append(problems, fmt.Sprintf("%s: %v", what, err))
+		}
+	}
+
+	// Unload every backend that could plausibly hold this service, not just the one
+	// detection picks now. An install performed under systemd and uninstalled from a
+	// container would otherwise leave the unit enabled, and "uninstall" has to mean nothing
+	// is left behind. Unload already tolerates a backend that is unusable here.
+	manager := service.Manager{UserMode: cfg.UserMode}
+	for _, kind := range service.ManagedKinds() {
+		fail(fmt.Sprintf("unload %s service", kind), (service.Manager{UserMode: cfg.UserMode, Kind: kind}).Unload())
+	}
+	if !cfg.UserMode && !opts.KeepUpdater {
+		removeUpdaterJob()
+	}
+	removeInventoryJob(cfg.UserMode)
+	// The S3, GCS and Falcon forwarders run from /opt/beacon and read the customer's credentials
+	// from their env files, so they go with the endpoint the same way the managed forwarder does.
+	if !cfg.UserMode && !opts.KeepForwarders {
+		fail("remove package forwarders", removeScriptForwarders(opts.KeepConfig))
+	}
+	// The managed-ingest forwarder and its credentials go with the endpoint; server-side the
+	// device stays registered until it is revoked from the dashboard. Repair keeps all of it.
+	if !opts.KeepManagedIngest {
+		fail("disconnect managed ingest", asymptote.Disconnect(asymptote.DisconnectOptions{
+			UserMode:        cfg.UserMode,
+			LogPath:         cfg.LogPath,
+			KeepCredentials: opts.KeepConfig,
+		}))
+	}
+	manifest, _ := ReadManifest(cfg.UserMode)
+	if !opts.KeepConfig {
+		restoreBackups(manifest.Backups)
+	}
+	// Repair (KeepManagedIngest) keeps config.json so the reinstall carries over what connect,
+	// disconnect and the operator own in it (managed_ingest, inventory, auto_update); without it
+	// a repaired endpoint that kept forwarding read as unconnected on disk. `uninstall
+	// --keep-config` keeps harness settings only, so it still removes Beacon's own config.
+	endpointConfigPath := endpointconfig.ConfigPath(cfg.UserMode)
+	for _, path := range manifest.Files {
+		if opts.KeepManagedIngest && path == endpointConfigPath {
+			continue
+		}
+		fail("remove "+path, os.Remove(path))
+	}
+	if len(manifest.Files) == 0 {
+		if path, err := manager.UnitPath(); err == nil {
+			fail("remove "+path, os.Remove(path))
+		}
+		fail("remove "+cfg.Collector.ConfigPath, os.Remove(cfg.Collector.ConfigPath))
+		if !opts.KeepManagedIngest {
+			fail("remove endpoint config", os.Remove(endpointConfigPath))
+		}
+	}
+	if !opts.KeepLogs {
+		for _, path := range runtimeLogFiles(cfg.LogPath) {
+			fail("remove "+path, os.Remove(path))
+		}
+		// The local history holds what the log held, and more, so it goes with the logs. It lives
+		// in the user's own endpoint directory, which a system uninstall does not own.
+		if cfg.UserMode {
+			history := endpointconfig.HistoryStorePath()
+			for _, suffix := range []string{"", "-wal", "-shm", ".lock"} {
+				fail("remove "+history+suffix, os.Remove(history+suffix))
+			}
+		}
+	}
+	fail("remove install manifest", os.Remove(manifestPath(cfg.UserMode)))
+
+	if len(problems) > 0 {
+		return fmt.Errorf("endpoint uninstall left %d item(s) behind:\n  %s",
+			len(problems), strings.Join(problems, "\n  "))
+	}
+	return nil
+}
+
+// runtimeLogFiles lists the runtime log and everything rotation has produced from it.
+//
+// Removing only runtime.jsonl left up to five rotated archives holding retained prompt text and
+// command lines on disk after an uninstall that was not asked to keep logs -- the opposite of what
+// the operator requested, and invisible because the file they would check was gone.
+func runtimeLogFiles(logPath string) []string {
+	if logPath == "" {
+		return nil
+	}
+	paths := []string{logPath, logPath + ".lock"}
+	if rotated, err := filepath.Glob(logPath + ".*"); err == nil {
+		for _, p := range rotated {
+			if p != logPath+".lock" {
+				paths = append(paths, p)
+			}
+		}
+	}
+	return paths
+}
+
+// repairUninstallOptions is the teardown half of Repair: everything the reinstall recreates goes,
+// and everything it does not recreate stays.
+func repairUninstallOptions(opts InstallOptions) UninstallOptions {
+	return UninstallOptions{
+		UserMode:          opts.UserMode,
+		LogPath:           opts.LogPath,
+		KeepLogs:          true,
+		KeepConfig:        true,
+		KeepUpdater:       true,
+		KeepForwarders:    true,
+		KeepManagedIngest: true,
+	}
+}
+
+func Repair(opts InstallOptions) (InstallResult, error) {
+	configPath := endpointconfig.ConfigPath(opts.UserMode)
+	configSnapshot := snapshotFile(configPath)
+	priorAutoUpdateMode := ""
+	if !opts.UserMode {
+		if mode, err := autoUpdateModeFromConfigFile(configPath); err == nil {
+			priorAutoUpdateMode = mode
+		}
+	}
+	_ = Uninstall(repairUninstallOptions(opts))
+	result, err := Install(opts)
+	if err != nil {
+		restoreFile(configPath, configSnapshot)
+		return result, err
+	}
+	if !opts.UserMode {
+		if priorAutoUpdateMode != "" {
+			if err := setAutoUpdateModeInConfigFile(configPath, priorAutoUpdateMode); err != nil {
+				return result, err
+			}
+		}
+		if err := reconcileUpdaterFromConfig(opts.LogPath); err != nil {
+			return result, err
+		}
+	}
+	return result, nil
+}
+
+func reconcileUpdaterFromConfig(logPath string) error {
+	if !detectUpdaterInstall().SupportsSeamlessUpdate() {
+		return nil
+	}
+	localMode := ""
+	if mode, err := autoUpdateModeFromConfigFile(endpointconfig.ConfigPath(false)); err == nil {
+		localMode = mode
+	}
+	mode := selfupdate.ResolveMode(localMode)
+	mgr := service.UpdaterManager{}
+	if mode == selfupdate.ModeOff {
+		_ = mgr.Unload()
+		mgr.RemoveUnits()
+		return nil
+	}
+	if _, err := mgr.WriteUnit(selfupdate.SystemBeaconPath()); err != nil {
+		return err
+	}
+	return mgr.Load()
+}
+
+func autoUpdateModeFromConfigFile(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	var partial struct {
+		AutoUpdate *endpointconfig.AutoUpdate `json:"auto_update"`
+	}
+	if err := json.Unmarshal(data, &partial); err != nil {
+		return "", err
+	}
+	if partial.AutoUpdate == nil {
+		return "", nil
+	}
+	return partial.AutoUpdate.Mode, nil
+}
+
+func setAutoUpdateModeInConfigFile(path, mode string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	autoUpdate, err := json.Marshal(endpointconfig.AutoUpdate{Mode: mode})
+	if err != nil {
+		return err
+	}
+	raw["auto_update"] = autoUpdate
+	out, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return err
+	}
+	perm := os.FileMode(0644)
+	if info, err := os.Stat(path); err == nil {
+		perm = info.Mode().Perm()
+	}
+	return atomicfile.Write(path, out, perm)
+}
+
+func GetStatus(userMode bool, logPath string) Status {
+	cfg := loadOrDefault(userMode, logPath)
+	runtimeLog := ResolveRuntimeLog(userMode, logPath)
+	effectiveCfg := cfg
+	effectiveCfg.UserMode = runtimeLog.EffectiveUserMode
+	if runtimeLog.EffectiveUserMode != cfg.UserMode {
+		effectiveCfg = loadOrDefault(runtimeLog.EffectiveUserMode, runtimeLog.EffectiveLogPath)
+	}
+	effectiveCfg.LogPath = runtimeLog.EffectiveLogPath
+	return buildStatus(userMode, effectiveCfg, runtimeLog, asymptote.StatusOptions{})
+}
+
+// buildStatus assembles the status from the effective collector configuration. Everything
+// about the collector and the runtime log follows effectiveCfg, which may have switched to
+// the system install when its collector holds the OTLP ports. Managed ingest does not: a
+// connection belongs to the install the caller asked about (`--user` or `--system`), each
+// mode keeps its own enrollment and forwarder, and the system record is unreadable
+// without root anyway.
+func buildStatus(requestedUserMode bool, effectiveCfg endpointconfig.Config, runtimeLog RuntimeLogSource, managedOpts asymptote.StatusOptions) Status {
+	last, _ := writer.LastLine(effectiveCfg.LogPath)
+	checks := diagnostics.Run(effectiveCfg)
+	if runtimeLog.Warning != "" {
+		checks = append(checks, diagnostics.Check{
+			Name:     "runtime_log_source",
+			Status:   "warn",
+			Severity: "medium",
+			Message:  runtimeLog.Warning,
+		})
+	}
+	return Status{
+		Version:            version.GetVersion(),
+		Edition:            version.ReportedEdition(),
+		ConfigPath:         endpointconfig.ConfigPath(effectiveCfg.UserMode),
+		LogPath:            effectiveCfg.LogPath,
+		RuntimeLog:         runtimeLog,
+		Collector:          endpointcollector.CheckStatus(effectiveCfg),
+		Service:            service.Manager{UserMode: effectiveCfg.UserMode}.Status(),
+		Harnesses:          harness.DiscoverAll(),
+		Diagnostics:        checks,
+		LastEvent:          last,
+		Destinations:       destinationStatus(effectiveCfg),
+		ManagedIngest:      asymptote.Status(requestedUserMode, managedOpts),
+		InventoryHeartbeat: inventoryHeartbeatStatus(requestedUserMode, runtimeLog.RequestedLogPath),
+		ScriptForwarders:   scriptForwarderStatuses(),
+	}
+}
+
+func ResolveRuntimeLog(userMode bool, logPath string) RuntimeLogSource {
+	cfg := loadOrDefault(userMode, logPath)
+	source := RuntimeLogSource{
+		RequestedUserMode: userMode,
+		EffectiveUserMode: userMode,
+		RequestedLogPath:  cfg.LogPath,
+		EffectiveLogPath:  cfg.LogPath,
+		Reason:            "requested endpoint configuration",
+	}
+	if logPath != "" {
+		source.Reason = "explicit runtime log path"
+		return source
+	}
+	if !userMode {
+		return source
+	}
+	systemCfg, err := endpointconfig.Load(false)
+	if err != nil || !sameCollectorPorts(cfg, systemCfg) || systemCfg.LogPath == "" || systemCfg.LogPath == cfg.LogPath {
+		return source
+	}
+	return selectRuntimeLog(source, service.Manager{UserMode: true}.Status(), service.Manager{UserMode: false}.Status(), systemCfg)
+}
+
+func selectRuntimeLog(source RuntimeLogSource, requestedService, systemService service.Status, systemCfg endpointconfig.Config) RuntimeLogSource {
+	if systemService.Running && !requestedService.Running {
+		source.Reason = "requested endpoint configuration; system collector is also running on the configured OTLP ports"
+		source.EffectiveUserMode = false
+		source.EffectiveLogPath = systemCfg.LogPath
+		source.Warning = fmt.Sprintf("system collector is writing OTLP events to %s instead of the user runtime log %s; stop the system collector or install user mode to keep all events in one file", systemCfg.LogPath, source.RequestedLogPath)
+	}
+	return source
+}
+
+func sameCollectorPorts(left, right endpointconfig.Config) bool {
+	return left.Collector.GRPCPort == right.Collector.GRPCPort && left.Collector.HTTPPort == right.Collector.HTTPPort
+}
+
+func buildConfig(opts InstallOptions) endpointconfig.Config {
+	logPath := opts.LogPath
+	if logPath == "" {
+		logPath = writer.DefaultPath(opts.UserMode)
+	}
+	cfg := endpointconfig.Default(opts.UserMode, logPath)
+	if mode, err := autoUpdateModeFromConfigFile(endpointconfig.ConfigPath(opts.UserMode)); err == nil && mode != "" {
+		cfg.AutoUpdate = &endpointconfig.AutoUpdate{Mode: mode}
+	}
+	// A re-install (upgrades run one) must not disconnect the machine on paper: the
+	// managed_ingest block is owned by connect/disconnect, so carry the existing one over.
+	// The same goes for inventory_heartbeat: an operator's `enabled: false` must survive the
+	// package upgrade that re-runs install, or the scheduled job would come back.
+	if existing, err := endpointconfig.Load(opts.UserMode); err == nil {
+		if existing.ManagedIngest != nil {
+			cfg.ManagedIngest = existing.ManagedIngest
+		}
+		if existing.Inventory != nil {
+			cfg.Inventory = existing.Inventory
+		}
+	}
+	if opts.Harnesses != nil {
+		cfg.Harnesses = opts.Harnesses
+	}
+	if opts.GRPCPort != 0 {
+		cfg.Collector.GRPCPort = opts.GRPCPort
+	}
+	if opts.HTTPPort != 0 {
+		cfg.Collector.HTTPPort = opts.HTTPPort
+	}
+	// Derived afresh from the ports in effect rather than carried from the existing config, the
+	// same way the OTLP ports themselves are taken from this install's options: an install that
+	// moves the OTLP ports has to move the health port with them, or a user-mode collector moved
+	// off the system one's ports would still collide with it on 13133.
+	cfg.Collector.HealthPort = opts.HealthPort
+	if cfg.Collector.HealthPort == 0 {
+		cfg.Collector.HealthPort = endpointconfig.DeriveHealthCheckPort(cfg.Collector.GRPCPort, cfg.Collector.HTTPPort)
+	}
+	cfg.Collector.BinaryPath = opts.CollectorPath
+	cfg.Collector.IncludeRuntimeMetrics = opts.IncludeRuntimeMetrics
+	cfg.Collector.IncludeCodexSpans = opts.IncludeCodexSpans
+	cfg.ClaudeCaptureModelContext = opts.ClaudeCaptureModelContext
+	if opts.SplunkHEC != nil {
+		if cfg.Destinations == nil {
+			cfg.Destinations = &endpointconfig.Destinations{}
+		}
+		cfg.Destinations.SplunkHEC = opts.SplunkHEC
+	}
+	if opts.FalconHEC != nil {
+		if cfg.Destinations == nil {
+			cfg.Destinations = &endpointconfig.Destinations{}
+		}
+		cfg.Destinations.FalconHEC = opts.FalconHEC
+	}
+	if cfg.Destinations != nil {
+		endpointconfig.NormalizeDestinations(&cfg)
+	}
+	return cfg
+}
+
+// collectorStartError adds the collector's own explanation to a readiness failure.
+//
+// The readiness check can only see the symptom -- ports not listening, health check not ready --
+// and the symptom points at the wrong thing when the collector exited on start: a user-mode
+// collector killed by a health-check port the system collector held was reported as "Collector
+// ports are not listening", which blames the OTLP ports (#447). The collector's last error line
+// names the real cause.
+func collectorStartError(err error, log service.CollectorLog, offset int64) error {
+	if log.Path != "" {
+		if line := endpointcollector.LogErrorSince(log.Path, offset); line != "" {
+			return fmt.Errorf("%w; collector reported: %s (full log: %s)", err, line, log.Path)
+		}
+		return fmt.Errorf("%w; the collector wrote nothing new to %s", err, log.Path)
+	}
+	if log.Hint != "" {
+		return fmt.Errorf("%w; for the collector's own error see %s", err, log.Hint)
+	}
+	return err
+}
+
+func installDestination(cfg endpointconfig.Config) *schema.DestinationInfo {
+	destination := &schema.DestinationInfo{Type: "local_jsonl", Mode: "file", Status: "configured"}
+	if cfg.Destinations != nil && cfg.Destinations.SplunkHEC != nil && cfg.Destinations.SplunkHEC.Enabled {
+		destination.Type += ",splunk_hec"
+		destination.Mode += ",hec"
+	}
+	if cfg.Destinations != nil && cfg.Destinations.FalconHEC != nil && cfg.Destinations.FalconHEC.Enabled {
+		destination.Type += ",falcon_hec"
+		destination.Mode += ",hec"
+	}
+	return destination
+}
+
+func destinationStatus(cfg endpointconfig.Config) DestinationStatus {
+	status := DestinationStatus{}
+	if cfg.Destinations == nil {
+		return status
+	}
+	if cfg.Destinations.SplunkHEC != nil && cfg.Destinations.SplunkHEC.Enabled {
+		splunk := cfg.Destinations.SplunkHEC
+		status.SplunkHEC = ConfiguredStatus{
+			Configured: true,
+			Endpoint:   splunk.Endpoint,
+			Index:      splunk.Index,
+			Source:     splunk.Source,
+			Sourcetype: splunk.Sourcetype,
+		}
+	}
+	if cfg.Destinations.FalconHEC != nil && cfg.Destinations.FalconHEC.Enabled {
+		falcon := cfg.Destinations.FalconHEC
+		status.FalconHEC = ConfiguredStatus{
+			Configured: true,
+			Endpoint:   falcon.Endpoint,
+			Index:      falcon.Index,
+			Source:     falcon.Source,
+			Sourcetype: falcon.Sourcetype,
+		}
+	}
+	return status
+}
+
+func loadOrDefault(userMode bool, logPath string) endpointconfig.Config {
+	if cfg, err := endpointconfig.Load(userMode); err == nil {
+		if logPath != "" {
+			cfg.LogPath = logPath
+		}
+		return cfg
+	}
+	if logPath == "" {
+		logPath = writer.DefaultPath(userMode)
+	}
+	return endpointconfig.Default(userMode, logPath)
+}
+
+func snapshotFile(path string) fileSnapshot {
+	snapshot := fileSnapshot{}
+	if data, err := os.ReadFile(path); err == nil {
+		snapshot.Existed = true
+		snapshot.Data = data
+		if info, statErr := os.Stat(path); statErr == nil {
+			snapshot.Mode = info.Mode().Perm()
+		}
+	}
+	return snapshot
+}
+
+func restoreFile(path string, snapshot fileSnapshot) {
+	if !snapshot.Existed {
+		_ = os.Remove(path)
+		return
+	}
+	mode := snapshot.Mode
+	if mode == 0 {
+		mode = 0600
+	}
+	_ = atomicfile.Write(path, snapshot.Data, mode)
+}
+
+func preflight(cfg endpointconfig.Config, startService bool, kind service.Kind) error {
+	if err := endpointconfig.ValidateDestinations(cfg.Destinations); err != nil {
+		return err
+	}
+	// Replaces a blanket "macOS only" refusal. What actually matters is whether a service
+	// manager can run the collector here, which is a property of the host rather than of the
+	// operating system name: a Linux VM with systemd is fully supported, and a container
+	// without an init system is supported through the supervised backend.
+	mgr := service.Manager{UserMode: cfg.UserMode, Kind: kind}
+	if !mgr.Available() {
+		reason := mgr.UnsupportedReason()
+		if kind == service.KindAuto {
+			// Detection picked something unusable, which should not happen since detection
+			// falls back to supervised; surface it rather than failing opaquely.
+			return fmt.Errorf("no usable service manager on this host: %s", reason)
+		}
+		return fmt.Errorf("--service=%s is not usable here: %s", kind, reason)
+	}
+	if !cfg.UserMode && !HasSystemPrivileges() {
+		return fmt.Errorf("system install needs elevated privileges; %s, or omit --system for the default user install",
+			SystemPrivilegeHint())
+	}
+	if err := endpointconfig.ValidateCollectorPorts(cfg.Collector); err != nil {
+		return err
+	}
+	if !startService {
+		return nil
+	}
+	healthPort := endpointconfig.HealthCheckPort(cfg.Collector)
+	grpcAvailable := endpointcollector.PortAvailable(cfg.Collector.GRPCPort)
+	httpAvailable := endpointcollector.PortAvailable(cfg.Collector.HTTPPort)
+	healthAvailable := endpointcollector.PortAvailable(healthPort)
+	if grpcAvailable && httpAvailable && healthAvailable {
+		return nil
+	}
+	own := service.Manager{UserMode: cfg.UserMode, Kind: kind}.Status()
+	if own.Loaded && existingCollectorReady(cfg) {
+		return nil
+	}
+	// This mode's own running collector may be what holds the health port: a reinstall that moves
+	// only the gRPC port keeps the same derived health port, and the restart that follows releases
+	// it. Only a health port held while this mode's collector is not running -- by the system
+	// collector, beside a first user-mode install -- is a conflict worth failing on here.
+	if grpcAvailable && httpAvailable && own.Running {
+		return nil
+	}
+	if err := endpointcollector.WaitForPortsAvailable(cfg.Collector.GRPCPort, cfg.Collector.HTTPPort, healthPort, portReleaseTimeout); err != nil {
+		return fmt.Errorf("%w; if this persists, another process may be using the ports Beacon's collector needs", err)
+	}
+	return nil
+}
+
+// existingCollectorReady reports whether this mode's loaded collector is already serving the OTLP
+// ports this install asks for, in which case the busy ports are its own and the install's restart
+// releases them.
+//
+// Its health endpoint is looked for on the port this install will use and, failing that, on the one
+// recorded by the install that started it. The two differ whenever the health port moves under a
+// running collector -- a legacy config with alternate OTLP ports, which ran on 13133, being
+// reinstalled onto its derived port, or an explicit --health-port change -- and probing only the
+// new port would take the endpoint's own collector for a stranger holding its ports.
+//
+// The caller has already checked that the service is loaded: the kind is threaded through rather
+// than re-detected, since preflight honours an explicit --service= and auto-detecting would consult
+// a different backend than the one the install is about to use.
+func existingCollectorReady(cfg endpointconfig.Config) bool {
+	status := endpointcollector.CheckStatus(cfg)
+	if !status.GRPCReady || !status.HTTPReady {
+		return false
+	}
+	if status.HealthReady {
+		return true
+	}
+	existing, err := endpointconfig.Load(cfg.UserMode)
+	if err != nil || endpointconfig.HealthCheckPort(existing.Collector) == status.HealthPort {
+		return false
+	}
+	existing.Collector.GRPCPort, existing.Collector.HTTPPort = cfg.Collector.GRPCPort, cfg.Collector.HTTPPort
+	return endpointcollector.CheckStatus(existing).HealthReady
+}
+
+func configureHarnesses(cfg endpointconfig.Config) ([]string, error) {
+	grpcEndpoint := fmt.Sprintf("http://127.0.0.1:%d", cfg.Collector.GRPCPort)
+	httpEndpoint := fmt.Sprintf("http://127.0.0.1:%d", cfg.Collector.HTTPPort)
+	var paths []string
+	for _, name := range cfg.Harnesses {
+		switch name {
+		case "claude", "claude_code":
+			path, err := harness.ConfigureClaude(harness.ConfigureOptions{Endpoint: grpcEndpoint, UserMode: cfg.UserMode, CaptureModelContext: cfg.ClaudeCaptureModelContext})
+			if err != nil {
+				return paths, err
+			}
+			paths = append(paths, path)
+		case "codex", "codex_cli":
+			path, err := harness.ConfigureCodex(harness.ConfigureOptions{Endpoint: grpcEndpoint, UserMode: cfg.UserMode})
+			if err != nil {
+				return paths, err
+			}
+			paths = append(paths, path)
+		case "gemini", "gemini_cli":
+			path, err := harness.ConfigureGemini(harness.ConfigureOptions{Endpoint: grpcEndpoint, UserMode: cfg.UserMode})
+			if err != nil {
+				return paths, err
+			}
+			paths = append(paths, path)
+		case "vscode", "vs_code", "vscode_copilot":
+			path, err := harness.ConfigureVSCode(harness.VSCodeConfigOptions{Endpoint: httpEndpoint})
+			if err != nil {
+				return paths, err
+			}
+			paths = append(paths, path)
+		case "opencode":
+			return paths, fmt.Errorf("opencode telemetry is installed with `beacon endpoint hooks install --harness opencode`, not endpoint install")
+		case "cline":
+			return paths, fmt.Errorf("Cline telemetry is installed with `beacon endpoint hooks install --harness cline`, not endpoint install")
+		case "pi", "pi_cli":
+			return paths, fmt.Errorf("Pi telemetry is installed with `beacon endpoint hooks install --harness pi`, not endpoint install")
+		case "omp", "oh_my_pi", "oh-my-pi":
+			return paths, fmt.Errorf("Oh My Pi telemetry is installed with `beacon endpoint hooks install --harness omp`, not endpoint install")
+		case "prime", "prime_agent", "prime-agent":
+			return paths, fmt.Errorf("Prime Agent telemetry is installed with `beacon endpoint hooks install --harness prime`, not endpoint install")
+		// OpenClaw has an OTLP surface, and it is still not one `endpoint install` can configure:
+		// it lives in OpenClaw's own config behind its diagnostics-otel plugin, so Beacon prints
+		// the settings rather than writing them. The agent-activity path is the managed plugin.
+		// Both commands are named, because an operator who reached for --harness openclaw wants
+		// one of them and cannot tell from here which.
+		case "openclaw", "openclaw_gateway", "openclaw-gateway":
+			return paths, fmt.Errorf("OpenClaw agent telemetry is installed with `beacon endpoint hooks install --harness openclaw`, and its gateway OTLP export is set up with `beacon endpoint integrations openclaw print-config`, not endpoint install")
+		// Qwen Code has no OpenTelemetry export to point at the local collector, so `endpoint
+		// install --harness qwen` has nothing to configure. Saying so beats the generic
+		// "unsupported harness", which reads as "Beacon does not support Qwen Code" when the
+		// support exists behind a different command.
+		case "qwen", "qwen_code":
+			return paths, fmt.Errorf("Qwen Code telemetry is installed with `beacon endpoint hooks install --harness qwen`, not endpoint install")
+		case "copilot", "copilot_cli", "github_copilot":
+			return paths, fmt.Errorf("Copilot CLI telemetry is MDM-managed; set COPILOT_OTEL_ENABLED=true and OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:%d in the Copilot CLI launch environment instead of using --harness %s", cfg.Collector.HTTPPort, name)
+		case "factory", "droid":
+			return paths, fmt.Errorf("Factory Droid telemetry is MDM-managed; set OTEL_TELEMETRY_ENDPOINT=http://127.0.0.1:%d in the Droid launch environment instead of using --harness %s", cfg.Collector.HTTPPort, name)
+		case "":
+		default:
+			return paths, fmt.Errorf("unsupported harness %q", name)
+		}
+	}
+	return paths, nil
+}
+
+func discoverBackups(paths []string) []string {
+	var backups []string
+	for _, path := range paths {
+		matches, _ := filepath.Glob(path + ".beacon.*.bak")
+		backups = append(backups, matches...)
+		if _, err := os.Stat(path + ".beacon.bak"); err == nil {
+			backups = append(backups, path+".beacon.bak")
+		}
+	}
+	return backups
+}
+
+func restoreBackups(backups []string) {
+	for _, backup := range backups {
+		target := restoreTarget(backup)
+		if target == "" {
+			continue
+		}
+		data, err := os.ReadFile(backup)
+		if err == nil {
+			_ = os.WriteFile(target, data, 0600)
+		}
+	}
+}
+
+func writeManifest(userMode bool, manifest Manifest) (string, error) {
+	path := manifestPath(userMode)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return "", err
+	}
+	data, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return path, os.WriteFile(path, data, 0600)
+}
+
+func ReadManifest(userMode bool) (Manifest, error) {
+	data, err := os.ReadFile(manifestPath(userMode))
+	if err != nil {
+		return Manifest{}, err
+	}
+	var manifest Manifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return Manifest{}, err
+	}
+	return manifest, nil
+}
+
+func manifestPath(userMode bool) string {
+	return filepath.Join(endpointconfig.BaseDir(userMode), "install-manifest.json")
+}
+
+func rollback(manifest Manifest) {
+	restoreBackups(manifest.Backups)
+	for i := len(manifest.Files) - 1; i >= 0; i-- {
+		_ = os.Remove(manifest.Files[i])
+	}
+}
+
+func restoreTarget(backup string) string {
+	for _, suffix := range []string{".beacon.bak", ".beacon."} {
+		for i := len(backup) - len(suffix); i >= 0; i-- {
+			if i+len(suffix) <= len(backup) && backup[i:i+len(suffix)] == suffix {
+				return backup[:i]
+			}
+		}
+	}
+	return ""
+}

@@ -1,0 +1,501 @@
+package diff
+
+import (
+	"fmt"
+	"path/filepath"
+	"strings"
+)
+
+// FromToolResponse builds a diff from any supported tool type
+func FromToolResponse(toolName string, toolInput, toolResponse map[string]interface{}) string {
+	filePath := GetStringFromMaps("file_path", toolInput, toolResponse)
+	if filePath == "" {
+		filePath = GetStringFromMaps("filePath", toolInput, toolResponse)
+	}
+	if filePath == "" {
+		filePath = GetStringFromMaps("path", toolInput, toolResponse)
+	}
+	if filePath == "" {
+		filePath = GetStringFromMaps("Path", toolInput, toolResponse)
+	}
+	if filePath == "" {
+		filePath = GetStringFromMaps("AbsolutePath", toolInput, toolResponse)
+	}
+	if filePath == "" {
+		filePath = GetStringFromMaps("absolute_path", toolInput, toolResponse)
+	}
+	// Kept in step with the resolver in parseClaudeCopilotInput; see the note there for why this
+	// changes no behavior today and is here so the readers do not drift.
+	if filePath == "" {
+		filePath = GetStringFromMaps("notebook_path", toolInput, toolResponse)
+	}
+	filePath = NormalizePath(filePath)
+	if filePath == "" {
+		return ""
+	}
+
+	// Prefer structuredPatch if available (most accurate)
+	if structuredPatch, ok := toolResponse["structuredPatch"].([]interface{}); ok && len(structuredPatch) > 0 {
+		return fromStructuredPatch(filePath, structuredPatch)
+	}
+
+	// Fall back to tool-specific construction
+	switch toolName {
+	// "replace" is Gemini CLI's -- and so early Qwen Code's -- id for the old_string/new_string edit
+	// tool that Qwen Code now documents as "edit". Without it the tool is recognized as an edit by
+	// isFileEditTool but produces no diff, so the event records that a file changed and not how.
+	case "Edit", "edit", "edit_file", "replace":
+		oldString := resolveEditString("old_string", "oldString", "old_str", toolInput, toolResponse)
+		newString := resolveEditString("new_string", "newString", "new_str", toolInput, toolResponse)
+		return fromEditTool(filePath, oldString, newString)
+
+	case "copilot_insertEdit":
+		// Copilot sends full file content as "code" field
+		content := GetStringFromMaps("code", toolInput, toolResponse)
+		return fromWriteTool(filePath, content, "")
+
+	case "Write", "Create", "write", "write_file", "write_to_file":
+		content := GetStringFromMaps("content", toolInput, toolResponse)
+		originalFile := GetStringFromMaps("originalFile", toolInput, toolResponse)
+		return fromWriteTool(filePath, content, originalFile)
+
+	case "MultiEdit":
+		edits, ok := toolInput["edits"].([]interface{})
+		if !ok || len(edits) == 0 {
+			return ""
+		}
+
+		var allDiffs []string
+		for _, edit := range edits {
+			editMap, ok := edit.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			editFile := GetStringFromMaps("file_path", editMap)
+			if editFile == "" {
+				editFile = filePath
+			}
+			oldStr := resolveEditString("old_string", "oldString", "old_str", editMap)
+			newStr := resolveEditString("new_string", "newString", "new_str", editMap)
+			if d := fromEditTool(editFile, oldStr, newStr); d != "" {
+				allDiffs = append(allDiffs, d)
+			}
+		}
+		return strings.Join(allDiffs, "\n\n")
+
+	case "create_file", "copilot_createFile":
+		content := GetStringFromMaps("content", toolInput, toolResponse)
+		return fromWriteTool(filePath, content, "")
+
+	case "apply_patch", "copilot_applyPatch":
+		patchInput := GetStringFromMaps("input", toolInput, toolResponse)
+		if patchInput == "" {
+			patchInput = GetStringFromMaps("textResultForLlm", toolInput, toolResponse)
+		}
+		if patchInput != "" {
+			return fromCopilotPatch(filePath, patchInput)
+		}
+		return ""
+	}
+
+	return ""
+}
+
+// resolveEditString tries multiple key variants for edit fields.
+// Claude uses old_string/new_string, Copilot uses oldString/newString, Factory uses old_str/new_str.
+func resolveEditString(snakeKey, camelKey, shortKey string, maps ...map[string]interface{}) string {
+	if v := GetStringFromMaps(snakeKey, maps...); v != "" {
+		return v
+	}
+	if v := GetStringFromMaps(camelKey, maps...); v != "" {
+		return v
+	}
+	return GetStringFromMaps(shortKey, maps...)
+}
+
+// fromCopilotPatch parses Copilot's patch format and converts to unified diff.
+// Format:
+//
+//	*** Begin Patch
+//	*** Update File: path/to/file.py
+//	@@@ -10,3 +10,5 @@@
+//	 context line
+//	-removed line
+//	+added line
+//	*** End Patch
+func fromCopilotPatch(filePath, patchInput string) string {
+	lines := strings.Split(patchInput, "\n")
+	var result []string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Skip patch boundaries
+		if trimmed == "*** Begin Patch" || trimmed == "*** End Patch" {
+			continue
+		}
+
+		// File headers: extract filename and emit appropriate diff header
+		if oldPath, newPath, ok := parsePatchFileHeader(trimmed, filePath); ok {
+			result = append(result, oldPath, newPath)
+			continue
+		}
+
+		// Convert @@@ markers to standard @@ markers
+		if strings.HasPrefix(trimmed, "@@@") {
+			result = append(result, strings.Replace(line, "@@@", "@@", 2))
+			continue
+		}
+
+		// Pass through diff content lines (context, additions, removals)
+		if len(result) > 0 {
+			result = append(result, line)
+		}
+	}
+
+	if len(result) == 0 {
+		filename := filepath.Base(filePath)
+		return fmt.Sprintf("--- a/%s\n+++ b/%s\n%s", filename, filename, patchInput)
+	}
+
+	return strings.Join(result, "\n")
+}
+
+// parsePatchFileHeader parses a Copilot patch file header line and returns the
+// diff header lines. Returns ok=true if the line was a file header.
+func parsePatchFileHeader(trimmed, fallbackPath string) (oldPath, newPath string, ok bool) {
+	type headerDef struct {
+		prefix string
+		oldFmt string
+		newFmt string
+	}
+
+	headers := []headerDef{
+		{"*** Update File:", "--- a/%s", "+++ b/%s"},
+		{"*** Add File:", "--- /dev/null", "+++ b/%s"},
+		{"*** Delete File:", "--- a/%s", "+++ /dev/null"},
+	}
+
+	for _, h := range headers {
+		if !strings.HasPrefix(trimmed, h.prefix) {
+			continue
+		}
+		file := strings.TrimSpace(strings.TrimPrefix(trimmed, h.prefix))
+		if file == "" {
+			file = fallbackPath
+		}
+		name := filepath.Base(file)
+
+		old := h.oldFmt
+		if strings.Contains(old, "%s") {
+			old = fmt.Sprintf(old, name)
+		}
+		newP := h.newFmt
+		if strings.Contains(newP, "%s") {
+			newP = fmt.Sprintf(newP, name)
+		}
+		return old, newP, true
+	}
+	return "", "", false
+}
+
+func fromStructuredPatch(filePath string, structuredPatch []interface{}) string {
+	if len(structuredPatch) == 0 {
+		return ""
+	}
+
+	filename := filepath.Base(filePath)
+	lines := []string{
+		fmt.Sprintf("--- a/%s", filename),
+		fmt.Sprintf("+++ b/%s", filename),
+	}
+
+	for _, hunk := range structuredPatch {
+		hunkMap, ok := hunk.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		oldStart := getIntFromMap(hunkMap, "oldStart", 1)
+		oldLines := getIntFromMap(hunkMap, "oldLines", 0)
+		newStart := getIntFromMap(hunkMap, "newStart", 1)
+		newLines := getIntFromMap(hunkMap, "newLines", 0)
+
+		lines = append(lines, fmt.Sprintf("@@ -%d,%d +%d,%d @@", oldStart, oldLines, newStart, newLines))
+
+		if hunkLines, ok := hunkMap["lines"].([]interface{}); ok {
+			for _, line := range hunkLines {
+				if lineStr, ok := line.(string); ok {
+					lines = append(lines, lineStr)
+				}
+			}
+		}
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// FromCursorEdits builds a unified diff from Cursor's afterFileEdit edits array.
+// Each edit has old_string and new_string fields, reusing the existing fromEditTool helper.
+func FromCursorEdits(filePath string, edits []interface{}) string {
+	var allDiffs []string
+	for _, edit := range edits {
+		editMap, ok := edit.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		oldStr, _ := editMap["old_string"].(string)
+		newStr, _ := editMap["new_string"].(string)
+		if d := fromEditTool(filePath, oldStr, newStr); d != "" {
+			allDiffs = append(allDiffs, d)
+		}
+	}
+	return strings.Join(allDiffs, "\n\n")
+}
+
+func fromEditTool(filePath, oldString, newString string) string {
+	if oldString == "" && newString == "" {
+		return ""
+	}
+
+	filename := filepath.Base(filePath)
+	oldLines := splitLines(oldString)
+	newLines := splitLines(newString)
+
+	lines := []string{
+		fmt.Sprintf("--- a/%s", filename),
+		fmt.Sprintf("+++ b/%s", filename),
+		fmt.Sprintf("@@ -1,%d +1,%d @@", len(oldLines), len(newLines)),
+	}
+
+	for _, line := range oldLines {
+		lines = append(lines, "-"+line)
+	}
+	for _, line := range newLines {
+		lines = append(lines, "+"+line)
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func fromWriteTool(filePath, content, originalFile string) string {
+	filename := filepath.Base(filePath)
+	newLines := splitLines(content)
+	oldLines := splitLines(originalFile)
+	lines := []string{fmt.Sprintf("--- a/%s", filename), fmt.Sprintf("+++ b/%s", filename)}
+	if originalFile != "" {
+		lines = append(lines, fmt.Sprintf("@@ -1,%d +1,%d @@", len(oldLines), len(newLines)))
+		lines = appendWholeFileLines(lines, oldLines, originalFile, "-")
+	} else {
+		lines = append(lines, fmt.Sprintf("@@ -0,0 +1,%d @@", len(newLines)))
+	}
+	lines = appendWholeFileLines(lines, newLines, content, "+")
+	return strings.Join(lines, "\n")
+}
+
+// Whole-file observations establish EOF; edit fragments do not. Emit the unified
+// diff marker only here so an unterminated replaced span is not mistaken for EOF.
+func appendWholeFileLines(lines, fileLines []string, content, prefix string) []string {
+	for _, line := range fileLines {
+		lines = append(lines, prefix+line)
+	}
+	if content != "" && !strings.HasSuffix(content, "\n") {
+		lines = append(lines, "\\ No newline at end of file")
+	}
+	return lines
+}
+
+func splitLines(s string) []string {
+	if s == "" {
+		return []string{}
+	}
+	// A trailing newline terminates the last line; it is not another blank line.
+	// Remove just one terminator so actual trailing blank lines remain.
+	return strings.Split(strings.TrimSuffix(s, "\n"), "\n")
+}
+
+// NormalizePath strips surrounding double quotes and whitespace from a path string.
+func NormalizePath(s string) string {
+	s = strings.TrimSpace(s)
+	return strings.Trim(s, `"`)
+}
+
+// GetStringFromMaps returns the first non-empty string value for key across the given maps.
+func GetStringFromMaps(key string, maps ...map[string]interface{}) string {
+	for _, m := range maps {
+		if m == nil {
+			continue
+		}
+		if v, ok := m[key].(string); ok && v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func getIntFromMap(m map[string]interface{}, key string, defaultVal int) int {
+	if v, ok := m[key].(float64); ok {
+		return int(v)
+	}
+	if v, ok := m[key].(int); ok {
+		return v
+	}
+	return defaultVal
+}
+
+// FromContentChange builds a unified diff from an observation that reports a file's whole content
+// before and after an edit, rather than the edit instruction the model wrote.
+//
+// This is the accurate direction. Every other constructor in this file reconstructs a diff from
+// what the model *asked* for -- an old_string/new_string pair, a patch body, a full-file write --
+// which is a statement of intent, and the reconstruction is only as right as the assumption that
+// the tool did exactly what it was told. A runtime that reports the file's before and after has
+// already answered the question, so nothing has to be inferred: an insert at line 40 and a
+// str_replace of one occurrence both come back as the same two strings and produce a diff that
+// matches what is on disk.
+//
+// OpenHands is the runtime that exposes it. Its file_editor, write_file and edit observations all
+// carry old_content/new_content, and its five editor commands (create, str_replace, insert,
+// undo_edit, view) are multiplexed on one tool name, so a name-keyed reconstruction could not tell
+// an insert from a replace in the first place.
+//
+// An unchanged file yields no diff. undo_edit that restores identical content, and a patch entry
+// whose two sides match, both arrive here and are not edits; returning a header with an empty hunk
+// would record that a file changed when it did not.
+func FromContentChange(filePath, oldContent, newContent string) string {
+	if filePath == "" || oldContent == newContent {
+		return ""
+	}
+	return fromWriteTool(filePath, newContent, oldContent)
+}
+
+// FromEditorCommandWrite builds the diff for one write through a multiplexed editor tool: the
+// Anthropic text-editor shape, where `command` selects between create, str_replace and insert over
+// a `path`.
+//
+// Two runtimes ship that tool and they spell its arguments differently, which is why this reads
+// several spellings of each field. Kiro is the one supported runtime that publishes its tool names
+// and not its tool arguments, so
+// this reads every plausible spelling of each field rather than one. That sounds like guessing and
+// is the opposite: an unrecognized shape returns "", which records the file event with its path
+// and no diff, while a shape that resolves produces a diff from values that can only have been the
+// content. There is no reading here that could produce a *wrong* diff -- only one or none.
+//
+// The two spellings come from two real places. `file_text`, `old_str` and `new_str` are Amazon Q
+// Developer CLI's names for the same tool, which Kiro CLI descends from and still documents a
+// migration path out of -- and which DeepSeek Harness's `str_replace_editor` publishes verbatim in
+// its generated schema; `content`, `old_string` and `new_string` are the ecosystem convention the
+// shared resolver already knows. Reading both costs one lookup.
+//
+// operation is passed in rather than derived, because deciding whether a write is a create or a
+// replacement is the taxonomy's job and it already answered. An empty operation means the tool
+// name is the whole answer.
+func FromEditorCommandWrite(operation, toolName string, toolInput, toolResponse map[string]interface{}) string {
+	filePath := NormalizePath(kiroWritePath(toolInput, toolResponse))
+	if filePath == "" {
+		return ""
+	}
+	if operation == "" {
+		operation = kiroOperationForToolName(toolName)
+	}
+	switch operation {
+	case "create":
+		content := GetStringFromMaps("file_text", toolInput, toolResponse)
+		if content == "" {
+			content = GetStringFromMaps("content", toolInput, toolResponse)
+		}
+		if content == "" {
+			content = GetStringFromMaps("text", toolInput, toolResponse)
+		}
+		if content == "" {
+			return ""
+		}
+		// A create that reports the previous contents is an overwrite, and rendering it as a new
+		// file would hide what was replaced. Kiro is not documented to send this; it is read
+		// because fromWriteTool already distinguishes the two cases and an absent value degrades
+		// to the new-file rendering that would have been produced anyway.
+		original := GetStringFromMaps("original_file", toolInput, toolResponse)
+		if original == "" {
+			original = GetStringFromMaps("originalFile", toolInput, toolResponse)
+		}
+		if original == "" {
+			original = GetStringFromMaps("old_content", toolInput, toolResponse)
+		}
+		return fromWriteTool(filePath, content, original)
+	case "str_replace":
+		oldString := resolveEditString("old_string", "oldString", "old_str", toolInput, toolResponse)
+		newString := resolveEditString("new_string", "newString", "new_str", toolInput, toolResponse)
+		return fromEditTool(filePath, oldString, newString)
+	case "insert", "append":
+		// An insert or an append adds lines and removes none, so the diff has an empty old side.
+		// Rendering it through the same edit builder keeps the shape identical to a replacement's,
+		// which is what a reader and a rule matching on file.diff both expect.
+		added := resolveEditString("new_string", "newString", "new_str", toolInput, toolResponse)
+		if added == "" {
+			added = GetStringFromMaps("content", toolInput, toolResponse)
+		}
+		if added == "" {
+			added = GetStringFromMaps("file_text", toolInput, toolResponse)
+		}
+		return fromEditTool(filePath, "", added)
+	default:
+		// Includes "delete" and "undo_edit". Neither carries content on both sides, so there is
+		// nothing to render; the caller records the file event without a diff.
+		return ""
+	}
+}
+
+// kiroOperationForToolName maps Kiro's split write tools onto the operation each one performs.
+//
+// Kiro's unified tool catalog lists the operations as separate tools while its CLI reference lists
+// one multiplexed tool, so a payload may name the operation in the tool or in an argument. This
+// covers the first case; the caller covers the second.
+func kiroOperationForToolName(toolName string) string {
+	switch strings.ToLower(strings.TrimSpace(toolName)) {
+	case "write", "fs_write", "fswrite":
+		return "create"
+	case "str_replace":
+		return "str_replace"
+	case "fs_append":
+		return "append"
+	default:
+		return ""
+	}
+}
+
+// kiroWritePath resolves the file a Kiro write call named, reading the arguments before the result.
+func kiroWritePath(toolInput, toolResponse map[string]interface{}) string {
+	for _, key := range []string{"path", "file_path", "filePath", "Path", "absolute_path"} {
+		if value := GetStringFromMaps(key, toolInput, toolResponse); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+// FromEditFragments builds the diff for a find-and-replace edit stated as the text on either side
+// of it, rather than as the file's whole contents.
+//
+// The distinction from FromContentChange is the whole point of having both, and getting it wrong
+// produces a diff that is wrong rather than absent. FromContentChange renders its two arguments as
+// the entire file before and after, which is right for a runtime that reports a write by echoing
+// the file; this renders them as one replaced span, which is right for a runtime that reports an
+// edit by naming the text it matched and the text it substituted.
+//
+// goose's `edit` is the second shape: it takes `before` and `after` and requires `before` to match
+// the file exactly and uniquely, so the pair describes a fragment and never the file. Claude Code's
+// old_string/new_string is the same shape, which is why this is the builder that case already uses
+// -- exported here so goose reaches it by the same route rather than by a second implementation.
+func FromEditFragments(filePath, before, after string) string {
+	filePath = NormalizePath(filePath)
+	if filePath == "" {
+		return ""
+	}
+	// An edit that substitutes a fragment for an identical one changed nothing. Returning a hunk
+	// for it would record that a file changed when it did not -- the guard FromContentChange makes
+	// for the same reason.
+	if before == after {
+		return ""
+	}
+	return fromEditTool(filePath, before, after)
+}

@@ -1,0 +1,100 @@
+---
+title: "Hermes Agent"
+description: "Beacon support details for Hermes Agent endpoint telemetry"
+---
+
+## Runtime overview
+
+Beacon supports Hermes Agent through shell hook payloads sent to `beacon-hooks`, with local session database sync for historical backfill.
+
+## Prerequisites
+
+Before enabling Hermes Agent hooks, make sure:
+
+- Hermes Agent is installed for the user or its `config.yaml` exists in the Hermes home directory (see [Hermes home and profiles](#hermes-home-and-profiles)).
+- `beacon endpoint install` has run so shared endpoint config and runtime log paths exist.
+- Beacon hooks are installed with `beacon endpoint hooks install --harness hermes`.
+- Hermes hook consent is handled for the session, especially in non-interactive gateway, cron, or CI runs.
+- Hermes is restarted after hook install or removal so new sessions load the updated config.
+
+## Collection path
+
+Beacon merges shell-hook entries into the `config.yaml` of the Hermes home directory, `~/.hermes/config.yaml` by default. Hermes invokes Beacon's hook adapter for supported lifecycle, prompt, tool, approval, and subagent events, and the adapter writes normalized endpoint events to the configured runtime JSONL log.
+
+Beacon can also read Hermes Agent's committed SQLite session store:
+
+```bash title="Sync Hermes Agent sessions"
+beacon endpoint hermes status
+beacon endpoint hermes sync
+```
+
+The sync path reads the home directory's `state.db` (`~/.hermes/state.db` by default) locally and offline. It writes mapped events with `harness.collection_method=poll`, so it can recover historical sessions or sessions that ran before hooks were installed, but it cannot hold, approve, deny, or delay tool calls.
+
+## Discovery and status
+
+Beacon detects Hermes through the `hermes` executable or the Hermes home directory, then checks that directory's `config.yaml` for Beacon-managed commands, identified by the endpoint settings flags (`--log`, `--config`, `--cli`) or a legacy `BEACON_ENDPOINT_MODE=1` prefix, together with `--platform hermes`.
+
+Use `beacon endpoint hooks status --harness hermes` to inspect Hermes Agent hook status. Use `beacon endpoint hermes status` to inspect committed local sessions and how much Beacon has synced.
+
+## Install or configuration support
+
+`beacon endpoint install` prepares shared endpoint config and runtime log paths. Install Hermes Agent hooks separately:
+
+```bash title="Install runtime hooks"
+beacon endpoint hooks install --harness hermes
+```
+
+Hermes Agent hooks support user-level config only. Project-level installs are rejected because Hermes reads shell hooks from the user's Hermes config.
+
+## Hermes home and profiles
+
+Hook install, uninstall and status, discovery, inventory, and session status, sync and handoff all resolve one Hermes home directory, the one a plain `hermes` command uses:
+
+1. The base directory is `HERMES_HOME` when it is set in Beacon's environment, trimmed, with a leading `~/` and `$VAR`/`${VAR}` references expanded, and a relative value taken from the current directory. Otherwise it is Hermes's native root: `~/.hermes` on macOS/Linux or `%LOCALAPPDATA%/hermes` on Windows, with `HERMES_DATA_DIR_SUFFIX` appended when set.
+2. A `HERMES_HOME` that already names a profile, `<root>/profiles/<name>`, is used as it is.
+3. Otherwise a sticky profile selected with `hermes profile use <name>`, which Hermes records in `<root>/active_profile`, moves the home to `<root>/profiles/<name>`. The root is the native root when `HERMES_HOME` is unset or inside it, and `HERMES_HOME` itself when it points elsewhere.
+
+When `active_profile` names a profile that is not a valid name or has no directory, Hermes refuses to start. Hook install, uninstall and status then return an error naming the profile, discovery reports Hermes as `missing` with the reason, and inventory leaves out the Hermes config. Session status, sync and handoff keep reading the base directory's `state.db`.
+
+A profile chosen for a single command with `hermes -p <name>` leaves nothing on disk, so Beacon cannot see it. Its hooks and sessions belong to `<root>/profiles/<name>`: run Beacon with `HERMES_HOME` set to that directory, or pass `--db <path>` to status/sync or `--store-dir hermes=<path>` to handoff.
+
+The scheduled inventory job runs without your shell's environment, so a per-user install or repair records `HERMES_HOME` (as an absolute path) and `HERMES_DATA_DIR_SUFFIX` in the job when they are set. It does not record the active profile, so the job follows a later `hermes profile use` on its own. If you change either variable later, run `beacon endpoint repair` from a shell that has the new value. System-mode installs record neither.
+
+## Telemetry coverage
+
+| Area | Support |
+|------|---------|
+| Prompt telemetry | Supported through Hermes `pre_llm_call` payloads, including `extra.user_message` where provided |
+| Command, tool, and file telemetry | Supported for observed pre-tool calls, post-tool results, command execution, file-like tools, and raw Hermes payload context |
+| Approval telemetry | Supported for Hermes approval request and response hooks, including allow, deny, timeout, and unknown decisions |
+| Session and subagent telemetry | Supported for session lifecycle events and subagent stop metadata where Hermes exposes role, status, summary, and duration |
+| Historical session sync | Supported through `beacon endpoint hermes sync`; marked as poll collection |
+| Local JSONL and dashboard | Supported |
+| MDM deployment | Supported for the endpoint agent. Hermes hooks are installed separately in the logged-in user's context |
+
+## Session database sync
+
+`beacon endpoint hermes sync` reads committed rows from Hermes Agent's state database after Hermes has written them. Session status, sync, and handoff use the `state.db` in the [Hermes home directory](#hermes-home-and-profiles), following `HERMES_HOME` and a sticky profile. Pass `--db <path>` to status/sync or `--store-dir hermes=<path>` to handoff to select a database explicitly.
+
+The cursor is stored in Beacon endpoint state and advances by session message id. Use `--print` to preview mapped events without writing the runtime log or advancing the cursor.
+
+For scheduled collection, run `beacon endpoint hermes sync --watch`, or run one-shot `sync` from your scheduler. Live hooks remain the real-time path.
+
+## Deployment notes
+
+Hermes prompts for first-use consent for each `(event, command)` hook pair. For non-interactive gateway, cron, or CI runs, set `HERMES_ACCEPT_HOOKS=1`, start Hermes with `--accept-hooks`, or configure `hooks_auto_accept: true` in the Hermes home directory's `config.yaml`.
+
+Beacon preserves existing Hermes settings and non-Beacon hooks when installing or uninstalling Hermes telemetry. It replaces only Beacon-managed Hermes hook commands.
+
+Restart Hermes after installing or removing hooks so new sessions pick up the updated configuration.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Supported agent harnesses" icon="list-check" href="/runtimes">
+    Return to the runtime support overview.
+  </Card>
+  <Card title="Hooks" icon="plug" href="/cli/hooks">
+    Install, inspect, and uninstall runtime hook integrations.
+  </Card>
+</Columns>

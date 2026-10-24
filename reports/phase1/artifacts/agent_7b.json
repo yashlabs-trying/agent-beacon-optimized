@@ -1,0 +1,164 @@
+[
+  {
+    "task": "feature",
+    "arm": "none",
+    "model": "qwen2.5-coder:7b",
+    "success": false,
+    "test_output": "======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='0')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/none/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='false')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/none/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='NO')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/none/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='off')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/none/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n----------------------------------------------------------------------\nRan 3 tests in 0.001s\n\nFAILED (failures=4)\n",
+    "retrieved_ids": [],
+    "retrieval_ms": 0.0,
+    "model_calls": 1,
+    "tool_calls": [],
+    "prompt_tokens_processed": 301,
+    "generated_tokens": 18,
+    "agent_seconds": 2.439,
+    "source_sha256": "3e7c90e67b7eac816686c069d403e2174a59d3fa6814bd64bb959a994a46daa6",
+    "final_text": "{\"name\": \"read_file\", \"arguments\": {\"name\": \"feature.py\"}}"
+  },
+  {
+    "task": "feature",
+    "arm": "original",
+    "model": "qwen2.5-coder:7b",
+    "success": false,
+    "test_output": "======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='0')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/original/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='false')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/original/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='NO')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/original/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='off')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/original/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n----------------------------------------------------------------------\nRan 3 tests in 0.001s\n\nFAILED (failures=4)\n",
+    "retrieved_ids": [
+      "feature-distractor",
+      "feature-current"
+    ],
+    "retrieval_ms": 60.992,
+    "model_calls": 1,
+    "tool_calls": [],
+    "prompt_tokens_processed": 359,
+    "generated_tokens": 18,
+    "agent_seconds": 0.928,
+    "source_sha256": "3e7c90e67b7eac816686c069d403e2174a59d3fa6814bd64bb959a994a46daa6",
+    "final_text": "{\"name\": \"read_file\", \"arguments\": {\"name\": \"feature.py\"}}"
+  },
+  {
+    "task": "feature",
+    "arm": "v6",
+    "model": "qwen2.5-coder:7b",
+    "success": false,
+    "test_output": "======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='0')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/v6/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='false')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/v6/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='NO')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/v6/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n======================================================================\nFAIL: test_false_values (test_solution.FeatureTests) (value='off')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/feature/v6/test_solution.py\", line 15, in test_false_values\n    self.assertFalse(enabled('APP_FEATURE'))\nAssertionError: True is not false\n\n----------------------------------------------------------------------\nRan 3 tests in 0.001s\n\nFAILED (failures=4)\n",
+    "retrieved_ids": [
+      "feature-distractor",
+      "feature-current"
+    ],
+    "retrieval_ms": 903.857,
+    "model_calls": 1,
+    "tool_calls": [],
+    "prompt_tokens_processed": 359,
+    "generated_tokens": 18,
+    "agent_seconds": 0.69,
+    "source_sha256": "3e7c90e67b7eac816686c069d403e2174a59d3fa6814bd64bb959a994a46daa6",
+    "final_text": "{\"name\": \"read_file\", \"arguments\": {\"name\": \"feature.py\"}}"
+  },
+  {
+    "task": "retry",
+    "arm": "none",
+    "model": "qwen2.5-coder:7b",
+    "success": false,
+    "test_output": "======================================================================\nFAIL: test_exponential_and_cap (test_solution.RetryTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/retry/none/test_solution.py\", line 9, in test_exponential_and_cap\n    self.assertEqual(delay(2), 1.0)\nAssertionError: 2.0 != 1.0\n\n======================================================================\nFAIL: test_first_attempt (test_solution.RetryTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/retry/none/test_solution.py\", line 6, in test_first_attempt\n    self.assertEqual(delay(1), 0.5)\nAssertionError: 1.0 != 0.5\n\n======================================================================\nFAIL: test_invalid_attempt (test_solution.RetryTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/retry/none/test_solution.py\", line 15, in test_invalid_attempt\n    delay(0)\nAssertionError: ValueError not raised\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nFAILED (failures=3)\n",
+    "retrieved_ids": [],
+    "retrieval_ms": 0.0,
+    "model_calls": 1,
+    "tool_calls": [],
+    "prompt_tokens_processed": 300,
+    "generated_tokens": 18,
+    "agent_seconds": 0.831,
+    "source_sha256": "f90ddac24d95c29fd3c100ed580addd2f753e0c7f3ccf84380de9b692bc8f730",
+    "final_text": "{\"name\": \"read_file\", \"arguments\": {\"name\": \"retry.py\"}}"
+  },
+  {
+    "task": "retry",
+    "arm": "original",
+    "model": "qwen2.5-coder:7b",
+    "success": false,
+    "test_output": "======================================================================\nFAIL: test_exponential_and_cap (test_solution.RetryTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/retry/original/test_solution.py\", line 9, in test_exponential_and_cap\n    self.assertEqual(delay(2), 1.0)\nAssertionError: 2.0 != 1.0\n\n======================================================================\nFAIL: test_first_attempt (test_solution.RetryTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/retry/original/test_solution.py\", line 6, in test_first_attempt\n    self.assertEqual(delay(1), 0.5)\nAssertionError: 1.0 != 0.5\n\n======================================================================\nFAIL: test_invalid_attempt (test_solution.RetryTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/retry/original/test_solution.py\", line 15, in test_invalid_attempt\n    delay(0)\nAssertionError: ValueError not raised\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nFAILED (failures=3)\n",
+    "retrieved_ids": [
+      "retry-distractor",
+      "retry-current"
+    ],
+    "retrieval_ms": 12.962,
+    "model_calls": 1,
+    "tool_calls": [],
+    "prompt_tokens_processed": 345,
+    "generated_tokens": 18,
+    "agent_seconds": 0.819,
+    "source_sha256": "f90ddac24d95c29fd3c100ed580addd2f753e0c7f3ccf84380de9b692bc8f730",
+    "final_text": "{\"name\": \"read_file\", \"arguments\": {\"name\": \"retry.py\"}}"
+  },
+  {
+    "task": "retry",
+    "arm": "v6",
+    "model": "qwen2.5-coder:7b",
+    "success": false,
+    "test_output": "======================================================================\nFAIL: test_exponential_and_cap (test_solution.RetryTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/retry/v6/test_solution.py\", line 9, in test_exponential_and_cap\n    self.assertEqual(delay(2), 1.0)\nAssertionError: 2.0 != 1.0\n\n======================================================================\nFAIL: test_first_attempt (test_solution.RetryTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/retry/v6/test_solution.py\", line 6, in test_first_attempt\n    self.assertEqual(delay(1), 0.5)\nAssertionError: 1.0 != 0.5\n\n======================================================================\nFAIL: test_invalid_attempt (test_solution.RetryTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/retry/v6/test_solution.py\", line 15, in test_invalid_attempt\n    delay(0)\nAssertionError: ValueError not raised\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nFAILED (failures=3)\n",
+    "retrieved_ids": [
+      "retry-distractor",
+      "retry-current"
+    ],
+    "retrieval_ms": 11.946,
+    "model_calls": 1,
+    "tool_calls": [],
+    "prompt_tokens_processed": 345,
+    "generated_tokens": 18,
+    "agent_seconds": 0.749,
+    "source_sha256": "f90ddac24d95c29fd3c100ed580addd2f753e0c7f3ccf84380de9b692bc8f730",
+    "final_text": "{\"name\": \"read_file\", \"arguments\": {\"name\": \"retry.py\"}}"
+  },
+  {
+    "task": "slug",
+    "arm": "none",
+    "model": "qwen2.5-coder:7b",
+    "success": false,
+    "test_output": "======================================================================\nFAIL: test_repeated_separators (test_solution.SlugTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/slug/none/test_solution.py\", line 10, in test_repeated_separators\n    self.assertEqual(slug('a--b__c'), 'a_b_c')\nAssertionError: 'a-b__c' != 'a_b_c'\n- a-b__c\n?  ^ -\n+ a_b_c\n?  ^\n\n\n======================================================================\nFAIL: test_trim (test_solution.SlugTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/slug/none/test_solution.py\", line 13, in test_trim\n    self.assertEqual(slug('___Hello___'), 'hello')\nAssertionError: '___hello___' != 'hello'\n- ___hello___\n+ hello\n\n\n======================================================================\nFAIL: test_words (test_solution.SlugTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/slug/none/test_solution.py\", line 6, in test_words\n    self.assertEqual(slug('HTTP Server'), 'http_server')\nAssertionError: 'http-server' != 'http_server'\n- http-server\n?     ^\n+ http_server\n?     ^\n\n\n----------------------------------------------------------------------\nRan 3 tests in 0.001s\n\nFAILED (failures=3)\n",
+    "retrieved_ids": [],
+    "retrieval_ms": 0.0,
+    "model_calls": 1,
+    "tool_calls": [],
+    "prompt_tokens_processed": 299,
+    "generated_tokens": 18,
+    "agent_seconds": 0.821,
+    "source_sha256": "7453a32c58bbed970765fde0a425886f5e89d82b5d33820fab0d2fe86590fbb4",
+    "final_text": "{\"name\": \"read_file\", \"arguments\": {\"name\": \"slug.py\"}}"
+  },
+  {
+    "task": "slug",
+    "arm": "original",
+    "model": "qwen2.5-coder:7b",
+    "success": false,
+    "test_output": "======================================================================\nFAIL: test_repeated_separators (test_solution.SlugTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/slug/original/test_solution.py\", line 10, in test_repeated_separators\n    self.assertEqual(slug('a--b__c'), 'a_b_c')\nAssertionError: 'a-b__c' != 'a_b_c'\n- a-b__c\n?  ^ -\n+ a_b_c\n?  ^\n\n\n======================================================================\nFAIL: test_trim (test_solution.SlugTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/slug/original/test_solution.py\", line 13, in test_trim\n    self.assertEqual(slug('___Hello___'), 'hello')\nAssertionError: '___hello___' != 'hello'\n- ___hello___\n+ hello\n\n\n======================================================================\nFAIL: test_words (test_solution.SlugTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/slug/original/test_solution.py\", line 6, in test_words\n    self.assertEqual(slug('HTTP Server'), 'http_server')\nAssertionError: 'http-server' != 'http_server'\n- http-server\n?     ^\n+ http_server\n?     ^\n\n\n----------------------------------------------------------------------\nRan 3 tests in 0.001s\n\nFAILED (failures=3)\n",
+    "retrieved_ids": [
+      "slug-distractor",
+      "slug-current"
+    ],
+    "retrieval_ms": 11.154,
+    "model_calls": 1,
+    "tool_calls": [],
+    "prompt_tokens_processed": 353,
+    "generated_tokens": 18,
+    "agent_seconds": 0.825,
+    "source_sha256": "7453a32c58bbed970765fde0a425886f5e89d82b5d33820fab0d2fe86590fbb4",
+    "final_text": "{\"name\": \"read_file\", \"arguments\": {\"name\": \"slug.py\"}}"
+  },
+  {
+    "task": "slug",
+    "arm": "v6",
+    "model": "qwen2.5-coder:7b",
+    "success": false,
+    "test_output": "======================================================================\nFAIL: test_repeated_separators (test_solution.SlugTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/slug/v6/test_solution.py\", line 10, in test_repeated_separators\n    self.assertEqual(slug('a--b__c'), 'a_b_c')\nAssertionError: 'a-b__c' != 'a_b_c'\n- a-b__c\n?  ^ -\n+ a_b_c\n?  ^\n\n\n======================================================================\nFAIL: test_trim (test_solution.SlugTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/slug/v6/test_solution.py\", line 13, in test_trim\n    self.assertEqual(slug('___Hello___'), 'hello')\nAssertionError: '___hello___' != 'hello'\n- ___hello___\n+ hello\n\n\n======================================================================\nFAIL: test_words (test_solution.SlugTests)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Users/<user>/beacon-phase1-agent-runs-7b-20261022/slug/v6/test_solution.py\", line 6, in test_words\n    self.assertEqual(slug('HTTP Server'), 'http_server')\nAssertionError: 'http-server' != 'http_server'\n- http-server\n?     ^\n+ http_server\n?     ^\n\n\n----------------------------------------------------------------------\nRan 3 tests in 0.001s\n\nFAILED (failures=3)\n",
+    "retrieved_ids": [
+      "slug-distractor",
+      "slug-current"
+    ],
+    "retrieval_ms": 12.018,
+    "model_calls": 1,
+    "tool_calls": [],
+    "prompt_tokens_processed": 353,
+    "generated_tokens": 18,
+    "agent_seconds": 0.677,
+    "source_sha256": "7453a32c58bbed970765fde0a425886f5e89d82b5d33820fab0d2fe86590fbb4",
+    "final_text": "{\"name\": \"read_file\", \"arguments\": {\"name\": \"slug.py\"}}"
+  }
+]

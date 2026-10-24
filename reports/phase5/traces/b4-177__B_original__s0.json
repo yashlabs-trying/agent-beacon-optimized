@@ -1,0 +1,27 @@
+{
+  "task": "b4-177",
+  "suite": "B",
+  "category": "B4_decision",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "b4-177-good"
+  ],
+  "required_evidence": [
+    "b4-177-good"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The recommended approach for the new scheduler change is to use prepared statements.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 16.31,
+  "agent_seconds": 1.433,
+  "prompt_tokens": 119,
+  "gen_tokens": 15
+}

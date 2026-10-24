@@ -1,0 +1,8 @@
+rows=224 tasks=56
+first original: n=56 mean=14.662ms p50=13.469ms p95=19.318ms p99=56.294ms
+first v7: n=56 mean=43.708ms p50=40.806ms p95=51.848ms p99=135.340ms
+first paired V7-original: median=27.022ms mean=29.046ms slower=55/56
+repeat original: n=56 mean=13.806ms p50=13.334ms p95=17.512ms p99=24.461ms
+repeat v7: n=56 mean=14.849ms p50=14.425ms p95=24.125ms p99=26.062ms
+repeat paired V7-original: median=0.720ms mean=1.043ms slower=41/56
+V7 routes: {('first', 'lexical'): 40, ('repeat', 'lexical'): 40, ('first', 'semantic'): 16, ('repeat', 'semantic'): 16}

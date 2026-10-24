@@ -1,0 +1,358 @@
+# Agent Beacon browser extension
+
+Part of the [agent-beacon](../README.md) monorepo. MIT, under the repository root `LICENSE`.
+
+Chrome (MV3) extension, with a Firefox build target, that relays LLM chat telemetry from the browser — Claude.ai and
+ChatGPT — into the **same local Agent Beacon pipeline** as the endpoint agent, normalized into
+the same schema. Browser chat activity (prompts, responses, tool calls) ends up in
+`runtime.jsonl` next to agent activity, and forwards onward via the same Vector shippers.
+
+It ships with a **fully automated, self-verifying build/test loop**: recorded chat streams are
+replayed through the real, loaded extension in headless Chromium and asserted against — no login,
+no API cost, deterministic.
+
+## Architecture
+
+The extension never writes files (it can't — extensions are sandboxed). Instead its service worker
+POSTs **OTLP GenAI logs** to the Beacon collector already listening on `http://127.0.0.1:4318/v1/logs`,
+which normalizes, redacts, rotates, and forwards them exactly like every other source.
+
+```mermaid
+flowchart LR
+    subgraph PAGE["Chat page · claude.ai / chatgpt.com"]
+        direction TB
+        MAIN["interceptor.js<br/>MAIN world · tee fetch SSE"]
+        ISO["content.js<br/>ISOLATED world · relay"]
+        MAIN -->|private MessagePort| ISO
+    end
+
+    subgraph SW["Extension service worker"]
+        direction TB
+        ASM["assembler.ts<br/>accumulate per tab/request"]
+        ADP["adapters<br/>claude.ts · chatgpt.ts<br/>SSE → ChatTurn"]
+        NRM["normalize.ts · pure<br/>ChatTurn → OTLP"]
+        DLV["delivery.ts<br/>queue + retry"]
+        ASM --> ADP --> NRM --> DLV
+    end
+
+    subgraph BEACON["Local Beacon agent"]
+        direction TB
+        COL["beacon-otelcol<br/>OTLP · 127.0.0.1:4318"]
+        JSONL["runtime.jsonl"]
+        COL --> JSONL
+    end
+
+    subgraph DOWN["Downstream"]
+        direction TB
+        VEC["Vector"]
+        OBJ["S3 / GCS"]
+        DASH["ClickHouse → dashboard"]
+        VEC --> OBJ --> DASH
+    end
+
+    ISO -->|BEACON_RAW| ASM
+    DLV -->|OTLP POST| COL
+    JSONL --> VEC
+```
+
+**Two capture surfaces per page:** the **MAIN-world** `interceptor.js` runs in the page's own JS
+context so it can tee `window.fetch`'s streamed SSE via `response.clone()`; the **ISOLATED-world**
+`content.js` holds the privileged `runtime` messaging channel to the service worker. Everything from
+`ChatTurn` onward is **site-agnostic** — only the per-site adapters know each site's wire format.
+Each captured turn emits one `prompt.submitted` + one `agent.response.completed` OTLP log (plus a
+`tool.invoked` per tool call).
+
+## Setup
+
+Requires Node 22 or newer (`npm run record:fixtures` uses `--experimental-strip-types`,
+which landed in Node 22.6). The e2e harness also needs `openssl` on `PATH` — it
+generates a throwaway self-signed cert for the local replay server.
+
+```bash
+cd browser-extension
+npm ci
+npx playwright install chromium   # one-time, for the e2e harness
+```
+
+## Commands
+
+```bash
+npm run build         # bundle src/ → dist/ (esbuild, Chrome target)
+npm run build:watch   # rebuild on change
+npm run build:firefox # bundle src/ → dist-firefox/ with the Gecko manifest
+npm run build:safari  # bundle src/ → dist-safari/ (input to packaging/macos/safari; not loadable alone)
+npm run lint:firefox  # build:firefox, then Mozilla's addons-linter (warnings fail)
+npm run check         # tsc --noEmit
+npm run test:unit     # pure adapter + normalization tests (vitest, no browser)
+npm test              # builds dist/, runs the Playwright replay e2e (THE autonomous loop)
+BROWSER_CHANNEL=msedge npm test                # same e2e in Microsoft Edge (chromium is the default)
+BROWSER_EXECUTABLE=/path/to/brave npm test     # same e2e in any other Chromium-family binary
+npm run test:headed   # watch it drive a browser
+npm run record:fixtures -- --site claude|chatgpt --name <n>   # capture a fixture (headed, authed)
+npm run report        # open the last HTML report
+```
+
+Watch mode also refreshes the manifest, popup/options HTML and icons. Reload the unpacked
+extension to apply manifest changes; reload an extension page to see its updated markup.
+
+## Loading the extension in your own browser
+
+One build serves every Chromium browser: Chrome, Edge, Brave, Opera, Vivaldi and Arc. The
+release archive is named `-chrome.zip` after the Chromium extension family, not after Google
+Chrome alone. CI runs the replay e2e in Chromium and Edge; the other forks are covered by the
+manual checklist in [docs/runtimes/browser-extension-chromium.mdx](../docs/runtimes/browser-extension-chromium.mdx).
+Every emitted event names the browser that produced it (`user_agent.name`, `user_agent.version`,
+`browser.brands`; see `src/shared/browser-identity.ts`).
+
+**Beta, and not on the Chrome Web Store.** It installs unpacked, so Chrome will not
+auto-update it: to move to a new version, rebuild or re-download and reload.
+
+No prebuilt archive is published yet, so build it. (Once an `ext-v*` release exists,
+`agent-beacon-browser-extension-<version>-chrome.zip` from the
+[releases page](https://github.com/Asymptote-Labs/agent-beacon/releases) will be
+loadable in place of `dist/`.)
+
+```bash
+npm ci
+npm run build      # produces dist/
+```
+
+Then:
+
+1. Make sure the Beacon endpoint agent is running. It provides the `127.0.0.1:4318` collector.
+2. Open `chrome://extensions`.
+3. Turn on **Developer mode**, top right.
+4. Choose **Load unpacked**, and select `dist/` (or the unzipped release folder).
+5. Send a message on claude.ai or chatgpt.com, then check for `claude_web` / `chatgpt_web`
+   events in `runtime.jsonl` or `beacon endpoint dashboard`.
+
+Read [Retained content](#retained-content) before enabling it on a browser profile you
+also use personally.
+
+## Firefox
+
+**Beta, and less tested than Chrome.** The Firefox build is produced from the same sources
+and passes Mozilla's linter in CI, but it has no automated end-to-end test (see
+[Testing model](#testing-model-layered-by-fidelitycost)). Requires Firefox 140 or newer (the
+current ESR).
+
+```bash
+npm ci
+npm run build:firefox   # produces dist-firefox/
+```
+
+For development, load it as a temporary add-on (removed when Firefox restarts):
+
+1. Make sure the Beacon endpoint agent is running.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Choose **Load Temporary Add-on…** and select `dist-firefox/manifest.json`.
+4. **Grant site access.** Firefox lets the user withhold an MV3 extension's host permissions,
+   and a withheld host means nothing is captured from it. Nothing else warns you: the page
+   works normally and no error appears. Click the extension's toolbar icon: if it shows
+   **Site access not granted**, choose **Grant site access** and accept Firefox's prompt. The
+   same banner is on the options page. Access can also be changed per site under
+   `about:addons` → Agent Beacon → **Permissions**. All five hosts are needed: the three chat
+   origins for capture, and `127.0.0.1` / `localhost` for delivery to the collector.
+5. Send a message on claude.ai or chatgpt.com and check `runtime.jsonl`, as for Chrome.
+
+A permanent install needs a Mozilla-signed `.xpi`. The release workflow signs one through AMO
+(unlisted, i.e. self-distributed) and attaches `agent-beacon-browser-extension-<version>-firefox.xpi`
+to the `ext-v*` release **when the `AMO_JWT_ISSUER` / `AMO_JWT_SECRET` secrets are configured**;
+until then only the Chrome zip is published. For fleets, force-install the signed `.xpi` with the
+`ExtensionSettings` enterprise policy. See the
+[deployment docs](../docs/runtimes/browser-extension.mdx#firefox-enterprise-policy).
+
+How the Firefox build differs, all generated from `src/manifest.json` by
+[`tools/targets.mjs`](tools/targets.mjs):
+
+- `background.scripts` (an event page) instead of `background.service_worker`, since Firefox
+  does not run extension service workers.
+- `options_ui` (opening in a tab) instead of Chrome's `options_page`.
+- `browser_specific_settings.gecko`: the pinned add-on ID
+  `browser-collector@agent-beacon.asymptotelabs.ai` (it keys `storage.local` and AMO signing, so it
+  must never change), `strict_min_version` 140, and a `data_collection_permissions` declaration of
+  `personalCommunications`, because captured chat text leaves the browser for the collector.
+- The MAIN-world interceptor keeps `content_scripts[].world: "MAIN"`, which Firefox honours from
+  128 on, so no `scripting.executeScript` fallback is needed at the supported minimum.
+- All extension calls go through `src/shared/browser.ts`, which picks the promise-based
+  `browser.*` namespace where it exists (Firefox, Safari) and `chrome.*` otherwise. A unit test
+  fails if any source file calls `chrome.*` directly.
+
+Not yet verified on a real Firefox (no Firefox runs in CI): the event page's POST to
+`http://127.0.0.1:4318/v1/logs`, and the retry cadence. Chrome clamps `chrome.alarms` to about
+30 seconds; Firefox's clamp has not been measured. The retry code and the queue's limits are the
+same on both engines.
+
+## Retained content
+
+**The default is `retention: 'full'`.** With the extension enabled, the *complete text* of your
+prompts and of the model's responses on claude.ai and chatgpt.com is sent to the local Beacon
+collector and written to `runtime.jsonl` — and forwarded onward by whatever shippers you have
+configured. This is deliberate: browser chat telemetry is worthless for investigation without
+content. It is also the most sensitive default in the product.
+
+Turn it down in the extension's popup (toolbar icon) before enabling it on a machine where you use these
+sites personally:
+
+| Mode | What is retained |
+|---|---|
+| `full` (default) | Complete prompt text, full assistant response, tool call arguments and results |
+| `redacted` | The same text with emails and API-key-shaped tokens scrubbed client-side |
+| `metadata` | No chat text at all. Actions, models, token counts, and tool names only |
+
+Retention is enforced in the browser, before anything is sent — under `metadata` the text never
+leaves the page. Beacon's endpoint-side redaction, sanitization, truncation, and event-size limits
+apply to whatever the extension does send, but they are a safety net, not a content filter.
+
+Note that retained prompt text also appears verbatim under `raw.attributes` in the written event,
+which is consistent with how every other OTLP source is recorded.
+
+The extension reads only the chat streams on `claude.ai`, `chatgpt.com`, and `chat.openai.com`.
+It has no access to other tabs, browsing history, or page content elsewhere, and it never writes
+files.
+
+## Recording fixtures
+
+`npm run record:fixtures` drives a **real, logged-in Chrome** against your actual Claude.ai or
+ChatGPT account to capture new `.sse` fixtures when a site changes its stream format. Two
+consequences worth understanding before running it:
+
+- It persists a browser profile under `.auth-profiles/<site>/`, which contains **real session
+  cookies**.
+- Its raw output (`*.page.html`, `*.meta.json`, `real-*.sse`, `diag-*.sse`) can contain personal
+  chat and account data.
+
+None of that is committable: the four `fixtures/**` patterns plus `.auth-profiles/` in
+[`.gitignore`](.gitignore) are what enforce it, and they are marked PRIVACY-CRITICAL there for the
+same reason. **Only hand-sanitized `*.sse` files are ever committed** — check the diff before
+staging one. Prefer a throwaway account where practical.
+
+## Layout
+
+| Path | Purpose |
+|---|---|
+| `src/shared/` | Site-agnostic core. `normalize.ts` (pure `ChatTurn → OTLP`), `otlp.ts`, `vocab.ts`, `types.ts`, `ids.ts`. `browser.ts` (the `browser.*` / `chrome.*` shim) and `permissions.ts` (host-permission banner). |
+| `src/adapters/` | The only site-specific code. `claude.ts` + `chatgpt.ts` (both done). `sse.ts` shared SSE framing. |
+| `src/interceptor/` | MAIN-world `fetch`/stream tee. |
+| `src/content/` | ISOLATED-world relay + (future) DOM fallback. |
+| `src/background/` | Service worker: `assembler.ts`, `delivery.ts` (durable queue + backoff), `settings.ts`, `sw.ts`. |
+| `src/popup/` | Capture on/off, retention selector, live queue depth and active stream count. |
+| `src/options/` | OTLP endpoint and per-site toggles. |
+| `e2e/` | Playwright fixtures + helpers (`mock-collector`, `sse-replay-server`, `otlp-assertions`) + specs. |
+| `test/unit/` | vitest unit tests. |
+| `tools/targets.mjs` | Per-browser build targets (`chrome` → `dist/`, `firefox` → `dist-firefox/`, `safari` → `dist-safari/`) and the manifest each one ships. |
+| `fixtures/<site>/*.sse` | Recorded, sanitized chat streams — real captures for `claude/` and `chatgpt/`. |
+
+## Testing model (layered by fidelity/cost)
+
+- **(a) unit** — recorded `.sse` → `ChatTurn` → golden OTLP. Milliseconds, no browser.
+- **(b) e2e replay** *(Chromium only)* — a local HTTPS server impersonates the chat site (via `--host-resolver-rules`
+  mapping the real hostname to it + a throwaway self-signed cert), the real extension loads, and a
+  **mock collector** captures what it POSTs. Fully autonomous — **this is the loop run every iteration.**
+- **Firefox smoke** — Playwright cannot load an extension into Firefox, so Firefox does **not**
+  get the replay e2e. Its automated coverage is reduced, not equal: the unit tests for the
+  manifest generator, the API shim and the permission flow, a real `build:firefox`, and
+  `addons-linter --warnings-as-errors` over the output (`npm run lint:firefox`, run in CI).
+  Capture on a real Firefox is a manual check, following the [Firefox](#firefox) steps.
+- **(c) collector conformance** *(planned)* — now that this lives in the agent-beacon monorepo,
+  the consumer of these envelopes is in-tree at `collector-builder/exporter/beaconjsonexporter`.
+  The plan is a Go test that feeds committed golden envelopes straight through the real exporter
+  and asserts the resulting `Event` — no binary, no ports, no network — rather than the
+  out-of-tree `/opt/beacon/bin/beacon-otelcol` approach sketched in `tools/integration-otelcol/`.
+- **(d) live smoke** (opt-in, headed) — drive the real sites in a persistent authed profile; a
+  drift alarm that flags when recorded fixtures go stale. *(not yet implemented)*
+
+## Safari (experimental, not shipped)
+
+Safari support is in progress (#392). `npm run build:safari` writes
+`dist-safari/`: the same bundles and the unchanged `src/manifest.json`, compiled
+for Safari 18, the first release documented to run MAIN-world content scripts.
+Safari cannot load that folder for real use; it has to ship inside a macOS app.
+The packaging lives in
+[`packaging/macos/safari/`](../packaging/macos/safari/README.md): the Xcode app
+wrapper script, the signing plan, the MDM example, and a
+[compatibility review](../packaging/macos/safari/compatibility.md) with its gap
+list.
+
+**The self-verifying loop above does not cover Safari.** Playwright cannot load
+extensions into WebKit, and `safaridriver` cannot install them. The replay e2e
+(layer b) therefore runs on Chromium only, and it stays the correctness gate for
+the site adapters. The unit tests (layer a) are browser-agnostic. A Safari build
+is verified by hand with the
+[Safari smoke checklist](../packaging/macos/safari/smoke-checklist.md) until an
+XCTest-based check exists.
+
+## Status
+
+This is a **V0 MVP**: both **Claude.ai** and **ChatGPT** capture are proven end-to-end against the
+real sites and the real Beacon collector (prompt → response → tool calls → `runtime.jsonl` → S3 →
+dashboard), including interleaved sessions with no cross-contamination.
+
+- ✅ Shared core + normalization (unit-tested)
+- ✅ Claude capture end-to-end + autonomous replay e2e
+- ✅ Resilience: multi-tab correlation + aborted/partial stream (e2e)
+- ✅ Content-script context-invalidation guard (survives extension reloads)
+- ✅ ChatGPT capture (`delta_encoding: v1` parser) + autonomous replay e2e
+- ✅ Firefox build target (`npm run build:firefox`): Gecko manifest, `browser.*` shim, host-permission
+  grant flow; covered by unit tests and `addons-linter`, **not** by the replay e2e
+- ⬜ ChatGPT stream-handoff/resume case (see limitations); DOM-fallback capture, XHR transport
+- ⬜ Real-collector integration test + live-smoke/fixture-recorder as CI layers
+
+### Known limitations (V0 — intentionally deferred)
+
+- **Service-worker suspension mid-stream.** In-flight turn assembly lives in memory in the SW.
+  Active streaming keeps the SW alive (each chunk is activity), so normal turns are safe; a >30s
+  stall between chunks could drop a turn. The durable delivery queue (in `chrome.storage`) protects
+  everything *after* a turn is assembled, not during. Persisting partial assembler state is a
+  future item.
+- **Delivery retry cadence and queue limits.** Each POST has a ten-second deadline, so a collector
+  that accepts a connection but never responds cannot hold the queue indefinitely; a timed-out
+  batch is retried like any other failure. Retries back off from half a second, doubling to a
+  one-minute cap, and run on `chrome.alarms`, which MV3 clamps to a ~30s minimum, so a recovered
+  collector receives the backlog within about a minute. Batches are delivered oldest first, and
+  while the collector is down only the oldest batch is retried; newer ones wait behind it. A
+  failed send (connection refused, timeout, or a retryable 429, 502, 503 or 504) never drops a
+  batch. A batch is dropped undelivered when the collector rejects it with any other status,
+  since sending it again cannot succeed, when it is older than **24 hours**, or when the queue
+  passes **2,000 batches** or **6 MiB** of envelopes, which drops the oldest batches first (the
+  byte cap keeps the queue inside `chrome.storage.local`'s 10 MiB quota). Within those limits, a
+  collector outage of any length (restarting during an install or upgrade, not yet started after
+  boot, crash-looping) loses nothing. The queue is re-checked each
+  time the service worker starts, because a browser restart or extension update can clear the
+  retry alarm.
+- **Capture depends on `window.fetch`.** Confirmed correct for claude.ai. Sites using XHR or a page
+  service worker for streaming would need additional interception (deferred).
+- **Single capture path.** No DOM-scraping fallback yet; if a site changes its SSE wire format, the
+  adapter needs updating (the live-smoke drift alarm is designed to catch this).
+- **ChatGPT stream-handoff turns.** ChatGPT streams the answer as `delta_encoding: v1` SSE, usually
+  *inline* on the `POST /backend-api/f/conversation` response (which we tee). Occasionally it instead
+  returns a `stream_handoff` and streams the tokens on a **resume-SSE endpoint** — those turns are
+  currently missed. That resume stream is also SSE-over-fetch (no WebSocket needed for tokens; the
+  `wss://ws.chatgpt.com` socket only carries control messages), so teeing the resume GET is a
+  follow-up, not a rearchitecture. ChatGPT web (like Claude web) doesn't stream token usage.
+- **Telemetry integrity on the injected page.** The MAIN-world interceptor and the ISOLATED content
+  script talk over a private `MessageChannel` whose port is handed over once, by a synchronously
+  dispatched event at `document_start`, before any page script runs (`src/shared/channel.ts`). The
+  content script never reads `window` messages, request ids are random, and the service worker
+  checks every relayed event's shape and size and bounds how many open streams it holds, so a page
+  script can no longer inject or splice into telemetry. What remains: a script in the page's own
+  world can still change what the page fetches, or wrap `window.fetch` itself, because the page is
+  the data source; and if the interceptor failed to run at all, a page script could offer the
+  content script its own port while the document is still loading.
+- **Loopback-only delivery.** The OTLP endpoint must be `http(s)` on `127.0.0.1`, `localhost` or
+  `[::1]` (any port). The service worker enforces this when settings are saved and again
+  before every send (redirects are refused), and it takes settings changes only from the
+  extension's own popup and options pages, never from a content script.
+
+> **Fixtures.** The committed `*.sse` files are **real, sanitized** captures (via
+> `npm run record:fixtures`): `fixtures/claude/simple-turn.sse` (claude.ai) and
+> `fixtures/chatgpt/simple-turn.sse` (ChatGPT). `claude/with-tool-call.sse` is synthetic (documented
+> Anthropic tool-use shape) pending a real tool-call capture. Raw recorder output (`*.page.html`,
+> `*.meta.json`, `real-*.sse`, `diag-*.sse`) is git-ignored — it can contain personal chat/account
+> data, so only hand-sanitized `*.sse` fixtures are committed.
+>
+> Real-format notes: **claude.ai** emits a leading `conversation_ready` event and nests the model in
+> `message_start.message.model` (typed Anthropic events). **ChatGPT** posts to
+> `/backend-api/f/conversation` and streams OpenAI `delta_encoding: v1` JSON-patch ops (add/append/patch
+> with bare-value path inheritance), model in `metadata.model_slug`. Neither site streams token usage,
+> so `gen_ai.usage.*` is absent for both.

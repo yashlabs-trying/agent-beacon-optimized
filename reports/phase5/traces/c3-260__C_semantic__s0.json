@@ -1,0 +1,27 @@
+{
+  "task": "c3-260",
+  "suite": "C",
+  "category": "C3_security_ops",
+  "difficulty": "extreme",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "c3-260-guard"
+  ],
+  "required_evidence": [
+    "c3-260-guard"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.614,
+  "prompt_tokens": 135,
+  "gen_tokens": 8
+}

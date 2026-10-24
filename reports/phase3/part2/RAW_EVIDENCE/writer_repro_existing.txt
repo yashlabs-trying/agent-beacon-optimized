@@ -1,0 +1,20 @@
+    phase2_concurrency_test.go:198: STRESS concurrency=8 duration_s=10 reads=2937 writes=776 supersedes=186 errors=0 busy=0 stale=0
+    phase2_concurrency_test.go:200: STRESS read_latency_us p50=2091 p95=7712 p99=25141 mean=3417 n=2937
+    phase2_concurrency_test.go:201: STRESS write_latency_us p50=9330 p95=85563 p99=141729 mean=21710 n=962
+    phase2_concurrency_test.go:202: STRESS goroutines before=3 after=2 heap_alloc_mb=7.0 heap_sys_mb=25.9 num_gc=2060 wal_bytes=0
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.527s
+    phase2_concurrency_test.go:198: STRESS concurrency=8 duration_s=10 reads=2784 writes=736 supersedes=174 errors=0 busy=0 stale=0
+    phase2_concurrency_test.go:200: STRESS read_latency_us p50=2183 p95=9068 p99=26988 mean=3640 n=2784
+    phase2_concurrency_test.go:201: STRESS write_latency_us p50=10202 p95=85689 p99=183826 mean=22322 n=910
+    phase2_concurrency_test.go:202: STRESS goroutines before=3 after=2 heap_alloc_mb=1.5 heap_sys_mb=29.6 num_gc=1888 wal_bytes=0
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.591s
+    phase2_concurrency_test.go:198: STRESS concurrency=16 duration_s=10 reads=2838 writes=745 supersedes=177 errors=0 busy=0 stale=0
+    phase2_concurrency_test.go:200: STRESS read_latency_us p50=2832 p95=12839 p99=59895 mean=6066 n=2838
+    phase2_concurrency_test.go:201: STRESS write_latency_us p50=16813 p95=340518 p99=1255010 mean=78053 n=922
+    phase2_concurrency_test.go:202: STRESS goroutines before=2 after=2 heap_alloc_mb=2.6 heap_sys_mb=37.9 num_gc=1924 wal_bytes=0
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.997s
+    phase2_concurrency_test.go:198: STRESS concurrency=16 duration_s=10 reads=2954 writes=778 supersedes=186 errors=0 busy=0 stale=0
+    phase2_concurrency_test.go:200: STRESS read_latency_us p50=2446 p95=10469 p99=31338 mean=4397 n=2954
+    phase2_concurrency_test.go:201: STRESS write_latency_us p50=17919 p95=345818 p99=950913 mean=76811 n=964
+    phase2_concurrency_test.go:202: STRESS goroutines before=3 after=2 heap_alloc_mb=2.3 heap_sys_mb=30.2 num_gc=2063 wal_bytes=0
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.634s

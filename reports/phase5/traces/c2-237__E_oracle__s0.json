@@ -1,0 +1,27 @@
+{
+  "task": "c2-237",
+  "suite": "C",
+  "category": "C2_workflow",
+  "difficulty": "hard",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "c2-237-order"
+  ],
+  "required_evidence": [
+    "c2-237-order"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The second step in the profile runbook order is migrate.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 1.125,
+  "prompt_tokens": 127,
+  "gen_tokens": 13
+}

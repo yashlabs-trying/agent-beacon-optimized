@@ -1,0 +1,60 @@
+cases=35 arms=9 runs=315
+
+PER-ARM ACCURACY (Wilson 95% CI)
+  none              6/35  acc=0.171  CI=[0.081,0.327]
+  original          6/35  acc=0.171  CI=[0.081,0.327]
+  v6_semantic      20/35  acc=0.571  CI=[0.409,0.720]
+  v6_intelligent   26/35  acc=0.743  CI=[0.579,0.858]
+  oracle           27/35  acc=0.771  CI=[0.610,0.879]
+  ab_supersession  20/35  acc=0.571  CI=[0.409,0.720]
+  ab_trust         25/35  acc=0.714  CI=[0.549,0.837]
+  ab_conflict      20/35  acc=0.571  CI=[0.409,0.720]
+  ab_injection     24/35  acc=0.686  CI=[0.520,0.814]
+
+PER-CATEGORY ACCURACY
+  arm              contradi ambiguit adversar decision  control
+  none                 1/11      3/8      0/6      2/6      0/4
+  original             1/11      3/8      0/6      2/6      0/4
+  v6_semantic          5/11      7/8      2/6      6/6      0/4
+  v6_intelligent       7/11      7/8      6/6      6/6      0/4
+  oracle               7/11      8/8      6/6      6/6      0/4
+  ab_supersession      5/11      7/8      2/6      6/6      0/4
+  ab_trust             7/11      7/8      5/6      6/6      0/4
+  ab_conflict          5/11      7/8      2/6      6/6      0/4
+  ab_injection         5/11      7/8      6/6      6/6      0/4
+
+PAIRED COMPARISONS (A vs B: A / B / ties, exact McNemar p)
+  v6_intelligent   vs v6_semantic     : 6 / 0 / 29  p=0.0312
+  v6_intelligent   vs original        : 21 / 1 / 13  p=0.0000
+  v6_intelligent   vs none            : 21 / 1 / 13  p=0.0000
+  v6_intelligent   vs oracle          : 0 / 1 / 34  p=1.0000
+  v6_semantic      vs original        : 15 / 1 / 19  p=0.0005
+
+ABLATION DELTAS vs v6_semantic (paired)
+  ab_supersession  vs v6_semantic : +0 / -0 / =35  p=1.0000
+  ab_trust         vs v6_semantic : +6 / -1 / =28  p=0.1250
+  ab_conflict      vs v6_semantic : +0 / -0 / =35  p=1.0000
+  ab_injection     vs v6_semantic : +4 / -0 / =31  p=0.1250
+  v6_intelligent   vs v6_semantic : +6 / -0 / =29  p=0.0312
+
+MEAN REQUIRED-EVIDENCE RECALL
+  none             0.257
+  original         0.257
+  v6_semantic      1.000
+  v6_intelligent   1.000
+  oracle           1.000
+  ab_supersession  1.000
+  ab_trust         0.971
+  ab_conflict      1.000
+  ab_injection     1.000
+
+MEAN LATENCY / TOKENS
+  none             agent_s=0.53 prompt_tok=75
+  original         agent_s=0.34 prompt_tok=75
+  v6_semantic      agent_s=0.43 prompt_tok=98
+  v6_intelligent   agent_s=0.30 prompt_tok=93
+  oracle           agent_s=0.26 prompt_tok=85
+  ab_supersession  agent_s=0.39 prompt_tok=96
+  ab_trust         agent_s=0.26 prompt_tok=94
+  ab_conflict      agent_s=0.31 prompt_tok=98
+  ab_injection     agent_s=0.25 prompt_tok=95

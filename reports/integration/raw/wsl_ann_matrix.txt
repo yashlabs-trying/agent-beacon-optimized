@@ -1,0 +1,16 @@
+=== RUN   TestANNPhase1Matrix
+ANN_MATRIX n=100 M=16 seed=7 recall@1=1.0000 recall@10=0.9531 build_ms=2 p50_us=8 p95_us=14 p99_us=26 heap_mb=0.6 build_alloc_mb=0.1 search_allocs=5.0
+ANN_MATRIX n=100 M=32 seed=7 recall@1=1.0000 recall@10=0.9984 build_ms=3 p50_us=15 p95_us=42 p99_us=4002 heap_mb=0.8 build_alloc_mb=0.2 search_allocs=5.0
+ANN_MATRIX n=100 M=64 seed=7 recall@1=1.0000 recall@10=1.0000 build_ms=5 p50_us=11 p95_us=13 p99_us=23 heap_mb=1.0 build_alloc_mb=0.3 search_allocs=5.0
+ANN_MATRIX n=1000 M=16 seed=7 recall@1=0.9531 recall@10=0.8641 build_ms=45 p50_us=10 p95_us=20 p99_us=38 heap_mb=2.7 build_alloc_mb=1.4 search_allocs=7.0
+ANN_MATRIX n=1000 M=32 seed=7 recall@1=0.9844 recall@10=0.9625 build_ms=136 p50_us=18 p95_us=39 p99_us=60 heap_mb=2.3 build_alloc_mb=2.1 search_allocs=7.0
+ANN_MATRIX n=1000 M=64 seed=7 recall@1=1.0000 recall@10=0.9953 build_ms=302 p50_us=46 p95_us=68 p99_us=353 heap_mb=3.9 build_alloc_mb=3.6 search_allocs=7.0
+ANN_MATRIX n=5000 M=16 seed=7 recall@1=0.7656 recall@10=0.7609 build_ms=291 p50_us=13 p95_us=28 p99_us=42 heap_mb=6.7 build_alloc_mb=7.5 search_allocs=8.0
+ANN_MATRIX n=5000 M=32 seed=7 recall@1=0.9844 recall@10=0.9844 build_ms=857 p50_us=30 p95_us=65 p99_us=90 heap_mb=11.6 build_alloc_mb=11.1 search_allocs=8.0
+ANN_MATRIX n=5000 M=64 seed=7 recall@1=1.0000 recall@10=1.0000 build_ms=2648 p50_us=72 p95_us=112 p99_us=162 heap_mb=16.1 build_alloc_mb=19.2 search_allocs=8.0
+ANN_MATRIX n=10000 M=16 seed=7 recall@1=0.8125 recall@10=0.7969 build_ms=773 p50_us=23 p95_us=69 p99_us=82 heap_mb=14.3 build_alloc_mb=15.7 search_allocs=8.0
+ANN_MATRIX n=10000 M=32 seed=7 recall@1=0.9844 recall@10=0.9844 build_ms=2374 p50_us=31 p95_us=66 p99_us=91 heap_mb=17.7 build_alloc_mb=22.9 search_allocs=8.0
+ANN_MATRIX n=10000 M=64 seed=7 recall@1=1.0000 recall@10=1.0000 build_ms=7134 p50_us=106 p95_us=222 p99_us=237 heap_mb=32.3 build_alloc_mb=38.9 search_allocs=8.0
+--- PASS: TestANNPhase1Matrix (15.03s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	15.038s

@@ -1,0 +1,27 @@
+{
+  "task": "a4-62",
+  "suite": "A",
+  "category": "A4_recovery",
+  "difficulty": "hard",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "a4-62-durable"
+  ],
+  "required_evidence": [
+    "a4-62-durable"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "50",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.722,
+  "prompt_tokens": 126,
+  "gen_tokens": 3
+}

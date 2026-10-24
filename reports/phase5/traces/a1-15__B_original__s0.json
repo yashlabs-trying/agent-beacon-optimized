@@ -1,0 +1,28 @@
+{
+  "task": "a1-15",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-15-fixed",
+    "a1-15-failed"
+  ],
+  "required_evidence": [
+    "a1-15-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the profile pool size problem in the new environment, you should use a connection pool.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 15.135,
+  "agent_seconds": 1.415,
+  "prompt_tokens": 153,
+  "gen_tokens": 20
+}

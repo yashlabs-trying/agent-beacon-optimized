@@ -1,0 +1,27 @@
+{
+  "task": "c1-208",
+  "suite": "C",
+  "category": "C1_coding",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "c1-208-conv"
+  ],
+  "required_evidence": [
+    "c1-208-conv"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.733,
+  "prompt_tokens": 157,
+  "gen_tokens": 23
+}

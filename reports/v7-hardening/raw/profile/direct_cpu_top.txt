@@ -1,0 +1,39 @@
+File: learning.test
+Build ID: 22868944051ce04e68f79973bbe44b3b7067f03d
+Type: cpu
+Time: 2026-10-23 16:38:48 UTC
+Duration: 15.38s, Total samples = 16.93s (110.05%)
+Showing nodes accounting for 6.44s, 38.04% of 16.93s total
+Dropped 732 nodes (cum <= 0.08s)
+Showing top 30 nodes out of 348
+      flat  flat%   sum%        cum   cum%
+     1.14s  6.73%  6.73%      1.14s  6.73%  internal/runtime/syscall/linux.Syscall6
+     0.72s  4.25% 10.99%      0.72s  4.25%  runtime.futex
+     0.40s  2.36% 13.35%      3.74s 22.09%  modernc.org/sqlite/lib._sqlite3VdbeExec
+     0.33s  1.95% 15.30%      3.71s 21.91%  modernc.org/sqlite/lib._yy_reduce
+     0.30s  1.77% 17.07%      0.63s  3.72%  strings.FieldsFunc
+     0.30s  1.77% 18.84%      0.58s  3.43%  strings.ToLower
+     0.25s  1.48% 20.32%      0.25s  1.48%  indexbody
+     0.23s  1.36% 21.68%      0.23s  1.36%  modernc.org/libc.(*TLS).Alloc
+     0.21s  1.24% 22.92%      0.22s  1.30%  internal/sync.(*Mutex).Unlock (inline)
+     0.17s  1.00% 23.92%      0.17s  1.00%  indexbytebody
+     0.17s  1.00% 24.93%      0.17s  1.00%  internal/runtime/maps.memHashAES
+     0.17s  1.00% 25.93%      0.17s  1.00%  runtime.fpTracebackPCs (inline)
+     0.16s  0.95% 26.88%      0.18s  1.06%  modernc.org/sqlite/lib._yy_find_shift_action
+     0.15s  0.89% 27.76%      0.15s  0.89%  runtime.memclrNoHeapPointers
+     0.14s  0.83% 28.59%      0.19s  1.12%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.embedWords.func1
+     0.14s  0.83% 29.42%      0.14s  0.83%  internal/sync.(*Mutex).Lock (inline)
+     0.14s  0.83% 30.24%      0.22s  1.30%  modernc.org/sqlite/lib._sqlite3GetToken
+     0.13s  0.77% 31.01%      0.13s  0.77%  runtime.asyncPreempt
+     0.12s  0.71% 31.72%      0.15s  0.89%  runtime.mallocgcTinySC2
+     0.11s  0.65% 32.37%      1.03s  6.08%  modernc.org/sqlite/lib._sqlite3WhereBegin
+     0.11s  0.65% 33.02%      0.32s  1.89%  runtime.mapaccess2_faststr
+     0.10s  0.59% 33.61%      0.10s  0.59%  memeqbody
+     0.10s  0.59% 34.20%      0.10s  0.59%  modernc.org/libc.(*TLS).Free
+     0.10s  0.59% 34.79%      0.10s  0.59%  runtime.memmove
+     0.10s  0.59% 35.38%      0.10s  0.59%  runtime.nanotime (inline)
+     0.09s  0.53% 35.91%      0.09s  0.53%  internal/runtime/maps.ctrlGroup.matchH2 (inline)
+     0.09s  0.53% 36.44%      0.09s  0.53%  modernc.org/memory.(*Allocator).UintptrMalloc
+     0.09s  0.53% 36.98%      0.12s  0.71%  modernc.org/sqlite/lib._exprAnalyze
+     0.09s  0.53% 37.51%      4.05s 23.92%  modernc.org/sqlite/lib._sqlite3Parser
+     0.09s  0.53% 38.04%      2.29s 13.53%  modernc.org/sqlite/lib._sqlite3Select

@@ -1,0 +1,27 @@
+{
+  "task": "a3-60",
+  "suite": "A",
+  "category": "A3_knowledge_transfer",
+  "difficulty": "medium",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "a3-60-conv"
+  ],
+  "required_evidence": [
+    "a3-60-conv"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "All Python services in this project must follow the convention of using idempotent handlers.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 1.466,
+  "prompt_tokens": 125,
+  "gen_tokens": 18
+}

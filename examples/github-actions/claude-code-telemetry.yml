@@ -1,0 +1,60 @@
+# Reference workflow for capturing Claude Code telemetry in CI with the
+# Beacon composite action. Copy this into .github/workflows/ in your own
+# repository and adjust the command, artifact, forwarding, or upload settings.
+#
+# This file lives under examples/ (not .github/workflows/) so it is a
+# reference only and does not run in this repository.
+# Replace <tag> with the Beacon release tag you want to run.
+
+name: Claude Code telemetry
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  claude-telemetry:
+    runs-on: ubuntu-latest
+    # Set destination config at the job level so Beacon can use it without
+    # exposing secrets to the Claude child process. Omit this block if you only
+    # upload the default GitHub artifact.
+    env:
+      BEACON_CI_S3_BUCKET: ${{ vars.BEACON_CI_S3_BUCKET }}
+      BEACON_CI_S3_PREFIX: github-actions
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Claude Code however your workflow normally does; the action
+      # only wraps the invocation with Beacon telemetry capture.
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      # Optional: configure cloud credentials before using upload: s3.
+      # - uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: ${{ secrets.BEACON_TELEMETRY_ROLE_ARN }}
+      #     aws-region: us-east-1
+
+      - name: Run Claude with Beacon telemetry
+        uses: asymptote-labs/agent-beacon@<tag>
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          command: claude --print "Summarize the changes in this pull request"
+          # Optional: forward to a customer-managed SIEM before teardown.
+          # Requires a Beacon release that includes ci exec --forward.
+          # See examples/github-actions/splunk-forward-telemetry.yml or
+          # examples/github-actions/falcon-forward-telemetry.yml.
+          # forward: splunk
+          # forward-endpoint: https://splunk.example:8088/services/collector
+          # forward: falcon
+          # forward-endpoint: https://cloud.us-1.humio.com/api/v1/ingest/hec
+          # Optional: upload the completed runtime JSONL to object storage.
+          # Supported values: s3, gcs, or s3,gcs.
+          # See examples/github-actions/s3-upload-telemetry.yml,
+          # examples/github-actions/gcs-upload-telemetry.yml, or
+          # examples/github-actions/s3-gcs-upload-telemetry.yml.
+          # upload: s3
+          # upload: s3,gcs
+          # The runtime log is uploaded as an artifact by default.
+          upload-artifact: "true"

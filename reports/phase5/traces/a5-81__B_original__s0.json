@@ -1,0 +1,27 @@
+{
+  "task": "a5-81",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-81-gold"
+  ],
+  "required_evidence": [
+    "a5-81-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "27 KB",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 8.274,
+  "agent_seconds": 0.593,
+  "prompt_tokens": 120,
+  "gen_tokens": 4
+}

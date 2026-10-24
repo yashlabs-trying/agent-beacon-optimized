@@ -1,0 +1,27 @@
+{
+  "task": "b1-113",
+  "suite": "B",
+  "category": "B1_contradiction",
+  "difficulty": "extreme",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "b1-113-b"
+  ],
+  "required_evidence": [
+    "b1-113-b"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The currently applicable value for the auth timeout is 4 seconds.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.17,
+  "prompt_tokens": 126,
+  "gen_tokens": 14
+}

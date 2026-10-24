@@ -1,0 +1,23 @@
+{
+  "task": "b2-128",
+  "suite": "B",
+  "category": "B2_ambiguity",
+  "difficulty": "extreme",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [],
+  "required_evidence": [],
+  "evidence_recall": 1.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 13.669,
+  "agent_seconds": 0.513,
+  "prompt_tokens": 110,
+  "gen_tokens": 8
+}

@@ -1,0 +1,1416 @@
+package inventory
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve"
+)
+
+func TestScanCurrentUserMCPInventory(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	writeFile(t, filepath.Join(home, ".claude", "settings.json"), `{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "env": {"NODE_ENV": "production"}
+    }
+  }
+}`)
+	writeFile(t, filepath.Join(home, ".codex", "config.toml"), `
+[mcp_servers.github]
+command = "gh"
+args = ["mcp", "serve"]
+
+[mcp_servers.github.env]
+GITHUB_TOKEN = "secret"
+`)
+	writeFile(t, filepath.Join(home, ".cursor", "mcp.json"), `{
+  "mcpServers": {
+    "remote": {
+      "url": "https://example.test/sse",
+      "transport": "sse"
+    }
+  }
+}`)
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
+	})
+
+	if got, want := len(result.MCPServers), 3; got != want {
+		t.Fatalf("MCPServers len = %d, want %d: %#v", got, want, result.MCPServers)
+	}
+	assertServer(t, result.MCPServers, "claude_code", "filesystem", TransportStdio, true, 3, 1, 1)
+	assertServer(t, result.MCPServers, "codex_cli", "github", TransportStdio, true, 2, 0, 1)
+	assertServer(t, result.MCPServers, "cursor", "remote", TransportSSE, false, 0, 0, 0)
+
+	claudeSettings := findConfig(result.Configs, "claude_code", filepath.Join(home, ".claude", "settings.json"))
+	if claudeSettings == nil {
+		t.Fatal("Claude settings config not found in inventory")
+	}
+	if !claudeSettings.Exists || !claudeSettings.Readable || claudeSettings.ParserStatus != StatusOK {
+		t.Fatalf("Claude config status = exists:%t readable:%t parser:%s", claudeSettings.Exists, claudeSettings.Readable, claudeSettings.ParserStatus)
+	}
+	if claudeSettings.MCPServerCount != 1 {
+		t.Fatalf("Claude MCPServerCount = %d, want 1", claudeSettings.MCPServerCount)
+	}
+	if claudeSettings.FileSHA256 == "" || claudeSettings.PathHash == "" {
+		t.Fatal("Claude config missing hashes")
+	}
+	if claudeSettings.ParserMode != formatJSON || claudeSettings.ConfigKind != KindNativeConfig {
+		t.Fatalf("Claude config mode/kind = %s/%s, want %s/%s", claudeSettings.ParserMode, claudeSettings.ConfigKind, formatJSON, KindNativeConfig)
+	}
+}
+
+func TestScanIncludesNamesAndPaths(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	writeFile(t, filepath.Join(home, ".claude", "settings.json"), `{
+  "mcpServers": {
+    "filesystem": {"command": "npx", "env": {"NODE_ENV": "production"}}
+  }
+}`)
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
+	})
+
+	if len(result.MCPServers) != 1 {
+		t.Fatalf("MCPServers len = %d, want 1", len(result.MCPServers))
+	}
+	server := result.MCPServers[0]
+	if server.ServerName != "filesystem" || server.CommandName != "npx" || server.SourcePath == "" || len(server.EnvKeys) != 1 {
+		t.Fatalf("server missing full inventory fields: %#v", server)
+	}
+	if server.ServerNameHash == "" || server.CommandNameHash == "" || server.SourcePathHash == "" || server.DefinitionHash == "" {
+		t.Fatalf("server missing hashes: %#v", server)
+	}
+	for _, config := range result.Configs {
+		if config.Exists && config.Path == "" {
+			t.Fatalf("config missing path: %#v", config)
+		}
+	}
+}
+
+// The definition fingerprint is a correlation identifier for "is this the same MCP server", and a
+// hash is not a disclosure -- but a digest over a definition whose only varying part is one token
+// is guessable, so the raw secret must not reach it. Two homes differing only in the value of a
+// secret-marked env key must fingerprint identically; a real change to the definition must not.
+func TestMCPDefinitionHashExcludesSecretEnvValues(t *testing.T) {
+	definitionHash := func(t *testing.T, settings string) string {
+		t.Helper()
+		home := t.TempDir()
+		writeFile(t, filepath.Join(home, ".claude", "settings.json"), settings)
+		result := Scan(Options{HomeDir: home, SkipProjectScope: true, Now: fixedNow})
+		if len(result.MCPServers) != 1 {
+			t.Fatalf("MCPServers len = %d, want 1", len(result.MCPServers))
+		}
+		return result.MCPServers[0].DefinitionHash
+	}
+
+	const withToken = `{
+  "mcpServers": {
+    "github": {"command": "gh", "env": {"GITHUB_TOKEN": "ghp_aaaaaaaaaaaaaaaaaaaa", "NODE_ENV": "production"}}
+  }
+}`
+	const rotatedToken = `{
+  "mcpServers": {
+    "github": {"command": "gh", "env": {"GITHUB_TOKEN": "ghp_bbbbbbbbbbbbbbbbbbbb", "NODE_ENV": "production"}}
+  }
+}`
+	const changedCommand = `{
+  "mcpServers": {
+    "github": {"command": "gh-2", "env": {"GITHUB_TOKEN": "ghp_aaaaaaaaaaaaaaaaaaaa", "NODE_ENV": "production"}}
+  }
+}`
+
+	base := definitionHash(t, withToken)
+	if base == "" {
+		t.Fatal("DefinitionHash is empty")
+	}
+	if rotated := definitionHash(t, rotatedToken); rotated != base {
+		t.Errorf("rotating a secret env value changed DefinitionHash: %s -> %s", base, rotated)
+	}
+	if changed := definitionHash(t, changedCommand); changed == base {
+		t.Errorf("changing the command left DefinitionHash at %s", base)
+	}
+}
+
+func TestScanClaudeJSONMCPInventory(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	writeFile(t, filepath.Join(home, ".claude.json"), `{
+  "mcpServers": {
+    "github": {
+      "command": "gh",
+      "args": ["mcp", "serve"],
+      "env": {"GITHUB_TOKEN": "secret", "GH_HOST": "github.com"}
+    }
+  }
+}`)
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Runtimes:   []string{"claude_code"},
+		Now:        fixedNow,
+	})
+
+	assertServer(t, result.MCPServers, "claude_code", "github", TransportStdio, true, 2, 1, 2)
+	config := findConfig(result.Configs, "claude_code", filepath.Join(home, ".claude.json"))
+	if config == nil {
+		t.Fatalf("Claude ~/.claude.json config not found in %#v", result.Configs)
+	}
+	if config.MCPServerCount != 1 || config.ParserStatus != StatusOK {
+		t.Fatalf("Claude ~/.claude.json status = %#v, want one MCP server", config)
+	}
+}
+
+func TestScanClaudeJSONNestedProjectMCPInventory(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	writeFile(t, filepath.Join(home, ".claude.json"), `{
+  "projects": {
+    "/repo/one": {
+      "mcpServers": {
+        "beacon-dummy-test": {
+          "command": "/bin/echo",
+          "args": ["beacon-dummy-test"]
+        }
+      }
+    },
+    "/repo/two": {
+      "mcpServers": {
+        "remote": {
+          "url": "https://example.test/mcp",
+          "transport": "http"
+        }
+      }
+    }
+  }
+}`)
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Runtimes:   []string{"claude_code"},
+		Now:        fixedNow,
+	})
+
+	if got, want := len(result.MCPServers), 2; got != want {
+		t.Fatalf("MCPServers len = %d, want %d: %#v", got, want, result.MCPServers)
+	}
+	assertServer(t, result.MCPServers, "claude_code", "beacon-dummy-test", TransportStdio, true, 1, 0, 0)
+	assertServer(t, result.MCPServers, "claude_code", "remote", TransportHTTP, false, 0, 0, 0)
+	config := findConfig(result.Configs, "claude_code", filepath.Join(home, ".claude.json"))
+	if config == nil {
+		t.Fatalf("Claude ~/.claude.json config not found in %#v", result.Configs)
+	}
+	if config.MCPServerCount != 2 || config.ParserStatus != StatusOK {
+		t.Fatalf("Claude ~/.claude.json status = %#v, want nested MCP servers", config)
+	}
+}
+
+func TestScanNestedMCPBlocksAcrossConfigFormats(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	writeFile(t, filepath.Join(home, ".cursor", "mcp.json"), `{
+  "profiles": {
+    "default": {
+      "mcp_servers": {
+        "cursor-nested": {"command": "node"}
+      }
+    }
+  }
+}`)
+	writeFile(t, filepath.Join(home, ".codex", "config.toml"), `
+[profiles.default.mcp_servers.codex_nested]
+command = "python3"
+args = ["server.py"]
+`)
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Runtimes:   []string{"cursor", "codex_cli"},
+		Now:        fixedNow,
+	})
+
+	assertServer(t, result.MCPServers, "cursor", "cursor-nested", TransportStdio, true, 0, 0, 0)
+	assertServer(t, result.MCPServers, "codex_cli", "codex_nested", TransportStdio, true, 1, 0, 0)
+	cursorConfig := findConfig(result.Configs, "cursor", filepath.Join(home, ".cursor", "mcp.json"))
+	if cursorConfig == nil || cursorConfig.MCPServerCount != 1 {
+		t.Fatalf("Cursor nested MCP count = %#v, want one server", cursorConfig)
+	}
+	codexConfig := findConfig(result.Configs, "codex_cli", filepath.Join(home, ".codex", "config.toml"))
+	if codexConfig == nil || codexConfig.MCPServerCount != 1 {
+		t.Fatalf("Codex nested MCP count = %#v, want one server", codexConfig)
+	}
+}
+
+func TestScanFiltersRuntimes(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	writeFile(t, filepath.Join(home, ".claude", "settings.json"), `{"mcpServers":{"filesystem":{"command":"npx"}}}`)
+	writeFile(t, filepath.Join(home, ".codex", "config.toml"), `[mcp_servers.github]
+command = "gh"
+`)
+	writeFile(t, filepath.Join(home, ".cursor", "mcp.json"), `{"mcpServers":{"remote":{"url":"https://example.test/sse"}}}`)
+	writeFile(t, filepath.Join(home, ".cursor", "skills", "direct", "SKILL.md"), "# Direct")
+	writeFile(t, filepath.Join(home, ".agents", "skills", "agent", "SKILL.md"), "# Agent")
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Runtimes:   []string{"cursor", "claude_code"},
+		Now:        fixedNow,
+	})
+
+	for _, config := range result.Configs {
+		if config.Runtime != "cursor" && config.Runtime != "claude_code" {
+			t.Fatalf("unexpected config runtime after filter: %#v", config)
+		}
+	}
+	for _, server := range result.MCPServers {
+		if server.Runtime != "cursor" && server.Runtime != "claude_code" {
+			t.Fatalf("unexpected MCP runtime after filter: %#v", server)
+		}
+	}
+	for _, skill := range result.Skills {
+		if skill.Runtime != "cursor" && skill.Runtime != "claude_code" {
+			t.Fatalf("unexpected skill runtime after filter: %#v", skill)
+		}
+	}
+	if assertServerPresent(result.MCPServers, "codex_cli", "github") {
+		t.Fatalf("codex server should be filtered out: %#v", result.MCPServers)
+	}
+	if findSkill(result.Skills, "agent_skills", "agent", filepath.Join(home, ".agents", "skills", "agent", "SKILL.md")) != nil {
+		t.Fatalf("agent_skills root should be filtered out: %#v", result.Skills)
+	}
+}
+
+func TestScanKeepsPartialResultsWhenAConfigIsMalformed(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	writeFile(t, filepath.Join(home, ".claude", "settings.json"), `{bad json`)
+	writeFile(t, filepath.Join(home, ".codex", "config.toml"), `
+[mcp_servers.github]
+command = "gh"
+`)
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
+	})
+
+	malformed := findConfig(result.Configs, "claude_code", filepath.Join(home, ".claude", "settings.json"))
+	if malformed == nil {
+		t.Fatal("malformed Claude config result not found")
+	}
+	if malformed.ParserStatus != StatusParseFailed {
+		t.Fatalf("malformed Claude parser status = %s, want %s", malformed.ParserStatus, StatusParseFailed)
+	}
+	assertServer(t, result.MCPServers, "codex_cli", "github", TransportStdio, true, 0, 0, 0)
+}
+
+func TestMissingCandidatesAreReportedAsNotFound(t *testing.T) {
+	result := Scan(Options{
+		HomeDir:    t.TempDir(),
+		WorkingDir: t.TempDir(),
+		Now:        fixedNow,
+	})
+	if len(result.Configs) == 0 {
+		t.Fatal("expected candidate config results")
+	}
+	for _, config := range result.Configs {
+		if config.Exists {
+			continue
+		}
+		if config.ParserStatus != StatusNotFound {
+			t.Fatalf("missing config status = %s, want %s", config.ParserStatus, StatusNotFound)
+		}
+		if config.PathHash == "" {
+			t.Fatal("missing config should still include a path hash")
+		}
+	}
+}
+
+// With CODEX_HOME set, the user-scope Codex files inventory reads are the ones Codex reads.
+func TestScanReadsCodexUserConfigFromCodexHome(t *testing.T) {
+	home := t.TempDir()
+	codexHome := t.TempDir()
+	t.Setenv("CODEX_HOME", codexHome)
+	writeFile(t, filepath.Join(codexHome, "config.toml"), "[mcp_servers.github]\ncommand = \"gh\"\n")
+	writeFile(t, filepath.Join(home, ".codex", "config.toml"), "[mcp_servers.stale]\ncommand = \"old\"\n")
+	resolved, err := filepath.EvalSymlinks(codexHome)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := Scan(Options{HomeDir: home, SkipProjectScope: true, Runtimes: []string{"codex_cli"}, Now: fixedNow})
+	config := findConfig(result.Configs, "codex_cli", filepath.Join(resolved, "config.toml"))
+	if config == nil || !config.Exists || config.MCPServerCount != 1 {
+		t.Fatalf("CODEX_HOME config.toml = %#v, want it read with one MCP server", config)
+	}
+	if stale := findConfig(result.Configs, "codex_cli", filepath.Join(home, ".codex", "config.toml")); stale != nil {
+		t.Fatalf("inventory reported ~/.codex/config.toml, which Codex does not read with CODEX_HOME set: %#v", stale)
+	}
+}
+
+// hermesDefaultRoot clears every variable that moves Hermes's home and returns its native root
+// under home.
+func hermesDefaultRoot(t *testing.T, home string) string {
+	t.Helper()
+	t.Setenv("HERMES_HOME", "")
+	t.Setenv("HERMES_DATA_DIR_SUFFIX", "")
+	t.Setenv("LOCALAPPDATA", "")
+	if runtime.GOOS == "windows" {
+		return filepath.Join(home, "AppData", "Local", "hermes")
+	}
+	return filepath.Join(home, ".hermes")
+}
+
+const hermesMCPConfig = `
+mcp_servers:
+  memory:
+    command: uvx
+`
+
+// With HERMES_HOME set, or a sticky profile active, inventory reads the config.yaml Hermes reads
+// and not the default profile's.
+func TestScanReadsHermesConfigFromHermesHomeAndActiveProfile(t *testing.T) {
+	scanHermes := func(home string) []Config {
+		return Scan(Options{HomeDir: home, SkipProjectScope: true, Runtimes: []string{"hermes"}, Now: fixedNow}).Configs
+	}
+	t.Run("HERMES_HOME", func(t *testing.T) {
+		home := t.TempDir()
+		root := hermesDefaultRoot(t, home)
+		writeFile(t, filepath.Join(root, "config.yaml"), "model: stale\n")
+		dir := t.TempDir()
+		t.Setenv("HERMES_HOME", dir)
+		writeFile(t, filepath.Join(dir, "config.yaml"), hermesMCPConfig)
+		configs := scanHermes(home)
+		if config := findConfig(configs, "hermes", filepath.Join(dir, "config.yaml")); config == nil || !config.Exists || config.MCPServerCount != 1 {
+			t.Fatalf("HERMES_HOME config.yaml = %#v, want it read with one MCP server", config)
+		}
+		if stale := findConfig(configs, "hermes", filepath.Join(root, "config.yaml")); stale != nil {
+			t.Fatalf("inventory reported the default config.yaml, which Hermes does not read with HERMES_HOME set: %#v", stale)
+		}
+	})
+	t.Run("active profile", func(t *testing.T) {
+		home := t.TempDir()
+		root := hermesDefaultRoot(t, home)
+		writeFile(t, filepath.Join(root, "config.yaml"), "model: stale\n")
+		writeFile(t, filepath.Join(root, "active_profile"), "work\n")
+		profile := filepath.Join(root, "profiles", "work")
+		writeFile(t, filepath.Join(profile, "config.yaml"), hermesMCPConfig)
+		configs := scanHermes(home)
+		if config := findConfig(configs, "hermes", filepath.Join(profile, "config.yaml")); config == nil || !config.Exists || config.MCPServerCount != 1 {
+			t.Fatalf("active profile config.yaml = %#v, want it read with one MCP server", config)
+		}
+		if stale := findConfig(configs, "hermes", filepath.Join(root, "config.yaml")); stale != nil {
+			t.Fatalf("inventory reported the default profile's config.yaml: %#v", stale)
+		}
+	})
+	t.Run("unusable active profile", func(t *testing.T) {
+		// Hermes refuses to start, so there is no config.yaml in use to report.
+		home := t.TempDir()
+		root := hermesDefaultRoot(t, home)
+		writeFile(t, filepath.Join(root, "config.yaml"), hermesMCPConfig)
+		writeFile(t, filepath.Join(root, "active_profile"), "gone\n")
+		for _, config := range scanHermes(home) {
+			if config.Runtime == "hermes" {
+				t.Fatalf("inventory reported %#v for an active profile Hermes cannot use", config)
+			}
+		}
+	})
+}
+
+// With CLINE_DIR set, the user plugin inventory reports is the one Cline loads.
+func TestScanReadsClinePluginFromClineDir(t *testing.T) {
+	home := t.TempDir()
+	clineDir := t.TempDir()
+	t.Setenv("CLINE_DIR", clineDir)
+	writeFile(t, filepath.Join(clineDir, "plugins", "beacon.ts"), `// beacon-managed-cline-plugin:v1`)
+	writeFile(t, filepath.Join(home, ".cline", "plugins", "beacon.ts"), `// beacon-managed-cline-plugin:v1`)
+
+	result := Scan(Options{HomeDir: home, SkipProjectScope: true, Runtimes: []string{"cline"}, Now: fixedNow})
+	if config := findConfig(result.Configs, "cline", filepath.Join(clineDir, "plugins", "beacon.ts")); config == nil || !config.Exists {
+		t.Fatalf("CLINE_DIR plugin = %#v, want it reported as present", config)
+	}
+	if stale := findConfig(result.Configs, "cline", filepath.Join(home, ".cline", "plugins", "beacon.ts")); stale != nil {
+		t.Fatalf("inventory reported ~/.cline/plugins/beacon.ts, which Cline does not load with CLINE_DIR set: %#v", stale)
+	}
+}
+
+// With GEMINI_CLI_HOME set, the Gemini CLI settings inventory reads are the ones Gemini reads.
+func TestScanReadsGeminiSettingsFromGeminiCLIHome(t *testing.T) {
+	home := t.TempDir()
+	geminiHome := t.TempDir()
+	t.Setenv("GEMINI_CLI_HOME", geminiHome)
+	writeFile(t, filepath.Join(geminiHome, ".gemini", "settings.json"), `{"mcpServers":{"github":{"command":"gh"}}}`)
+	writeFile(t, filepath.Join(home, ".gemini", "settings.json"), `{"mcpServers":{"stale":{"command":"old"}}}`)
+
+	result := Scan(Options{HomeDir: home, SkipProjectScope: true, Runtimes: []string{"gemini_cli"}, Now: fixedNow})
+	config := findConfig(result.Configs, "gemini_cli", filepath.Join(geminiHome, ".gemini", "settings.json"))
+	if config == nil || !config.Exists || config.MCPServerCount != 1 {
+		t.Fatalf("GEMINI_CLI_HOME settings.json = %#v, want it read with one MCP server", config)
+	}
+	if stale := findConfig(result.Configs, "gemini_cli", filepath.Join(home, ".gemini", "settings.json")); stale != nil {
+		t.Fatalf("inventory reported ~/.gemini/settings.json, which Gemini does not read with GEMINI_CLI_HOME set: %#v", stale)
+	}
+}
+
+// With CLAUDE_CONFIG_DIR set, the Claude Code files inventory reads are the ones Claude Code reads:
+// settings.json, .claude.json and skills all move with it.
+func TestScanReadsClaudeUserFilesFromClaudeConfigDir(t *testing.T) {
+	home := t.TempDir()
+	configDir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", configDir)
+	writeFile(t, filepath.Join(configDir, "settings.json"), `{"mcpServers":{"github":{"command":"gh"}}}`)
+	writeFile(t, filepath.Join(configDir, ".claude.json"), `{"mcpServers":{"memory":{"command":"npx"}}}`)
+	writeFile(t, filepath.Join(configDir, "skills", "demo", "SKILL.md"), "---\nname: demo\ndescription: demo skill\n---\n")
+	writeFile(t, filepath.Join(home, ".claude", "settings.json"), `{"mcpServers":{"stale":{"command":"old"}}}`)
+	writeFile(t, filepath.Join(home, ".claude.json"), `{"mcpServers":{"stale":{"command":"old"}}}`)
+
+	result := Scan(Options{HomeDir: home, SkipProjectScope: true, Runtimes: []string{"claude_code"}, Now: fixedNow})
+	for _, path := range []string{filepath.Join(configDir, "settings.json"), filepath.Join(configDir, ".claude.json")} {
+		if config := findConfig(result.Configs, "claude_code", path); config == nil || !config.Exists || config.MCPServerCount != 1 {
+			t.Fatalf("%s = %#v, want it read with one MCP server", path, config)
+		}
+	}
+	for _, stale := range []string{filepath.Join(home, ".claude", "settings.json"), filepath.Join(home, ".claude.json")} {
+		if config := findConfig(result.Configs, "claude_code", stale); config != nil {
+			t.Fatalf("inventory reported %s, which Claude Code does not read with CLAUDE_CONFIG_DIR set: %#v", stale, config)
+		}
+	}
+	found := false
+	for _, skill := range result.Skills {
+		if skill.Runtime == "claude_code" && skill.SkillName == "demo" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("skills = %#v, want the demo skill under CLAUDE_CONFIG_DIR/skills", result.Skills)
+	}
+}
+
+func TestScanIncludesAllSupportedCurrentUserAndProjectConfigs(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	t.Setenv("SHELL", "/bin/bash")
+	// Oh My Pi's user extension path is the one candidate an environment variable can move, so the
+	// variables it reads are cleared: a developer who happens to run Oh My Pi under a profile would
+	// otherwise see this test fail on a path that is correct for their machine.
+	for _, name := range []string{"PI_CODING_AGENT_DIR", "PI_CONFIG_DIR", "OMP_PROFILE", "PI_PROFILE"} {
+		t.Setenv(name, "")
+	}
+	// Senpi reads the same PI_CODING_AGENT_DIR as its last fallback, plus two of its own; all three
+	// are cleared for the same reason.
+	t.Setenv("OMO_CODING_AGENT_DIR", "")
+	t.Setenv("SENPI_CODING_AGENT_DIR", "")
+	// Codex's, Cline's and Gemini CLI's user-scope files follow CODEX_HOME, CLINE_DIR and
+	// GEMINI_CLI_HOME.
+	t.Setenv("CODEX_HOME", "")
+	t.Setenv("CLINE_DIR", "")
+	t.Setenv("GEMINI_CLI_HOME", "")
+	// Hermes's config.yaml follows HERMES_HOME, its data-dir suffix and, on Windows, LOCALAPPDATA.
+	hermesRoot := hermesDefaultRoot(t, home)
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
+	})
+
+	expected := []candidate{
+		{runtime: "claude_code", path: filepath.Join(home, ".claude.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "claude_code", path: filepath.Join(home, ".claude", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "claude_code", path: filepath.Join(work, ".claude", "settings.json"), scope: ScopeProject, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "claude_code", path: "/Library/Application Support/ClaudeCode/managed-settings.json", scope: ScopeManaged, format: formatJSON, kind: KindManagedConfig},
+		{runtime: "codex_cli", path: filepath.Join(home, ".codex", "config.toml"), scope: ScopeUser, format: formatTOML, kind: KindNativeConfig},
+		{runtime: "codex_cli", path: filepath.Join(home, ".codex", "hooks.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "codex_cli", path: filepath.Join(work, ".codex", "config.toml"), scope: ScopeProject, format: formatTOML, kind: KindNativeConfig},
+		{runtime: "codex_cli", path: filepath.Join(work, ".codex", "hooks.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		{runtime: "cursor", path: filepath.Join(home, ".cursor", "mcp.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "cursor", path: filepath.Join(work, ".cursor", "mcp.json"), scope: ScopeProject, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "cursor", path: filepath.Join(home, ".cursor", "hooks.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "cursor", path: filepath.Join(work, ".cursor", "hooks.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		{runtime: "gemini_cli", path: filepath.Join(home, ".gemini", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "antigravity_cli", path: filepath.Join(home, ".gemini", "config", "hooks.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "antigravity_cli", path: filepath.Join(work, ".agents", "hooks.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		{runtime: "vscode", path: vscodeUserSettingsPath(home), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "vscode", path: filepath.Join(work, ".vscode", "settings.json"), scope: ScopeProject, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "vscode", path: filepath.Join(home, ".copilot", "hooks", "beacon.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "vscode", path: filepath.Join(work, ".github", "hooks", "beacon.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		{runtime: "factory", path: filepath.Join(home, ".bash_profile"), scope: ScopeUser, format: formatMetadataOnly, kind: KindProfile},
+		{runtime: "factory", path: filepath.Join(home, ".factory", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "factory", path: filepath.Join(work, ".factory", "settings.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		{runtime: "copilot_cli", path: filepath.Join(home, ".bash_profile"), scope: ScopeUser, format: formatMetadataOnly, kind: KindProfile},
+		{runtime: "opencode", path: filepath.Join(home, ".config", "opencode", "plugins", "beacon.ts"), scope: ScopeUser, format: formatMetadataOnly, kind: KindPlugin},
+		{runtime: "opencode", path: filepath.Join(work, ".opencode", "plugins", "beacon.ts"), scope: ScopeProject, format: formatMetadataOnly, kind: KindPlugin},
+		{runtime: "cline", path: filepath.Join(home, ".cline", "plugins", "beacon.ts"), scope: ScopeUser, format: formatMetadataOnly, kind: KindPlugin},
+		{runtime: "cline", path: filepath.Join(work, ".cline", "plugins", "beacon.ts"), scope: ScopeProject, format: formatMetadataOnly, kind: KindPlugin},
+		// Pi's user extension directory carries an `agent` segment that its project directory does
+		// not, so the two paths are spelled out rather than derived from each other.
+		{runtime: "pi_cli", path: filepath.Join(home, ".pi", "agent", "extensions", "beacon.ts"), scope: ScopeUser, format: formatMetadataOnly, kind: KindPlugin},
+		{runtime: "pi_cli", path: filepath.Join(work, ".pi", "extensions", "beacon.ts"), scope: ScopeProject, format: formatMetadataOnly, kind: KindPlugin},
+		// Oh My Pi's paths mirror Pi's asymmetry -- an `agent` segment under home and none in the
+		// project -- but under its own `.omp` root, because the two runtimes install separately.
+		{runtime: "omp", path: filepath.Join(home, ".omp", "agent", "extensions", "beacon.ts"), scope: ScopeUser, format: formatMetadataOnly, kind: KindPlugin},
+		{runtime: "omp", path: filepath.Join(work, ".omp", "extensions", "beacon.ts"), scope: ScopeProject, format: formatMetadataOnly, kind: KindPlugin},
+		// Prime Agent, the third pi-family runtime, under its own `.prime` root. Both scopes carry
+		// the `agent` segment: it joins the same two-segment literal at project scope where Pi and
+		// Oh My Pi drop it, so a path derived from either sibling would be wrong here.
+		{runtime: "prime_agent", path: filepath.Join(home, ".prime", "agent", "extensions", "beacon.ts"), scope: ScopeUser, format: formatMetadataOnly, kind: KindPlugin},
+		{runtime: "prime_agent", path: filepath.Join(work, ".prime", "agent", "extensions", "beacon.ts"), scope: ScopeProject, format: formatMetadataOnly, kind: KindPlugin},
+		// Senpi, the fourth pi-family runtime, under its own `.omo` root. Both scopes carry the
+		// `agent` segment, the same shape Prime Agent uses and Pi and Oh My Pi do not.
+		{runtime: "omo_senpi", path: filepath.Join(home, ".omo", "agent", "extensions", "beacon.ts"), scope: ScopeUser, format: formatMetadataOnly, kind: KindPlugin},
+		{runtime: "omo_senpi", path: filepath.Join(work, ".omo", "agent", "extensions", "beacon.ts"), scope: ScopeProject, format: formatMetadataOnly, kind: KindPlugin},
+		// OpenClaw's candidate is the plugin entry rather than its directory, because the entry is
+		// what carries Beacon's marker -- the two manifests beside it are byte-identical for every
+		// install and identify nothing. Both scopes are reported: OpenClaw discovers a workspace
+		// plugin root and a global one, and a gateway can be running with either.
+		{runtime: "openclaw_gateway", path: filepath.Join(home, ".openclaw", "extensions", "beacon-endpoint", "beacon.js"), scope: ScopeUser, format: formatMetadataOnly, kind: KindPlugin},
+		{runtime: "openclaw_gateway", path: filepath.Join(work, ".openclaw", "extensions", "beacon-endpoint", "beacon.js"), scope: ScopeProject, format: formatMetadataOnly, kind: KindPlugin},
+		{runtime: "hermes", path: filepath.Join(hermesRoot, "config.yaml"), scope: ScopeUser, format: formatYAML, kind: KindNativeConfig},
+		{runtime: "devin-cli", path: filepath.Join(home, ".config", "devin", "config.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: "devin-cli", path: filepath.Join(work, ".devin", "hooks.v1.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		{runtime: "devin-desktop", path: filepath.Join(home, ".codeium", "windsurf", "hooks.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "devin-desktop", path: filepath.Join(work, ".windsurf", "hooks.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		{runtime: "grok", path: filepath.Join(home, ".grok", "hooks", "beacon-endpoint.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "grok", path: filepath.Join(work, ".grok", "hooks", "beacon-endpoint.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		{runtime: "qwen_code", path: filepath.Join(home, ".qwen", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "qwen_code", path: filepath.Join(work, ".qwen", "settings.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		// Muse Code is two files and no project entry. Both halves are reported because either one
+		// alone is a broken install that Muse says nothing about; the project scope is absent
+		// because Muse's project .muse/hooks.json is ignored by the shipping build, so the
+		// installer refuses it and there is no project path to find.
+		{runtime: "muse_code", path: filepath.Join(museConfigDir(home), "beacon-endpoint-hooks.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "muse_code", path: filepath.Join(museConfigDir(home), "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		// OpenHands is one file per scope, and both are reported because the runtime reads the
+		// first it finds rather than merging them: a repository with its own hooks.json shadows the
+		// user one entirely, so an inventory showing only the user file would report a working
+		// install for a machine where Beacon's hooks never run.
+		{runtime: "openhands", path: filepath.Join(openHandsUserDir(home), "hooks.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "openhands", path: filepath.Join(work, ".openhands", "hooks.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		// Kiro is one Beacon-owned file per scope, and both are reported because Kiro merges hook
+		// files across scopes rather than taking the first it finds -- the opposite of OpenHands
+		// above. Both can be live at once, so showing one would understate the install.
+		{runtime: "kiro", path: filepath.Join(kiroUserDir(home), "hooks", "beacon-endpoint.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "kiro", path: filepath.Join(work, ".kiro", "hooks", "beacon-endpoint.json"), scope: ScopeProject, format: formatJSON, kind: KindHookConfig},
+		// DeepSeek Harness is two files and no project entry. Both halves are reported because
+		// either one alone is inert and the runtime says nothing about it -- the Muse Code shape;
+		// the project scope is absent because dsh composes its plugin tree from the Harness home,
+		// so a repository has nowhere to mount a hook bridge from. cordis.patch.yml is the user's
+		// own file, which is why it is listed as YAML and matched on the bridge package rather
+		// than on a Beacon marker.
+		{runtime: "deepseek_harness", path: filepath.Join(dshUserDir(home), "beacon-endpoint-hooks.json"), scope: ScopeUser, format: formatJSON, kind: KindHookConfig},
+		{runtime: "deepseek_harness", path: filepath.Join(dshUserDir(home), "cordis.patch.yml"), scope: ScopeUser, format: formatYAML, kind: KindHookConfig},
+		// Kimi Code is one file and no project entry, and the file is not Beacon's: config.toml
+		// is where the runtime keeps its provider credentials, its model catalog and its
+		// permission rules, and Beacon's hooks are a minority of it. That is why it is listed as
+		// KindNativeConfig rather than KindHookConfig, and why the tell is the hook command
+		// rather than the file existing. The project scope is absent because Kimi Code reads one
+		// user-level config file and has no project-level config mechanism at all.
+		{runtime: "kimi_code", path: filepath.Join(kimiUserDir(home), "config.toml"), scope: ScopeUser, format: formatTOML, kind: KindNativeConfig},
+		// fx has no Beacon-written file, so all three are its own configuration. The two MCP files
+		// are the ones that carry information nothing else here reports: fx's profile server list
+		// and the workspace servers it shares with Claude-compatible runtimes.
+		{runtime: fxRuntime, path: filepath.Join(home, ".fx", "settings.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: fxRuntime, path: filepath.Join(home, ".fx", "mcp.json"), scope: ScopeUser, format: formatJSON, kind: KindNativeConfig},
+		{runtime: fxRuntime, path: filepath.Join(work, ".mcp.json"), scope: ScopeProject, format: formatJSON, kind: KindNativeConfig},
+	}
+	if got, want := len(result.Configs), len(expected); got != want {
+		t.Fatalf("config candidates = %d, want %d", got, want)
+	}
+	for _, item := range expected {
+		config := findConfig(result.Configs, item.runtime, item.path)
+		if config == nil {
+			t.Fatalf("missing candidate %s %s", item.runtime, item.path)
+		}
+		if config.Scope != item.scope {
+			t.Fatalf("%s %s scope = %s, want %s", item.runtime, item.path, config.Scope, item.scope)
+		}
+		if config.ParserMode != item.format || config.ConfigKind != item.kind {
+			t.Fatalf("%s %s mode/kind = %s/%s, want %s/%s", item.runtime, item.path, config.ParserMode, config.ConfigKind, item.format, item.kind)
+		}
+	}
+}
+
+func TestScanYAMLAndMetadataOnlyConfigs(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	t.Setenv("SHELL", "/bin/zsh")
+	t.Setenv("CLINE_DIR", "")
+	writeFile(t, filepath.Join(hermesDefaultRoot(t, home), "config.yaml"), `
+mcpServers:
+  memory:
+    command: uvx
+    args:
+      - mcp-server-memory
+`)
+	writeFile(t, filepath.Join(home, ".config", "opencode", "plugins", "beacon.ts"), `// beacon-managed-opencode-plugin:v1`)
+	writeFile(t, filepath.Join(home, ".cline", "plugins", "beacon.ts"), `// beacon-managed-cline-plugin:v1`)
+	writeFile(t, filepath.Join(home, ".zshrc"), `export OTEL_TELEMETRY_ENDPOINT=http://127.0.0.1:4318`)
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
+	})
+
+	assertServer(t, result.MCPServers, "hermes", "memory", TransportStdio, true, 1, 0, 0)
+	opencode := findConfig(result.Configs, "opencode", filepath.Join(home, ".config", "opencode", "plugins", "beacon.ts"))
+	if opencode == nil {
+		t.Fatal("opencode metadata-only config not found")
+	}
+	if opencode.ParserStatus != StatusOK || !opencode.BeaconManaged {
+		t.Fatalf("opencode status = %s managed=%t, want ok/managed", opencode.ParserStatus, opencode.BeaconManaged)
+	}
+	if opencode.ParserMode != formatMetadataOnly || opencode.ConfigKind != KindPlugin {
+		t.Fatalf("opencode mode/kind = %s/%s, want %s/%s", opencode.ParserMode, opencode.ConfigKind, formatMetadataOnly, KindPlugin)
+	}
+	// Each plugin runtime needs its own marker case in beaconManaged; a missing one reports an
+	// installed plugin as unmanaged, which is how an inventory comes to show telemetry as absent on
+	// a machine that has it.
+	cline := findConfig(result.Configs, "cline", filepath.Join(home, ".cline", "plugins", "beacon.ts"))
+	if cline == nil {
+		t.Fatal("cline metadata-only config not found")
+	}
+	if cline.ParserStatus != StatusOK || !cline.BeaconManaged {
+		t.Fatalf("cline status = %s managed=%t, want ok/managed", cline.ParserStatus, cline.BeaconManaged)
+	}
+	if cline.ParserMode != formatMetadataOnly || cline.ConfigKind != KindPlugin {
+		t.Fatalf("cline mode/kind = %s/%s, want %s/%s", cline.ParserMode, cline.ConfigKind, formatMetadataOnly, KindPlugin)
+	}
+	factoryProfile := findConfig(result.Configs, "factory", filepath.Join(home, ".zshrc"))
+	if factoryProfile == nil {
+		t.Fatal("factory shell profile config not found")
+	}
+	if factoryProfile.ParserStatus != StatusOK || !factoryProfile.BeaconManaged {
+		t.Fatalf("factory profile status = %s managed=%t, want ok/managed", factoryProfile.ParserStatus, factoryProfile.BeaconManaged)
+	}
+	if factoryProfile.ParserMode != formatMetadataOnly || factoryProfile.ConfigKind != KindProfile {
+		t.Fatalf("factory profile mode/kind = %s/%s, want %s/%s", factoryProfile.ParserMode, factoryProfile.ConfigKind, formatMetadataOnly, KindProfile)
+	}
+	copilotProfile := findConfig(result.Configs, "copilot_cli", filepath.Join(home, ".zshrc"))
+	if copilotProfile == nil {
+		t.Fatal("copilot shell profile config not found")
+	}
+	if copilotProfile.BeaconManaged {
+		t.Fatal("factory OTEL marker should not make copilot profile Beacon-managed")
+	}
+}
+
+func TestCopilotManagedDetectionFalsePositives(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+	cases := []struct {
+		name    string
+		content string
+		want    bool
+	}{
+		{
+			name:    "commented_out",
+			content: "# export COPILOT_OTEL_ENABLED=true\nexport OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318\n",
+			want:    false,
+		},
+		{
+			name:    "disabled_false",
+			content: "export COPILOT_OTEL_ENABLED=false\nexport OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318\n",
+			want:    false,
+		},
+		{
+			name:    "disabled_zero",
+			content: "export COPILOT_OTEL_ENABLED=0\nexport COPILOT_OTEL_ENDPOINT=http://127.0.0.1:4318\n",
+			want:    false,
+		},
+		{
+			name:    "enabled_no_endpoint",
+			content: "export COPILOT_OTEL_ENABLED=true\n",
+			want:    false,
+		},
+		{
+			name:    "enabled_remote_endpoint",
+			content: "export COPILOT_OTEL_ENABLED=true\nexport COPILOT_OTEL_ENDPOINT=http://remote.example.com:4318\n",
+			want:    false,
+		},
+		{
+			name:    "enabled_with_local_endpoint",
+			content: "export COPILOT_OTEL_ENABLED=true\nexport COPILOT_OTEL_ENDPOINT=http://127.0.0.1:4318\n",
+			want:    true,
+		},
+		{
+			name:    "enabled_with_generic_otlp_endpoint",
+			content: "export COPILOT_OTEL_ENABLED=1\nexport OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318\n",
+			want:    true,
+		},
+		{
+			name:    "factory_endpoint_only",
+			content: "export OTEL_TELEMETRY_ENDPOINT=http://127.0.0.1:4318\n",
+			want:    false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			work := t.TempDir()
+			writeFile(t, filepath.Join(home, ".zshrc"), tc.content)
+
+			result := Scan(Options{
+				HomeDir:    home,
+				WorkingDir: work,
+				Now:        fixedNow,
+			})
+
+			copilotProfile := findConfig(result.Configs, "copilot_cli", filepath.Join(home, ".zshrc"))
+			if copilotProfile == nil {
+				t.Fatal("copilot shell profile config not found")
+			}
+			if copilotProfile.BeaconManaged != tc.want {
+				t.Fatalf("copilot BeaconManaged = %t, want %t", copilotProfile.BeaconManaged, tc.want)
+			}
+		})
+	}
+}
+
+func TestScanCurrentUserAndProjectSkillInventory(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	claudeSkillPath := filepath.Join(home, ".claude", "skills", "deploy", "SKILL.md")
+	agentSkillPath := filepath.Join(work, ".agents", "skills", "review", "SKILL.md")
+	writeFile(t, claudeSkillPath, "---\ndescription: do not retain\n---\nSECRET INSTRUCTIONS")
+	writeFile(t, agentSkillPath, "# Review\nKeep this instruction body out of inventory.")
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
+	})
+
+	deploy := findSkill(result.Skills, "claude_code", "deploy", claudeSkillPath)
+	if deploy == nil {
+		t.Fatalf("Claude skill not found in %#v", result.Skills)
+	}
+	if deploy.SourceScope != ScopeUser || !deploy.Exists || !deploy.Readable || deploy.ParserStatus != StatusOK {
+		t.Fatalf("Claude skill status = %#v", deploy)
+	}
+	// The same hash a session.context skill listing names the skill under, so the two join.
+	if deploy.SkillNameHash != asymptoteobserve.SkillNameHash("deploy") || deploy.SkillNameHash != hashString("deploy") {
+		t.Fatalf("skill_name_hash = %q, want the skill-listing hash of its name", deploy.SkillNameHash)
+	}
+	if deploy.FileSHA256 == "" || deploy.SkillNameHash == "" || deploy.RootPathHash == "" || deploy.ManifestPathHash == "" {
+		t.Fatalf("Claude skill missing hashes: %#v", deploy)
+	}
+	review := findSkill(result.Skills, "agent_skills", "review", agentSkillPath)
+	if review == nil || review.SourceScope != ScopeProject {
+		t.Fatalf("project agent skill = %#v, want project scope", review)
+	}
+
+	data, err := json.Marshal(result.Skills)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	for _, forbidden := range []string{"SECRET INSTRUCTIONS", "Keep this instruction body", "do not retain"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("skill inventory retained manifest content %q in %s", forbidden, text)
+		}
+	}
+}
+
+func TestMissingSkillRootsAreReportedAsNotFound(t *testing.T) {
+	result := Scan(Options{
+		HomeDir:    t.TempDir(),
+		WorkingDir: t.TempDir(),
+		Now:        fixedNow,
+	})
+	if len(result.Skills) == 0 {
+		t.Fatal("expected missing skill roots to be reported")
+	}
+	for _, skill := range result.Skills {
+		if skill.Exists {
+			continue
+		}
+		if skill.ParserStatus != StatusNotFound {
+			t.Fatalf("missing skill status = %s, want %s", skill.ParserStatus, StatusNotFound)
+		}
+		if skill.RootPathHash == "" {
+			t.Fatal("missing skill root should still include a path hash")
+		}
+	}
+}
+
+func TestSkillScanIsBoundedToDirectSkillManifests(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	writeFile(t, filepath.Join(home, ".cursor", "skills", "direct", "SKILL.md"), "# Direct")
+	writeFile(t, filepath.Join(home, ".cursor", "skills", "nested", "child", "SKILL.md"), "# Nested")
+	writeFile(t, filepath.Join(home, ".cursor", "skills", "node_modules", "package", "SKILL.md"), "# Vendor")
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Now:        fixedNow,
+	})
+
+	if findSkill(result.Skills, "cursor", "direct", filepath.Join(home, ".cursor", "skills", "direct", "SKILL.md")) == nil {
+		t.Fatal("direct Cursor skill not found")
+	}
+	if findSkill(result.Skills, "cursor", "child", filepath.Join(home, ".cursor", "skills", "nested", "child", "SKILL.md")) != nil {
+		t.Fatal("nested skill manifest should not be discovered")
+	}
+	if findSkill(result.Skills, "cursor", "package", filepath.Join(home, ".cursor", "skills", "node_modules", "package", "SKILL.md")) != nil {
+		t.Fatal("vendor skill manifest should not be discovered")
+	}
+}
+
+func TestSkillScanFollowsSymlinkedSkillDirectories(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	target := filepath.Join(home, ".agents", "skills", "find-skills")
+	writeFile(t, filepath.Join(target, "SKILL.md"), "# Find Skills")
+	linkRoot := filepath.Join(home, ".claude", "skills")
+	if err := os.MkdirAll(linkRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(linkRoot, "find-skills")); err != nil {
+		t.Fatal(err)
+	}
+
+	result := Scan(Options{
+		HomeDir:    home,
+		WorkingDir: work,
+		Runtimes:   []string{"claude_code"},
+		Now:        fixedNow,
+	})
+
+	skill := findSkill(result.Skills, "claude_code", "find-skills", filepath.Join(linkRoot, "find-skills", "SKILL.md"))
+	if skill == nil {
+		t.Fatalf("symlinked Claude skill not found in %#v", result.Skills)
+	}
+	if !skill.Exists || !skill.Readable || skill.ParserStatus != StatusOK {
+		t.Fatalf("symlinked Claude skill status = %#v", skill)
+	}
+}
+
+func TestInventoryLogAndStatePathsFollowRuntimeLog(t *testing.T) {
+	runtimeLog := filepath.Join("/tmp", "beacon", "runtime.jsonl")
+	if got, want := LogPath(runtimeLog, true), filepath.Join("/tmp", "beacon", "inventory_state.jsonl"); got != want {
+		t.Fatalf("LogPath = %q, want %q", got, want)
+	}
+	if got, want := StatePathForLog(runtimeLog, true), filepath.Join("/tmp", "beacon", "inventory-state.json"); got != want {
+		t.Fatalf("StatePathForLog = %q, want %q", got, want)
+	}
+}
+
+func TestReadStateTreatsEmptyFileAsFreshState(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "inventory-state.json")
+	if err := os.WriteFile(path, []byte(" \n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	state, err := ReadState(path)
+	if err != nil {
+		t.Fatalf("ReadState returned error for empty state file: %v", err)
+	}
+	if state.LastEmittedAt != "" || state.LastSnapshotDigest != "" || len(state.LastSnapshotDigests) != 0 {
+		t.Fatalf("state = %#v, want empty", state)
+	}
+}
+
+func TestScanOmitsContentsByDefault(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	writeFile(t, filepath.Join(home, ".claude", "settings.json"), `{"mcpServers":{"fs":{"command":"npx","env":{"GITHUB_TOKEN":"ghp_secret"}}}}`)
+	writeFile(t, filepath.Join(home, ".cursor", "skills", "deploy", "SKILL.md"), "# Deploy\nbody")
+
+	result := Scan(Options{HomeDir: home, WorkingDir: work, Now: fixedNow})
+
+	for _, config := range result.Configs {
+		if config.Content != nil {
+			t.Fatalf("config %s retained content by default: %#v", config.Runtime, config.Content)
+		}
+	}
+	for _, server := range result.MCPServers {
+		if server.Definition != nil {
+			t.Fatalf("server %s retained definition by default: %#v", server.ServerName, server.Definition)
+		}
+	}
+	for _, skill := range result.Skills {
+		if skill.Content != nil {
+			t.Fatalf("skill %s retained content by default: %#v", skill.SkillName, skill.Content)
+		}
+	}
+}
+
+func TestScanCapturesRedactedContentsWhenRequested(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	claudePath := filepath.Join(home, ".claude", "settings.json")
+	skillPath := filepath.Join(home, ".cursor", "skills", "deploy", "SKILL.md")
+	writeFile(t, claudePath, `{
+  "mcpServers": {
+    "github": {
+      "command": "gh",
+      "args": ["mcp", "serve"],
+      "env": {"GITHUB_TOKEN": "ghp_supersecret", "GH_HOST": "github.com"}
+    }
+  }
+}`)
+	writeFile(t, skillPath, "---\napi_key: sk-live-skillsecret\n---\n# Deploy instructions")
+
+	result := Scan(Options{
+		HomeDir:         home,
+		WorkingDir:      work,
+		Runtimes:        []string{"claude_code", "cursor"},
+		IncludeContents: true,
+		Now:             fixedNow,
+	})
+
+	config := findConfig(result.Configs, "claude_code", claudePath)
+	if config == nil || config.Content == nil {
+		t.Fatalf("expected captured content for claude config, got %#v", config)
+	}
+	if config.Content.Bytes == 0 || config.Content.RedactedCount < 1 {
+		t.Fatalf("content metadata = %#v, want bytes>0 and redactions>=1", config.Content)
+	}
+	if strings.Contains(config.Content.Text, "ghp_supersecret") {
+		t.Fatalf("captured content leaked secret: %s", config.Content.Text)
+	}
+	if !strings.Contains(config.Content.Text, redactedPlaceholder) {
+		t.Fatalf("captured content missing redaction placeholder: %s", config.Content.Text)
+	}
+	if !strings.Contains(config.Content.Text, "github.com") {
+		t.Fatalf("captured content dropped non-secret value: %s", config.Content.Text)
+	}
+
+	server := findServer(result.MCPServers, "claude_code", "github")
+	if server == nil || server.Definition == nil {
+		t.Fatalf("expected captured definition for github server, got %#v", server)
+	}
+	envBlock, ok := server.Definition["env"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("definition env block missing: %#v", server.Definition)
+	}
+	if envBlock["GITHUB_TOKEN"] != redactedPlaceholder {
+		t.Fatalf("definition GITHUB_TOKEN not redacted: %#v", envBlock)
+	}
+	if envBlock["GH_HOST"] != "github.com" {
+		t.Fatalf("definition GH_HOST altered: %#v", envBlock)
+	}
+	if args, ok := server.Definition["args"].([]interface{}); !ok || len(args) != 2 {
+		t.Fatalf("definition args not preserved in full: %#v", server.Definition["args"])
+	}
+
+	skill := findSkill(result.Skills, "cursor", "deploy", skillPath)
+	if skill == nil || skill.Content == nil {
+		t.Fatalf("expected captured skill content, got %#v", skill)
+	}
+	if strings.Contains(skill.Content.Text, "sk-live-skillsecret") {
+		t.Fatalf("skill content leaked secret: %s", skill.Content.Text)
+	}
+	if !strings.Contains(skill.Content.Text, "Deploy instructions") {
+		t.Fatalf("skill content dropped instruction body: %s", skill.Content.Text)
+	}
+}
+
+func TestCapturedContentTruncatesToSizeLimit(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	claudePath := filepath.Join(home, ".claude", "settings.json")
+	writeFile(t, claudePath, `{"note":"`+strings.Repeat("a", 500)+`"}`)
+
+	result := Scan(Options{
+		HomeDir:         home,
+		WorkingDir:      work,
+		Runtimes:        []string{"claude_code"},
+		IncludeContents: true,
+		MaxContentBytes: 64,
+		Now:             fixedNow,
+	})
+
+	config := findConfig(result.Configs, "claude_code", claudePath)
+	if config == nil || config.Content == nil {
+		t.Fatalf("expected captured content, got %#v", config)
+	}
+	if !config.Content.Truncated {
+		t.Fatal("expected content to be marked truncated")
+	}
+	if len(config.Content.Text) > 64 {
+		t.Fatalf("truncated text len = %d, want <= 64", len(config.Content.Text))
+	}
+	if config.Content.Bytes <= 64 {
+		t.Fatalf("Bytes should reflect original size, got %d", config.Content.Bytes)
+	}
+}
+
+func TestRedactSecretsAcrossFormats(t *testing.T) {
+	cases := []struct {
+		name      string
+		input     string
+		forbidden string
+		wantCount int
+	}{
+		{"json", `{"api_token": "ghp_x", "host": "h"}`, "ghp_x", 1},
+		{"toml", "GITHUB_TOKEN = \"tk_x\"\nname = \"ok\"", "tk_x", 1},
+		{"yaml", "password: hunter2\nuser: bob", "hunter2", 1},
+		{"yaml block scalar", "api_token: |\n  ghp_first\n  ghp_second\nuser: bob", "ghp_second", 1},
+		{"shell", "export AWS_SECRET_ACCESS_KEY=abc123\nexport PATH=/bin", "abc123", 1},
+		{"none", `{"host": "example.com", "port": 8080}`, "", 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			out, count := redactSecrets(tc.input)
+			if count != tc.wantCount {
+				t.Fatalf("redaction count = %d, want %d (out=%q)", count, tc.wantCount, out)
+			}
+			if tc.forbidden != "" && strings.Contains(out, tc.forbidden) {
+				t.Fatalf("redacted output leaked %q: %s", tc.forbidden, out)
+			}
+		})
+	}
+}
+
+func TestCaptureContentRedactsYAMLBlockScalarSecrets(t *testing.T) {
+	content := captureContent([]byte("api_token: |\n  ghp_first\n  ghp_second\nuser: bob"), DefaultMaxContentBytes)
+	if content == nil {
+		t.Fatal("expected captured content")
+	}
+	if content.RedactedCount != 1 {
+		t.Fatalf("redaction count = %d, want 1 (text=%q)", content.RedactedCount, content.Text)
+	}
+	for _, forbidden := range []string{"ghp_first", "ghp_second"} {
+		if strings.Contains(content.Text, forbidden) {
+			t.Fatalf("captured content leaked %q: %s", forbidden, content.Text)
+		}
+	}
+	if !strings.Contains(content.Text, "user: bob") {
+		t.Fatalf("captured content dropped non-secret YAML body: %s", content.Text)
+	}
+}
+
+func fixedNow() time.Time {
+	return time.Date(2026, 6, 5, 7, 0, 0, 0, time.UTC)
+}
+
+func writeFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertServer(t *testing.T, servers []MCPServer, runtime, name, transport string, commandPresent bool, argsCount, envKeys, envKeyCount int) {
+	t.Helper()
+	for _, server := range servers {
+		if server.Runtime == runtime && server.ServerName == name {
+			if server.Transport != transport {
+				t.Fatalf("%s/%s transport = %s, want %s", runtime, name, server.Transport, transport)
+			}
+			if server.CommandPresent != commandPresent {
+				t.Fatalf("%s/%s commandPresent = %t, want %t", runtime, name, server.CommandPresent, commandPresent)
+			}
+			if server.ArgsCount != argsCount {
+				t.Fatalf("%s/%s argsCount = %d, want %d", runtime, name, server.ArgsCount, argsCount)
+			}
+			if len(server.EnvKeys) != envKeys {
+				t.Fatalf("%s/%s EnvKeys len = %d, want %d (%#v)", runtime, name, len(server.EnvKeys), envKeys, server.EnvKeys)
+			}
+			if server.EnvKeyCount != envKeyCount {
+				t.Fatalf("%s/%s EnvKeyCount = %d, want %d", runtime, name, server.EnvKeyCount, envKeyCount)
+			}
+			if server.DefinitionHash == "" || server.ServerNameHash == "" || server.SourcePathHash == "" {
+				t.Fatalf("%s/%s missing hashes: %#v", runtime, name, server)
+			}
+			return
+		}
+	}
+	t.Fatalf("server %s/%s not found in %#v", runtime, name, servers)
+}
+
+func assertServerPresent(servers []MCPServer, runtime, name string) bool {
+	for _, server := range servers {
+		if server.Runtime == runtime && server.ServerName == name {
+			return true
+		}
+	}
+	return false
+}
+
+func findServer(servers []MCPServer, runtime, name string) *MCPServer {
+	for i := range servers {
+		if servers[i].Runtime == runtime && servers[i].ServerName == name {
+			return &servers[i]
+		}
+	}
+	return nil
+}
+
+func findConfig(configs []Config, runtime, path string) *Config {
+	pathHash := hashString(path)
+	for i := range configs {
+		if configs[i].Runtime == runtime && configs[i].PathHash == pathHash {
+			return &configs[i]
+		}
+	}
+	return nil
+}
+
+func findSkill(skills []Skill, runtime, name, manifestPath string) *Skill {
+	manifestPathHash := hashString(manifestPath)
+	for i := range skills {
+		if skills[i].Runtime == runtime && skills[i].SkillName == name && skills[i].ManifestPathHash == manifestPathHash {
+			return &skills[i]
+		}
+	}
+	return nil
+}
+
+// Qwen Code's hooks live in the same settings.json as the rest of its configuration, so Beacon has
+// no file of its own there to stamp with a marker. Detection keys on the hook command instead, and
+// both directions matter: missing the install reports telemetry as absent on a machine that has it,
+// and claiming another runtime's hooks attributes someone else's install to Qwen.
+func TestQwenManagedDetectionReadsTheHookCommand(t *testing.T) {
+	for name, tc := range map[string]struct {
+		settings string
+		want     bool
+	}{
+		"flag form":       {`{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"'/opt/beacon/hooks/beacon-hooks' --platform qwen --log '/tmp/runtime.jsonl' stop"}]}]}}`, true},
+		"equals form":     {`{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"beacon-hooks --platform=qwen stop"}]}]}}`, true},
+		"another runtime": {`{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"beacon-hooks --platform claude stop"}]}]}}`, false},
+		"the user's own":  {`{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"my-own.sh"}]}]}}`, false},
+		"no hooks at all": {`{"theme":"Dracula"}`, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := beaconManaged(candidate{runtime: "qwen_code"}, []byte(tc.settings))
+			if got != tc.want {
+				t.Errorf("beaconManaged(qwen_code) = %t, want %t for %s", got, tc.want, tc.settings)
+			}
+		})
+	}
+}
+
+// fx keeps its profile MCP servers under an `mcp` key and accepts `mcpServers` as an alias, and a
+// workspace can add a Claude-compatible .mcp.json. Both keys are ones the scanner already reads, so
+// what this test protects is the wiring: fx's files being scanned at all, and being attributed to
+// the same harness name the collector writes on fx events.
+func TestScanFxMCPInventory(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+	writeFile(t, filepath.Join(home, ".fx", "mcp.json"), `{
+  "mcp": {
+    "docs": {
+      "command": "docs-server",
+      "args": ["--stdio"],
+      "env": {"DOCS_TOKEN": "secret"}
+    }
+  }
+}`)
+	writeFile(t, filepath.Join(work, ".mcp.json"), `{
+  "mcpServers": {
+    "issues": {
+      "url": "https://example.test/mcp",
+      "transport": "http"
+    }
+  }
+}`)
+	writeFile(t, filepath.Join(home, ".fx", "settings.json"), `{"collapse_tool_calls": true}`)
+
+	result := Scan(Options{HomeDir: home, WorkingDir: work, Now: fixedNow})
+
+	// One env key, and its name is withheld: DOCS_TOKEN reads as a secret, so the inventory counts
+	// it without naming it. The count is the point -- a server with credentials in its environment
+	// is worth knowing about even when the key names are not safe to print.
+	assertServer(t, result.MCPServers, fxRuntime, "docs", TransportStdio, true, 1, 0, 1)
+	assertServer(t, result.MCPServers, fxRuntime, "issues", TransportHTTP, false, 0, 0, 0)
+
+	settings := findConfig(result.Configs, fxRuntime, filepath.Join(home, ".fx", "settings.json"))
+	if settings == nil {
+		t.Fatal("fx settings.json is not in the inventory")
+	}
+	if !settings.Exists || settings.ParserStatus != StatusOK {
+		t.Fatalf("fx settings status = exists:%t parser:%s", settings.Exists, settings.ParserStatus)
+	}
+	// Beacon writes nothing into fx, so claiming these files as Beacon-managed would assert an
+	// install that does not exist -- and would make `endpoint inventory` disagree with
+	// `endpoint discover`, which reports fx as a runtime Beacon reads rather than configures.
+	if settings.BeaconManaged {
+		t.Error("fx settings.json is reported as Beacon-managed; Beacon writes nothing into fx")
+	}
+}
+
+// A machine with fx installed and no MCP servers configured must produce inventory rows saying the
+// files are absent, not an error and not a phantom server.
+func TestScanFxWithoutMCPConfigurationIsQuiet(t *testing.T) {
+	home := t.TempDir()
+	work := t.TempDir()
+
+	result := Scan(Options{HomeDir: home, WorkingDir: work, Now: fixedNow})
+
+	for _, server := range result.MCPServers {
+		if server.Runtime == fxRuntime {
+			t.Fatalf("fx server reported with no fx configuration on disk: %#v", server)
+		}
+	}
+	config := findConfig(result.Configs, fxRuntime, filepath.Join(home, ".fx", "mcp.json"))
+	if config == nil {
+		t.Fatal("fx mcp.json candidate is missing from the inventory")
+	}
+	if config.Exists || config.ParserStatus != StatusNotFound {
+		t.Errorf("absent fx mcp.json reported as exists:%t parser:%s", config.Exists, config.ParserStatus)
+	}
+}
+
+// The scheduled heartbeat runs with no meaningful working directory (launchd and systemd start
+// jobs in /). It must not fall back to the process cwd and scan whatever repo happens to be there.
+func TestScanSkipProjectScopeIgnoresTheProcessCwd(t *testing.T) {
+	home := t.TempDir()
+	project := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(project, ".cursor"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, ".cursor", "mcp.json"), []byte(`{"mcpServers":{"proj":{"command":"npx"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(project, ".claude", "skills", "s1"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, ".claude", "skills", "s1", "SKILL.md"), []byte("---\nname: s1\ndescription: d\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(project); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(wd) })
+
+	withCwd := Scan(Options{HomeDir: home})
+	if !hasScope(withCwd, ScopeProject) {
+		t.Fatal("without SkipProjectScope the cwd project config should be scanned (control)")
+	}
+	skipped := Scan(Options{HomeDir: home, SkipProjectScope: true})
+	if hasScope(skipped, ScopeProject) {
+		t.Fatalf("SkipProjectScope must drop project-scoped configs and skills: %+v", skipped)
+	}
+	if skipped.UserScope.WorkingDir != "" || skipped.UserScope.WorkDirHash != "" {
+		t.Fatalf("SkipProjectScope must leave the working dir empty: %+v", skipped.UserScope)
+	}
+	for _, server := range skipped.MCPServers {
+		if server.ServerName == "proj" {
+			t.Fatal("project MCP server leaked into a project-scope-free scan")
+		}
+	}
+}
+
+func hasScope(result Result, scope string) bool {
+	for _, c := range result.Configs {
+		if c.Scope == scope {
+			return true
+		}
+	}
+	for _, s := range result.Skills {
+		if s.SourceScope == scope {
+			return true
+		}
+	}
+	return false
+}
+
+func TestStateDigestFallsBackToTheLegacyFieldThenTracksPerHome(t *testing.T) {
+	legacy := State{LastSnapshotDigest: "sha256:old"}
+	if legacy.DigestFor("home-a") != "sha256:old" {
+		t.Fatal("a pre-map state must answer with the endpoint-wide digest for any home")
+	}
+	next := legacy.WithDigest("home-a", "sha256:a")
+	if next.DigestFor("home-a") != "sha256:a" || next.LastSnapshotDigest != "sha256:a" {
+		t.Fatalf("WithDigest should record per home and overall: %+v", next)
+	}
+	if next.DigestFor("home-b") != "" {
+		t.Fatal("once per-home digests exist, an unknown home has no previous digest")
+	}
+	if legacy.LastSnapshotDigests != nil {
+		t.Fatal("WithDigest must not mutate its receiver")
+	}
+}
+
+// ~/.claude.json is Claude Code's state file and changes on every session. Its raw hash must not
+// move the digest; the MCP servers parsed from it must.
+func TestSnapshotDigestIgnoresVolatileStateFileChurn(t *testing.T) {
+	home := t.TempDir()
+	statePath := filepath.Join(home, ".claude.json")
+	if err := os.WriteFile(statePath, []byte(`{"numStartups":1,"mcpServers":{"one":{"command":"npx"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	first := Scan(Options{HomeDir: home, SkipProjectScope: true})
+	if err := os.WriteFile(statePath, []byte(`{"numStartups":2,"lastSessionId":"abc","mcpServers":{"one":{"command":"npx"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	second := Scan(Options{HomeDir: home, SkipProjectScope: true})
+	if first.Configs[0].FileSHA256 == second.Configs[0].FileSHA256 {
+		t.Fatal("test setup: the file hash should differ between scans")
+	}
+	if !second.Configs[0].Volatile {
+		t.Fatal("~/.claude.json must be marked volatile")
+	}
+	if SnapshotDigest(first) != SnapshotDigest(second) {
+		t.Fatal("bookkeeping churn in ~/.claude.json must not change the snapshot digest")
+	}
+	if err := os.WriteFile(statePath, []byte(`{"numStartups":3,"mcpServers":{"one":{"command":"npx"},"two":{"command":"uvx"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	third := Scan(Options{HomeDir: home, SkipProjectScope: true})
+	if SnapshotDigest(second) == SnapshotDigest(third) {
+		t.Fatal("a new MCP server in ~/.claude.json must change the digest")
+	}
+	// A non-volatile config keeps its content in the digest.
+	settings := filepath.Join(home, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settings), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(settings, []byte(`{"hooks":{}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fourth := Scan(Options{HomeDir: home, SkipProjectScope: true})
+	if err := os.WriteFile(settings, []byte(`{"hooks":{"Stop":[]}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fifth := Scan(Options{HomeDir: home, SkipProjectScope: true})
+	if SnapshotDigest(fourth) == SnapshotDigest(fifth) {
+		t.Fatal("an edit to settings.json must still change the digest")
+	}
+}
+
+func TestScanFollowsPiAgentDirForTheUserExtension(t *testing.T) {
+	home := t.TempDir()
+	agentDir := filepath.Join(t.TempDir(), "pi-agent")
+	t.Setenv("PI_CODING_AGENT_DIR", agentDir)
+
+	var got []string
+	for _, c := range piCandidates(home, "") {
+		got = append(got, c.path)
+	}
+	want := filepath.Join(agentDir, "extensions", "beacon.ts")
+	if len(got) != 1 || got[0] != want {
+		t.Fatalf("pi user candidates = %v, want [%s]", got, want)
+	}
+}

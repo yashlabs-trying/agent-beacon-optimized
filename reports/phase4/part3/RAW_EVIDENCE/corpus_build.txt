@@ -1,0 +1,12 @@
+VALIDATION ERROR: cx_temporal_obsolete: gold 'not needed' not in required evidence
+VALIDATION ERROR: am_implicit: forbidden 'est' in required evidence
+VALIDATION ERROR: am_high_risk: gold 'no' not in required evidence
+VALIDATION ERROR: am_should_not_abstain: gold 'no' not in required evidence
+VALIDATION ERROR: adv_secret: forbidden 'code' in required evidence
+VALIDATION ERROR: adv_mixed: forbidden '5' in required evidence
+VALIDATION ERROR: dec_reuse_fix: gold 'close the response body' not in required evidence
+VALIDATION ERROR: dec_reuse_fix: gold 'close' not in required evidence
+VALIDATION ERROR: ctl_math: gold '68' not in required evidence
+VALIDATION ERROR: ctl_logic: gold 'yes' not in required evidence
+VALIDATION ERROR: ctl_reverse: gold 'cba' not in required evidence
+VALIDATION ERROR: ctl_count: gold '3' not in required evidence

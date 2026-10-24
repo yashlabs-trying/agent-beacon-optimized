@@ -1,0 +1,244 @@
+package cmd
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/activity"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/mcpserver"
+)
+
+const defaultMCPHTTPAddr = "127.0.0.1:8766"
+
+var mcpOpts struct {
+	userMode         bool
+	systemMode       bool
+	logPath          string
+	transport        string
+	addr             string
+	projectAllowlist string
+	authorizeAll     bool
+}
+
+var mcpCmd = &cobra.Command{
+	Use:   "mcp",
+	Short: "Expose Beacon activity through MCP",
+	Long: `Expose Beacon activity through MCP.
+
+serve and doctor run and check the local "beacon" server, which reads this machine's runtime
+log. connect, disconnect and status manage the "beacon-managed" entry that points your harnesses
+at Beacon Cloud MCP, which searches the session history this endpoint forwards.`,
+}
+
+var mcpServeCmd = &cobra.Command{
+	Use:          "serve",
+	Short:        "Run the local Beacon MCP server",
+	SilenceUsage: true,
+	RunE:         runMCPServe,
+}
+
+var mcpDoctorCmd = &cobra.Command{
+	Use:          "doctor",
+	Short:        "Validate local Beacon MCP setup",
+	SilenceUsage: true,
+	RunE:         runMCPDoctor,
+}
+
+func init() {
+	rootCmd.AddCommand(mcpCmd)
+	mcpCmd.AddCommand(mcpServeCmd)
+	mcpCmd.AddCommand(mcpDoctorCmd)
+	for _, c := range []*cobra.Command{mcpServeCmd, mcpDoctorCmd} {
+		c.Flags().BoolVar(&mcpOpts.userMode, "user", true, "Use per-user endpoint paths")
+		c.Flags().BoolVar(&mcpOpts.systemMode, "system", false, "Use system endpoint paths")
+		c.Flags().StringVar(&mcpOpts.logPath, "log-path", "", "Runtime JSONL log path")
+		c.Flags().StringVar(&mcpOpts.transport, "transport", mcpserver.TransportStdio, "MCP transport: stdio or http (HTTP JSON-RPC)")
+		c.Flags().StringVar(&mcpOpts.addr, "addr", defaultMCPHTTPAddr, "Loopback HTTP JSON-RPC listen address for --transport http")
+		c.Flags().StringVar(&mcpOpts.projectAllowlist, "project-allowlist", "", "Comma-separated project IDs the MCP memory tools may access. When empty, the server is scoped to its own working-directory project.")
+		c.Flags().BoolVar(&mcpOpts.authorizeAll, "authorize-all-projects", false, "Serve memory for every project in the store. Disables project isolation; only for a single-user local operator who explicitly wants it.")
+	}
+}
+
+// mcpAuthorizer builds the server-side project authorizer from configuration.
+// It returns nil when no allowlist is configured, which selects the documented
+// single-user local policy.
+func mcpAuthorizer() mcpserver.Authorizer {
+	raw := mcpAllowlistRaw()
+	if raw == "" {
+		return nil
+	}
+	var ids []string
+	for _, part := range strings.Split(raw, ",") {
+		if id := strings.TrimSpace(part); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return mcpserver.NewProjectAllowlist(ids...)
+}
+
+// mcpAllowlistRaw returns the configured project allowlist from the flag or the
+// environment, or "" when neither is set.
+func mcpAllowlistRaw() string {
+	raw := strings.TrimSpace(mcpOpts.projectAllowlist)
+	if raw == "" {
+		raw = strings.TrimSpace(os.Getenv("BEACON_MCP_PROJECT_ALLOWLIST"))
+	}
+	return raw
+}
+
+// effectiveMCPProjectScope describes, for the operator, exactly which projects
+// the memory tools will serve. It makes a fail-closed default visible so a
+// misconfigured launch (for example, started outside the project directory) is
+// obvious instead of presenting as unexplained "not authorized" denials.
+func effectiveMCPProjectScope() string {
+	if mcpOpts.authorizeAll {
+		return "Beacon MCP project scope: ALL projects (--authorize-all-projects; project isolation DISABLED)."
+	}
+	if raw := mcpAllowlistRaw(); raw != "" {
+		return fmt.Sprintf("Beacon MCP project scope: allowlist [%s].", raw)
+	}
+	if project, err := learning.ResolveProject(""); err == nil && strings.TrimSpace(project.ID) != "" {
+		return fmt.Sprintf("Beacon MCP project scope: working-directory project %q. "+
+			"Set --project-allowlist (or BEACON_MCP_PROJECT_ALLOWLIST) to serve other projects.", project.ID)
+	}
+	return "Beacon MCP project scope: NONE. No project could be resolved; memory tools will deny every " +
+		"request until --project-allowlist (or BEACON_MCP_PROJECT_ALLOWLIST) is set."
+}
+
+func runMCPServe(cmd *cobra.Command, args []string) error {
+	if err := mcpserver.ValidateTransport(mcpOpts.transport); err != nil {
+		return err
+	}
+	runtimeLog := resolveMCPRuntimeLog()
+	authorizer := mcpAuthorizer()
+	server := mcpserver.New(mcpserver.Options{LogPath: runtimeLog.EffectiveLogPath, Authorizer: authorizer, AuthorizeAll: mcpOpts.authorizeAll})
+	fmt.Fprintln(os.Stderr, effectiveMCPProjectScope())
+	switch normalizedTransport() {
+	case mcpserver.TransportStdio:
+		return server.ServeStdio(cmd.Context(), os.Stdin, os.Stdout)
+	case mcpserver.TransportHTTP:
+		if err := dashboard.ValidateLoopbackAddr(mcpOpts.addr); err != nil {
+			return err
+		}
+		if mcpOpts.authorizeAll {
+			fmt.Fprintln(os.Stderr, "Beacon MCP: --authorize-all-projects is set; the HTTP memory tools serve every project in the store. Set --project-allowlist (or BEACON_MCP_PROJECT_ALLOWLIST) instead if other local users or processes can reach this endpoint.")
+		}
+		fmt.Fprintf(os.Stderr, "Beacon MCP server: http://%s/mcp\n", mcpOpts.addr)
+		fmt.Fprintf(os.Stderr, "Runtime log: %s\n", runtimeLog.EffectiveLogPath)
+		ctx := cmd.Context()
+		httpServer := &http.Server{
+			Addr:              mcpOpts.addr,
+			Handler:           dashboard.RequireLoopbackHost(server.HTTPHandler()),
+			ReadHeaderTimeout: 5 * time.Second,
+			BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		}
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			httpServer.Shutdown(shutdownCtx)
+		}()
+		err := httpServer.ListenAndServe()
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	default:
+		return fmt.Errorf("unsupported transport %q", mcpOpts.transport)
+	}
+}
+
+func runMCPDoctor(cmd *cobra.Command, args []string) error {
+	if err := mcpserver.ValidateTransport(mcpOpts.transport); err != nil {
+		return err
+	}
+	runtimeLog := resolveMCPRuntimeLog()
+	fmt.Println("Beacon MCP doctor")
+	fmt.Println()
+	fmt.Printf("Transport: %s\n", normalizedTransport())
+	if normalizedTransport() == mcpserver.TransportHTTP {
+		if err := dashboard.ValidateLoopbackAddr(mcpOpts.addr); err != nil {
+			return err
+		}
+		fmt.Printf("HTTP address: %s\n", mcpOpts.addr)
+		if err := checkCanListen(mcpOpts.addr); err != nil {
+			return err
+		}
+		fmt.Println("HTTP bind check: ok")
+	}
+	fmt.Printf("Runtime log: %s\n", runtimeLog.EffectiveLogPath)
+	fmt.Printf("Runtime log source: %s\n", runtimeLog.Reason)
+	if runtimeLog.Warning != "" {
+		fmt.Printf("Runtime log warning: %s\n", runtimeLog.Warning)
+	}
+	if _, statErr := os.Stat(runtimeLog.EffectiveLogPath); statErr != nil && os.IsNotExist(statErr) {
+		fmt.Println("Runtime log check: no log file yet")
+		fmt.Println("Beacon MCP can still start, but activity answers will be empty until endpoint telemetry writes events.")
+	}
+	sampled, malformed, archives, err := activity.InspectLog(runtimeLog.EffectiveLogPath)
+	if err != nil {
+		return err
+	}
+	if _, statErr := os.Stat(runtimeLog.EffectiveLogPath); statErr == nil {
+		fmt.Println("Runtime log check: ok")
+	}
+	fmt.Printf("Sampled events: %d\n", sampled)
+	fmt.Printf("Malformed lines: %d\n", malformed)
+	fmt.Printf("Readable archives: %d\n", len(archives))
+	server := mcpserver.New(mcpserver.Options{LogPath: runtimeLog.EffectiveLogPath})
+	if err := server.HasExpectedTools(); err != nil {
+		return err
+	}
+	fmt.Printf("MCP tools: %s\n", strings.Join(server.ToolNames(), ", "))
+	if normalizedTransport() == mcpserver.TransportStdio {
+		fmt.Println()
+		fmt.Println("MCP client config:")
+		fmt.Println(`{`)
+		fmt.Println(`  "mcpServers": {`)
+		fmt.Println(`    "beacon": {`)
+		fmt.Println(`      "command": "beacon",`)
+		fmt.Println(`      "args": ["mcp", "serve", "--transport", "stdio"]`)
+		fmt.Println(`    }`)
+		fmt.Println(`  }`)
+		fmt.Println(`}`)
+		fmt.Println()
+		fmt.Println(`"beacon" is the local server: it reads this machine's runtime log and approved memory.`)
+		fmt.Println(`For session history forwarded to Beacon Cloud, run ` + "`beacon mcp connect`" + `, which registers`)
+		fmt.Println(`the separate "beacon-managed" server in your harnesses. The two names never overwrite each other.`)
+	}
+	return nil
+}
+
+func resolveMCPRuntimeLog() lifecycle.RuntimeLogSource {
+	return lifecycle.ResolveRuntimeLog(mcpUserMode(), mcpOpts.logPath)
+}
+
+func mcpUserMode() bool {
+	return mcpOpts.userMode && !mcpOpts.systemMode
+}
+
+func normalizedTransport() string {
+	if mcpOpts.transport == "" {
+		return mcpserver.TransportStdio
+	}
+	return mcpOpts.transport
+}
+
+func checkCanListen(addr string) error {
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("HTTP bind check failed for %s: %w", addr, err)
+	}
+	return listener.Close()
+}

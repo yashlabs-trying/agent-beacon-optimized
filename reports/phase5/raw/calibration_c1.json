@@ -1,0 +1,2662 @@
+[
+  {
+    "task": "c1-201",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-201-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.692,
+    "prompt_tokens": 133,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-201",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-201-conv"
+    ],
+    "required_evidence": [
+      "c1-201-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 50.144,
+    "agent_seconds": 0.84,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-201",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-201-conv"
+    ],
+    "required_evidence": [
+      "c1-201-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.037,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-201",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-201-conv"
+    ],
+    "required_evidence": [
+      "c1-201-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.733,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-201",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-201-conv"
+    ],
+    "required_evidence": [
+      "c1-201-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.685,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-202",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-202-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.828,
+    "prompt_tokens": 129,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-202",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-202-conv"
+    ],
+    "required_evidence": [
+      "c1-202-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 16.039,
+    "agent_seconds": 1.147,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-202",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-202-conv"
+    ],
+    "required_evidence": [
+      "c1-202-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.951,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-202",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-202-conv"
+    ],
+    "required_evidence": [
+      "c1-202-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.957,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-202",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-202-conv"
+    ],
+    "required_evidence": [
+      "c1-202-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.933,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-203",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-203-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.538,
+    "prompt_tokens": 136,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-203",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-203-conv"
+    ],
+    "required_evidence": [
+      "c1-203-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 31.949,
+    "agent_seconds": 1.046,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-203",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-203-conv"
+    ],
+    "required_evidence": [
+      "c1-203-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.845,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-203",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-203-conv"
+    ],
+    "required_evidence": [
+      "c1-203-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.892,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-203",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-203-conv"
+    ],
+    "required_evidence": [
+      "c1-203-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.841,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-204",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-204-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.424,
+    "prompt_tokens": 133,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-204",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-204-conv"
+    ],
+    "required_evidence": [
+      "c1-204-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 10.594,
+    "agent_seconds": 0.878,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-204",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-204-conv"
+    ],
+    "required_evidence": [
+      "c1-204-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.754,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-204",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-204-conv"
+    ],
+    "required_evidence": [
+      "c1-204-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.749,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-204",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-204-conv"
+    ],
+    "required_evidence": [
+      "c1-204-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.745,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-205",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-205-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.433,
+    "prompt_tokens": 129,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-205",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-205-conv"
+    ],
+    "required_evidence": [
+      "c1-205-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 7.652,
+    "agent_seconds": 1.083,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-205",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-205-conv"
+    ],
+    "required_evidence": [
+      "c1-205-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.165,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-205",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-205-conv"
+    ],
+    "required_evidence": [
+      "c1-205-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.896,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-205",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-205-conv"
+    ],
+    "required_evidence": [
+      "c1-205-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.986,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-206",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-206-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.38,
+    "prompt_tokens": 136,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-206",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-206-conv"
+    ],
+    "required_evidence": [
+      "c1-206-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 9.72,
+    "agent_seconds": 1.041,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-206",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-206-conv"
+    ],
+    "required_evidence": [
+      "c1-206-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.817,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-206",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-206-conv"
+    ],
+    "required_evidence": [
+      "c1-206-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.815,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-206",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-206-conv"
+    ],
+    "required_evidence": [
+      "c1-206-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.782,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-207",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-207-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.394,
+    "prompt_tokens": 133,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-207",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-207-conv"
+    ],
+    "required_evidence": [
+      "c1-207-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 9.896,
+    "agent_seconds": 0.819,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-207",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-207-conv"
+    ],
+    "required_evidence": [
+      "c1-207-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.022,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-207",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-207-conv"
+    ],
+    "required_evidence": [
+      "c1-207-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.71,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-207",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-207-conv"
+    ],
+    "required_evidence": [
+      "c1-207-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.687,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-208",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-208-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.429,
+    "prompt_tokens": 129,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-208",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-208-conv"
+    ],
+    "required_evidence": [
+      "c1-208-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 8.596,
+    "agent_seconds": 1.062,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-208",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-208-conv"
+    ],
+    "required_evidence": [
+      "c1-208-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.966,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-208",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-208-conv"
+    ],
+    "required_evidence": [
+      "c1-208-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.898,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-208",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-208-conv"
+    ],
+    "required_evidence": [
+      "c1-208-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.969,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-209",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-209-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.353,
+    "prompt_tokens": 136,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-209",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-209-conv"
+    ],
+    "required_evidence": [
+      "c1-209-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 9.675,
+    "agent_seconds": 1.009,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-209",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-209-conv"
+    ],
+    "required_evidence": [
+      "c1-209-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.838,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-209",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-209-conv"
+    ],
+    "required_evidence": [
+      "c1-209-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.862,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-209",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-209-conv"
+    ],
+    "required_evidence": [
+      "c1-209-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.845,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-210",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-210-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.437,
+    "prompt_tokens": 133,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-210",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-210-conv"
+    ],
+    "required_evidence": [
+      "c1-210-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 8.736,
+    "agent_seconds": 0.812,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-210",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-210-conv"
+    ],
+    "required_evidence": [
+      "c1-210-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.764,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-210",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-210-conv"
+    ],
+    "required_evidence": [
+      "c1-210-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.66,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-210",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-210-conv"
+    ],
+    "required_evidence": [
+      "c1-210-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.74,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-211",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-211-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.37,
+    "prompt_tokens": 129,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-211",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-211-conv"
+    ],
+    "required_evidence": [
+      "c1-211-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 6.983,
+    "agent_seconds": 0.518,
+    "prompt_tokens": 141,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-211",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-211-conv"
+    ],
+    "required_evidence": [
+      "c1-211-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.485,
+    "prompt_tokens": 141,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-211",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-211-conv"
+    ],
+    "required_evidence": [
+      "c1-211-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.345,
+    "prompt_tokens": 141,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-211",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-211-conv"
+    ],
+    "required_evidence": [
+      "c1-211-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.427,
+    "prompt_tokens": 141,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-212",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-212-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.603,
+    "prompt_tokens": 136,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-212",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-212-conv"
+    ],
+    "required_evidence": [
+      "c1-212-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 10.64,
+    "agent_seconds": 0.964,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-212",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-212-conv"
+    ],
+    "required_evidence": [
+      "c1-212-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.837,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-212",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-212-conv"
+    ],
+    "required_evidence": [
+      "c1-212-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.792,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-212",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-212-conv"
+    ],
+    "required_evidence": [
+      "c1-212-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.896,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-213",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-213-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.421,
+    "prompt_tokens": 133,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-213",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-213-conv"
+    ],
+    "required_evidence": [
+      "c1-213-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 13.753,
+    "agent_seconds": 0.861,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-213",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-213-conv"
+    ],
+    "required_evidence": [
+      "c1-213-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.027,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-213",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-213-conv"
+    ],
+    "required_evidence": [
+      "c1-213-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.755,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-213",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-213-conv"
+    ],
+    "required_evidence": [
+      "c1-213-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 1.05,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-214",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-214-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.818,
+    "prompt_tokens": 129,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-214",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-214-conv"
+    ],
+    "required_evidence": [
+      "c1-214-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 100))\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 8.933,
+    "agent_seconds": 1.169,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-214",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-214-conv"
+    ],
+    "required_evidence": [
+      "c1-214-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 100))\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.903,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-214",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-214-conv"
+    ],
+    "required_evidence": [
+      "c1-214-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 100))\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 1.001,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-214",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-214-conv"
+    ],
+    "required_evidence": [
+      "c1-214-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 100))\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.961,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-215",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-215-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.423,
+    "prompt_tokens": 136,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-215",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-215-conv"
+    ],
+    "required_evidence": [
+      "c1-215-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 9.293,
+    "agent_seconds": 0.984,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-215",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-215-conv"
+    ],
+    "required_evidence": [
+      "c1-215-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.768,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-215",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-215-conv"
+    ],
+    "required_evidence": [
+      "c1-215-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.844,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-215",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-215-conv"
+    ],
+    "required_evidence": [
+      "c1-215-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.839,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-216",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-216-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.497,
+    "prompt_tokens": 133,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-216",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-216-conv"
+    ],
+    "required_evidence": [
+      "c1-216-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 11.095,
+    "agent_seconds": 0.854,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-216",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-216-conv"
+    ],
+    "required_evidence": [
+      "c1-216-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.697,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-216",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-216-conv"
+    ],
+    "required_evidence": [
+      "c1-216-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.781,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-216",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-216-conv"
+    ],
+    "required_evidence": [
+      "c1-216-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.749,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-217",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-217-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.426,
+    "prompt_tokens": 129,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-217",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-217-conv"
+    ],
+    "required_evidence": [
+      "c1-217-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 11.259,
+    "agent_seconds": 1.176,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-217",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-217-conv"
+    ],
+    "required_evidence": [
+      "c1-217-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.948,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-217",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-217-conv"
+    ],
+    "required_evidence": [
+      "c1-217-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.951,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-217",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-217-conv"
+    ],
+    "required_evidence": [
+      "c1-217-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return max(0, min(x, 255))\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.966,
+    "prompt_tokens": 141,
+    "gen_tokens": 23
+  },
+  {
+    "task": "c1-218",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-218-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.368,
+    "prompt_tokens": 136,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-218",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-218-conv"
+    ],
+    "required_evidence": [
+      "c1-218-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 8.043,
+    "agent_seconds": 1.015,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-218",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-218-conv"
+    ],
+    "required_evidence": [
+      "c1-218-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.814,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-218",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-218-conv"
+    ],
+    "required_evidence": [
+      "c1-218-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.826,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-218",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-218-conv"
+    ],
+    "required_evidence": [
+      "c1-218-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.777,
+    "prompt_tokens": 148,
+    "gen_tokens": 20
+  },
+  {
+    "task": "c1-219",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-219-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.518,
+    "prompt_tokens": 133,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-219",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-219-conv"
+    ],
+    "required_evidence": [
+      "c1-219-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 12.839,
+    "agent_seconds": 0.851,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-219",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-219-conv"
+    ],
+    "required_evidence": [
+      "c1-219-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.705,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-219",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-219-conv"
+    ],
+    "required_evidence": [
+      "c1-219-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.755,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-219",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-219-conv"
+    ],
+    "required_evidence": [
+      "c1-219-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef add(a, b):\n    return a + b\n```",
+    "correct": true,
+    "grade": {
+      "correct": true,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.672,
+    "prompt_tokens": 145,
+    "gen_tokens": 17
+  },
+  {
+    "task": "c1-220",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "A_none",
+    "seed": 0,
+    "retrieved_ids": [],
+    "required_evidence": [
+      "c1-220-conv"
+    ],
+    "evidence_recall": 0.0,
+    "answer": "Cannot determine from the provided notes.",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.453,
+    "prompt_tokens": 129,
+    "gen_tokens": 8
+  },
+  {
+    "task": "c1-220",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "B_original",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-220-conv"
+    ],
+    "required_evidence": [
+      "c1-220-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return x\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 13.042,
+    "agent_seconds": 0.664,
+    "prompt_tokens": 141,
+    "gen_tokens": 13
+  },
+  {
+    "task": "c1-220",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "C_semantic",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-220-conv"
+    ],
+    "required_evidence": [
+      "c1-220-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return x\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.616,
+    "prompt_tokens": 141,
+    "gen_tokens": 13
+  },
+  {
+    "task": "c1-220",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "D_intelligent",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-220-conv"
+    ],
+    "required_evidence": [
+      "c1-220-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return x\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": -1.0,
+    "agent_seconds": 0.763,
+    "prompt_tokens": 141,
+    "gen_tokens": 13
+  },
+  {
+    "task": "c1-220",
+    "suite": "C",
+    "category": "C1_coding",
+    "difficulty": "hard",
+    "arm": "E_oracle",
+    "seed": 0,
+    "retrieved_ids": [
+      "c1-220-conv"
+    ],
+    "required_evidence": [
+      "c1-220-conv"
+    ],
+    "evidence_recall": 1.0,
+    "answer": "```python\ndef clamp(x):\n    return x\n```",
+    "correct": false,
+    "grade": {
+      "correct": false,
+      "abstained": false,
+      "leaked": []
+    },
+    "forbidden_leaked": [],
+    "retrieval_ms": 0.0,
+    "agent_seconds": 0.548,
+    "prompt_tokens": 141,
+    "gen_tokens": 13
+  }
+]

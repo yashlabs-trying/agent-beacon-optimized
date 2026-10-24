@@ -1,0 +1,596 @@
+# CLAUDE.md
+
+Guidance for Claude Code and other coding agents working in this repository.
+
+## Project Scope
+
+Beacon Endpoint Agent is a local-only endpoint telemetry agent for AI runtimes. The shipping code paths are:
+
+- `cli/beacon`: public `beacon` CLI and endpoint runtime.
+- `cli/beacon-hooks`: hook adapter invoked by Cursor and other supported runtimes.
+- `collector-builder`: OpenTelemetry Collector distribution and Beacon JSONL exporter.
+- `packages/asymptote-sdk-js`: TypeScript SDK for cloud agent telemetry that exports Beacon-compatible OpenTelemetry spans.
+- `browser-extension`: optional MV3 collector (Chrome, plus a beta Firefox build target) that relays Claude.ai and ChatGPT chat telemetry into the local pipeline as OTLP.
+- `pkg/asymptoteobserve`: shared Go library — event schema, harness-name normalization, provenance markers, token usage, and the threat-rules engine. Imported by the CLI, the hook adapter, and the collector exporter, so a change here reaches all three.
+- `plugins`: TypeScript sources for the managed runtime plugins/extensions (`opencode-beacon`, `cline-beacon`, `pi-beacon`, `omp-beacon`, `openclaw-beacon`, `prime-beacon`, `omo-beacon`), each mirrored into an embedded copy under `cli/beacon/internal/endpoint/hooks/assets/`.
+- `agent-skills`: publishable Agent Skills plugin for the traces-to-memory workflow (`beacon-memory-recall`, `beacon-memory-distill`, `beacon-memory-promote`) for authoring dashboard lenses (`beacon-lens-create`), and for sharing the current session to beacon.sh (`beacon-trace-share`, which runs `beacon share --current --harness <runtime> --json`, keeps the default direct visibility and asks before public) with manifests for Claude Code, Agent Plugins (Codex, Copilot, VS Code, Kiro, Devin), Cursor, Kimi Code, and Gemini CLI. At the repo root, `.claude-plugin/marketplace.json` is read by most harnesses, `.cursor-plugin/marketplace.json` by Cursor, and `package.json` (`pi.skills` only) makes the repo a Pi/Prime Agent package; keep that root `package.json` free of dependencies and scripts. `cli/beacon/cmd/agent_skills_test.go` checks every `beacon` command and flag the skills name against the real command tree, so rename a command and update the skills together. The binary carries a copy of `agent-skills/skills` in `cli/beacon/internal/agentskills/skills` for onboarding and `beacon skills install`; a test keeps it identical, so copy it across whenever a skill changes.
+- `rules` and `spec/threat-rules`: the open rule corpus and the Threat Rules format it conforms to. Every rule's `taxonomy.beacon_category` is its directory name, and the six embedded baseline rules in `pkg/asymptoteobserve/rulestore/baseline` are byte-identical copies of their corpus rules; conformance tests enforce both.
+- `spec/lenses`: the Lenses format — single-file HTML views of one trace that the local dashboard runs in a sandboxed, network-less frame and feeds once through `window.beacon.getTrace()`. The contract types (`LensManifestV1`, `LensDataV1`) live in `pkg/asymptoteobserve/lens.go`, and `lens_test.go` pins the spec's examples and manifest schema to them. The dashboard builds the data in `BuildLensData` (`/api/lens-data`), lists lenses at `/api/lenses`, and serves each lens at `/lenses/frame/<id>` under the spec's CSP with `lenses/prelude.js` (which defines `window.beacon`) injected ahead of it; that route is the only one that may be framed. Built-in lenses are `cli/beacon/internal/endpoint/dashboard/lenses/*.lens.html`, and `activity` is byte-identical to the spec example (a test enforces it). The session page (`static/session.html`, `initLensTabs` in `app.js`) shows lenses as tabs fed by `/api/lens-data?session=`, which projects exactly the events that page lists; it is the host half of the protocol and closes a lens that errors, stalls, or navigates its own frame. Trust model (SPEC "Trust model"): the opaque origin, sandbox and CSP keep a lens from touching Beacon or the dashboard and block ordinary network APIs, but cannot fully prevent a lens from sending trace data out through browser features no CSP governs (WebRTC, resource hints, speculative loading), so an installed lens is code the person trusts with the trace data it is shown; never describe the sandbox as making exfiltration impossible. `prelude.js` removes the `RTC*` globals and guards the document (refuses creating, inserting or parsing in nested frames, `<link>` elements and `<script type=speculationrules>`, parsing markup in the real call's document and context and inserting exactly the checked nodes so `<noscript>`/foreign-content parser differentials cannot slip through, refuses `document.write` and `execCommand("insertHTML")`, and a mutation observer removes those from the file's own markup); that is best-effort hardening, not a boundary, and the hostile `probe` fixture in `testdata/lens-e2e` pins each covered path. Installed lenses live in the lens store (`cli/beacon/internal/endpoint/lensstore`, `<BaseDir>/lenses/<id>.lens.html`, 0600 under 0700), written only by `beacon lenses add|remove` (`cli/beacon/cmd/lenses.go`; `add` prints the trust warning and confirms on a TTY, and refuses without one or in CI unless `--yes`); the dashboard rescans it per request and never writes it, and a store lens can never shadow a built-in. `asymptoteobserve.CheckLensFile` is the one file check every installer, server and linter uses. User docs are `docs/concepts/lenses.mdx` and `docs/cli/lenses.mdx`; keep them in sync with the commands and built-in lenses. The authoring loop is `beacon lenses spec` (the spec carried in the binary as `dashboard/lenses/SPEC.md`, kept byte-identical to `spec/lenses/SPEC.md` by a test), `beacon lenses data` (the exact `LensDataV1` for a session), `beacon lenses lint` (`lensstore.Lint`; built-ins must lint clean) and `beacon lenses preview` (the dashboard with `Options.LensFiles`, re-read per reload).
+- `beacon-sandbox`: harness that runs a real Claude Code session in a disposable sandbox and checks what Beacon captured. See `beacon-sandbox/AGENTS.md`.
+- `packaging`: macOS, Linux, and Windows packaging and deployment assets.
+- `terraform`: customer-run Terraform modules for the cloud side of object storage forwarding. The base modules `aws-s3` and `gcs` always create a new, dedicated bucket (never an existing one) and the writer every Mac's forwarder uses: the put-only `beacon-endpoint-writer` IAM user, or a `beacon-endpoint-writer` service account with `objectCreator` limited to the prefix by an IAM condition. The enterprise self-hosted path, where Asymptote reads that bucket through ClickHouse, is two separate modules that take the base module's `bucket` output: `aws-s3-asymptote-reader` (an `asymptote-s3-reader` IAM user, because ClickPipes on the GCP-hosted ClickHouse rejects IAM roles, plus an SQS queue and dead-letter queue per stream and the bucket notification, which it owns) and `gcs-asymptote-reader` (`objectViewer` for `beacon-clickpipes-reader@asymptote-labs`, a Pub/Sub topic, the notification and a subscription per stream with the managed path's settings). The queues exist because a ClickPipe without one reads in key order and skips objects that land behind its cursor, which Macs uploading on their own timers cause; their URLs and subscription paths are outputs for the provisioning script's `--queue-url`. Keep everything Asymptote-specific out of the base modules. No module creates keys unless asked (`create_writer_access_key`, `create_writer_key`, `create_access_key`), so no secret lands in state by default. Resource names and `forwarder_settings` match the packaged `install-forwarder.sh` helpers and the manual guides. docs.beacon.sh (`docs/log-forwarding/{aws-s3,gcs}-terraform.mdx`) documents the base modules only. The reader modules and the self-hosted setup are documented only on docs.asymptotelabs.ai (beacon-mdr `docs/deployment/self-hosted-{s3,gcs}.mdx`), so keep them out of `docs/`; `/manage/configure-s3-data-connector` redirects there. Both sites pin the modules to a release tag; keep them in sync with the variables.
+- `docs`: the published documentation site (docs.asymptotelabs.ai).
+
+Do not recreate or depend on removed `asymptote` mirror trees. Keep new work focused on the Beacon paths above.
+
+## Product Posture
+
+- Beacon is visibility-first endpoint telemetry for local AI agent runtimes, not a hosted policy service or general endpoint protection product.
+- Preserve the local-only default. The public Beacon build must not require a hosted account, remote policy fetch, hosted dashboard, or external network dependency during normal hook execution, and hooks themselves never touch the network.
+- `beacon login` is the account-identity channel for interactive users and is required by the interactive `beacon endpoint install` wizard. It uses browser PKCE against beacon.sh and stores the scoped CLI token only in `~/.beacon/auth/session.json` (0600 under a 0700 directory). Signing in alone never starts forwarding. User-mode `beacon endpoint connect` may send that token once to `POST /api/cli/enroll/account` to authorize minting a separate device ingest key, and `beacon mcp token create` may send it to `POST /api/cli/mcp/tokens` (scope `mcp:token:create`, listed on the sign-in page) to mint a personal MCP token that is printed once to stdout and never written to a file, and `beacon share` may send it (scope `traces:write`, also on the sign-in page) to `PUT /v1/traces/{external_id}`, `POST /v1/traces/{external_id}/events/batch` and `GET /v1/traces/{external_id}` on the Beacon API host (`https://api.beacon.sh` for a beacon.sh sign-in, other hosts unchanged, `BEACON_API_URL` overrides) to upload a shared trace the person chose to publish, as a `beacon.trace.v1` summary and its events (`cli/beacon/internal/account/share.go`; a `bcn_api_` API key from `--key` or `BEACON_API_KEY` may stand in for it, precedence `--key`, then a current sign-in carrying the scope, then the environment). These are explicit, user-initiated requests with redirects refused. Hooks, plugins and background jobs never make them, with one exception: the git pre-push hook, only when the person opted in with `beacon git setup --share-sessions` (public needs confirmation), may make the three share requests during a push the person started, within the hook's budget and never failing the push. Never copy the account token into endpoint config, Vector, hook environments, logs, or command output. System/root/package/MDM/CI/piped-stdin/dry-run installs stay noninteractive and account-free.
+- Beacon Cloud forwarding (`cli/beacon/internal/endpoint/asymptote`, `beacon endpoint connect`, `beacon endpoint asymptote`) is Vector-shaped: Beacon writes local JSONL, Vector ships runtime lines only from the connection point forward and reads inventory from the beginning to establish the endpoint's current baseline, plus the one bounded exception of the session backfill (below), and the `bcn_device_*` key stays only in `<BaseDir>/asymptote/vector-secrets.json` via Vector's secret backend. The onboarding wizard preselects Beacon Cloud, and confirming it connects this endpoint in the same command once the local install has succeeded; an endpoint that is already enrolled is never re-enrolled, because enrollment rotates the device key. Standard mode ships locally sanitized retained content; metadata-only uses local Vector transforms to remove prompts, responses, reasoning, tool arguments/results, tool descriptions/definitions, retrieval queries/documents, evaluation explanations, agent descriptions, stop sequences, approval/policy reasons, command output, raw fields, diffs, inventory content, and MCP definitions before buffering/upload. Every text-shaped event field must be classified in `metadata_fields_test.go` (`metadataOnlyRemoved`, each with its own `del()` in `pack/metadata-transforms.toml`, or `metadataOnlyKept`); a new field fails that test until it is, and `BEACON_TEST_VECTOR_BIN` runs the transform on an event with every field set. `vector.toml` is not rendered only at connect: `asymptote.ReconcileForwarder` re-renders it in place for a connected endpoint from the current pack with the enrollment's ingest URL and recorded privacy mode, validates it with the forwarder's own Vector exactly as connect does, atomically replaces it, and restarts the forwarder only when the content changed and the forwarder is running (a stopped one reads the new config when it next starts). It never enrolls, reads or rewrites the secrets file, makes a network request, or touches `vector-data/` (checkpoints stay, so pack changes must keep source ids and fingerprinting stable), and a rejected config is a warning that keeps the old one; it is a no-op when not connected, after an incomplete connect, without an installed unit, or where `ForwarderManager` is unsupported (supervised mode). `lifecycle.Install` runs it last when services are started (so install, repair and the Linux package upgrade), repair's teardown keeps the forwarder (`UninstallOptions.KeepManagedIngest`) instead of disconnecting it, and the macOS postinstall, which installs with `--no-start`, runs the hidden `beacon endpoint asymptote reconcile --system`. Keep the ingest URL `https://`, the wire contract aligned with `beacon-ingest` (`/v1/ingest/{runtime,inventory}` and `/v1/ingest/health`), and do not add another endpoint network channel. The cloud-sandbox shuttle is the bounded exception: only with `BEACON_ORIGIN=cloud`, it can upload new runtime lines to GCS, S3, or the same Beacon ingest contract because no Vector/service manager/browser/persistent disk exists there.
+- Session backfill (`cli/beacon/cmd/endpoint_backfill.go`; docs in `docs/cli/endpoint-install.mdx#session-backfill` and `docs/cli/endpoint-connect.mdx#session-backfill`): after every successful install (user or system mode), every session-store collector runs once with `CollectOptions.Since` (30 days; `sessionwindow.Recent` keeps those sessions, newest first, and never touches the cursors of the rest) and a shared `writer.Budget` (24 MiB, at most 12 MiB per runtime through `Budget.Sub`; a refused append returns `writer.ErrBudgetSpent`, the collector stops with cursors past only what was written, and a manual sync reads the rest). A new session-store collector takes both fields, reads its store only through `internal/sessionfs` (a test parses every collector package to enforce it), and joins `endpointBackfillRunners` and that test's list. Every connect, first or re-connect, user or system, runs the same sweep before enrollment (skipped when install just ran it) and, before the forwarder starts, `asymptote.StageBackfill` copies the window's `harness.collection_method=poll` lines into `cloud-backfill.jsonl` beside the runtime log, which the `beacon_backfill` Vector source (fingerprinted `device_and_inode`, so each atomically restaged copy is a new file) reads from the beginning into the runtime sink through the same privacy transform. Live hook/OTLP/plugin history before the connection point stays local. Re-connects restage, so a resend of already-shipped lines is expected and rests on the deterministic `event.id`; a privacy-mode change clears the checkpoints and the restage renames the new-mode copy over the old one (kept until then so the copy is always a new inode; deleted instead when nothing restages), and `disconnect` removes it. System mode runs the collectors under `withUserHome` for the active console user (`activeConsoleUser`), with cursors under the system base directory, and reports a skip when nobody is logged in; root is reading a home the console user controls, so the sweep runs under `sessionfs.Confine` (an `os.Root` on that home, files owned by the home's owner only, non-blocking opens that refuse FIFOs/devices, SQLite read from a private snapshot under `<SystemBaseDir>/state/backfill-snapshots`, retried until the database size/change counter and WAL header are unchanged across the copy, and refused past `sessionfs.MaxSnapshotBytes` (512 MiB with its WAL) with the runtime's sync command named in the report), and refused paths read as absent and are listed in the report. User-mode sync and backfill stay unconfined. The wizard's confirm screen names the upload (`WizardOptions.BackfillDays`). Dry-run, `--no-backfill` and `BEACON_BACKFILL=0` skip all of it; the cmd tests run with `BEACON_BACKFILL=0` set in `TestMain`.
+- `beacon endpoint install` has a full-screen onboarding wizard on interactive user TTYs. It signs in, preselects Beacon Cloud, requires an explicit choice to opt out to Local, and asks Managed users to choose Standard or Metadata-only privacy. Signing in alone still moves no telemetry. Confirming Beacon Cloud does: the confirm screen states that it installs Beacon and starts forwarding, and names what the selected privacy mode sends, so that screen is the consent point. The managed destination is recorded only after enrollment succeeds, so a failed enrollment leaves a working local install, prints `beacon endpoint connect` as the retry, and re-offers the question on the next install. The onboarding record is written only after `lifecycle.Install` returns, because a profile written first left a failed install looking onboarded and silently skipped the wizard on the retry. Explicit `install --connect` is unchanged. The wizard is skipped for system/root/CI/piped-stdin/dry-run or `BEACON_ONBOARDING=0`; those unattended paths must never gain an account or browser dependency. Legacy `BEACON_ONBOARDING_EMAIL`/`USAGE` submissions remain only for fleet compatibility. After the destination, the wizard shows an agent tools screen; every row is preselected (opt-out, space toggles). Beacon Cloud MCP is offered only with Beacon Cloud and runs the `beacon mcp connect` flow (`connectCloudMCP` with `yes`, OAuth, detected harnesses) only after the endpoint is connected (or already was), via `finishCloudSetup`; a failed enrollment skips it and names the retry. The Beacon Agent Skills are offered for either destination and installed user-wide into `~/.agents/skills` and, when Claude Code is set up, `~/.claude/skills` (`cli/beacon/internal/agentskills`, `beacon skills install|uninstall`; a `.beacon-managed` marker decides what Beacon may replace or remove; install and repair refresh only copies Beacon already wrote). Both run after `lifecycle.Install` returns and warn rather than fail. The answers are recorded as `onboarding.cloud_mcp`/`agent_skills`. Implementation lives in `cli/beacon/internal/onboarding`, `cli/beacon/cmd/endpoint_onboarding.go`, `cli/beacon/cmd/endpoint_install.go` and `cli/beacon/cmd/agent_tools.go`; keep `docs/cli/endpoint-onboarding.mdx` and `docs/cli/skills.mdx` in sync.
+- The update notice on bare interactive `beacon` (`cli/beacon/cmd/root.go`, cache in `cli/beacon/internal/updatecheck/cache.go`; docs in `docs/cli/version.mdx`) follows the Codex/Claude Code pattern: it reads `~/.beacon/endpoint/update-check.json` and never waits on the network, and only when that cache is a day old does it start a detached `beacon version refresh` (hidden) that asks GitHub for the latest release and rewrites the cache, failures included. It is the CLI's one background network call; it never runs from hooks, other commands, non-TTY output, CI or dev builds, and `BEACON_UPDATE_CHECK=0` turns it off. Installs other than Homebrew and the system package get the release download, because `beacon endpoint update` applies only to the system package.
+- Do not add dependency vulnerability scanning, OSV/GHSA lookups, package remediation, or other vulnerability-enforcement flows to the public hook path.
+- Do not add broad runtime enforcement unless explicitly requested. Current control behavior is limited to hook-native approvals/denials exposed by supported agent runtimes.
+- Keep destination support shaped like the existing local JSONL and customer-managed forwarding paths. Beacon may render supported packs or token-based endpoint forwarders, but should not add hosted SIEM dependencies or store third-party service credentials beyond the explicit supported configs. Elastic remains a file-tailing pack over local JSONL.
+- Beacon writes retained prompt text, command output, raw tool inputs, raw OTLP attributes, and raw diffs to local or customer-controlled logs, subject to local redaction and size limits where supported.
+- The Asymptote Observe TypeScript SDK may default to the hosted `/v1/observe` endpoint as an opt-in cloud SDK contract. Beacon endpoint execution stays local-only/no-network.
+
+## Telemetry Scope
+
+Supported runtime surfaces today:
+
+- Claude Code and Codex CLI use local OpenTelemetry settings, and `beacon endpoint install` writes their user-level hooks alongside those settings (`otlpTargetCarriesHook` in `cli/beacon/cmd/endpoint_targets.go`), because Claude's OTLP export has no session lifecycle, file activity, or subagent events and Codex's SessionStart hook supplies the OS-user context its spans lack. Both runtimes' Stop hooks record the turn's final reply from `last_assistant_message` as `agent.message` (Codex through the dedicated `codex-assistant-response` command, since its OTLP export carries no response text and it gets no generic hooks). `beacon endpoint codex sync` is the offline poll backfill from `~/.codex/sessions`; it never reads `~/.codex/auth.json` and cannot approve, deny, or delay tool calls.
+- Cursor hook telemetry for sessions, prompt submission, tool use, command execution, MCP-like tool activity, approval decisions, file edits, and agent reasoning (`afterAgentThought` thinking text recorded as `agent.reasoning` events in the OTel GenAI `gen_ai.output.messages` reasoning-part shape) where hook payloads expose those fields.
+- Cline uses a Beacon-managed plugin (`~/.cline/plugins/beacon.ts`) for live capture plus `beacon endpoint cline sync` for local history backfill. Cline's own OTel export/hosted prompt storage are not used, and approvals are not exposed or synthesized.
+- Pi-family runtimes use Beacon-managed extensions and the shared `cli/beacon-hooks/cmd/pi_family.go` mapper while keeping separate harness names and install roots: Pi (`pi_cli`), Oh My Pi (`omp`), Prime Agent (`prime_agent`), and Senpi/OMO (`omo_senpi`). Pi, Prime, and Senpi do not expose operator approval decisions, so Beacon does not synthesize them. Oh My Pi exposes real approval events and the extension carries the remembered tool input onto those approvals.
+- Prime Agent is the Pi-family exception with a single persistent `ipython` tool: kernel cells are recorded as `command.executed`, carry Python status/output metadata, and have no invented exit code. MCP is not separately attributed because Prime exposes integrations inside the kernel. `beacon endpoint prime sync` is the local poll backfill from `~/.prime/agent/sessions` and session artifacts.
+- Senpi is the standalone OMO edition. The OpenCode and Codex editions ride existing Beacon integrations, so do not alias bare `oh-my-openagent` to this extension. The install target is `omo`; the event harness is `omo_senpi`; agent-directory overrides follow OMO's own order (`OMO_CODING_AGENT_DIR`, `SENPI_CODING_AGENT_DIR`, then `PI_CODING_AGENT_DIR`).
+- OpenCode uses the managed plugin for live capture and approvals, plus `beacon endpoint opencode sync` for current SQLite and legacy file-store backfill. Poll events are marked `harness.collection_method=poll`, cannot hold or deny tools, and must not synthesize approvals from persisted tool results.
+- Muse Code uses a Beacon-owned hooks file referenced by Muse `settings.json` via `managed_hooks_path`. Muse Spark is the model, not the runtime; do not normalize Spark spellings to `muse_code`. `PreLLMCall`/`PostLLMCall` stay unsubscribed because they carry full message arrays/tool schemas and chunked responses.
+- OpenHands hooks are merged into the runtime's own `.openhands/hooks.json`. Project scope is the practical default because the loader takes the first hooks file and the CLI/GUI agent server reads the repository file. Approvals, token usage/cost, per-call tool ids, and assistant response text are not exposed or synthesized.
+- Kimi Code registers in the `[[hooks]]` array of the runtime's own `$KIMI_CODE_HOME/config.toml` (default `~/.kimi-code`), the same file that holds `[providers.<name>].api_key`. Beacon appends its block and never re-serializes the document, and every write is parsed back and compared against the intended result before it replaces the file. Detection and removal go by the hook command rather than by Beacon's comment, because Kimi Code's legacy `kimi-cli` migration re-serializes config.toml and drops every comment. There is no project scope: Kimi Code reads one user-level config file. Thirteen of its twenty events are registered; `SessionHeartbeat` is deliberately left out because its sixty-second timer runs only when a hook is configured for it, and `Interrupt` because Beacon's closing action asserts the agent finished. Kimi Code reports real operator approval decisions over `PermissionRequest`/`PermissionResult`, so `PreToolUse` must not also synthesize one. Beacon writes nothing to stdout on this runtime, because `UserPromptSubmit` stdout is appended to the model's context; the policy seam denies with exit code 2 and is inert in the permission-request phase, which Kimi Code does not allow blocking. No token usage is exposed on any hook payload.
+- Kiro uses one Beacon-owned hook file under `.kiro/hooks` or `$KIRO_HOME`/`~/.kiro/hooks`. Its hook stdout is added to agent context on `SessionStart` and `UserPromptSubmit`, so Beacon writes nothing to stdout on Kiro; blocking is exit code 2 with the reason on stderr. Approvals are not exposed or synthesized.
+- goose currently has only the adapter: `cli/beacon-hooks/cmd/goose.go` can map a manually written `hooks.json` that invokes `beacon-hooks --platform goose`, but there is no `beacon endpoint hooks install --harness goose`, no `DiscoverGoose`, and no automatic OTLP configuration. Keep README/docs from implying goose is generally installable until those pieces exist. goose uses HTTP OTLP (4318), its blocking hook stdout must be `{"decision":"allow"}` or `{"decision":"block"}`, and it exposes no approval decisions or tool output.
+- DeepSeek Harness (`dsh`) is installed through two user-level files: `$DSH_HOME/beacon-endpoint-hooks.json` and a row in `$DSH_HOME/cordis.patch.yml`; there is no project scope. It also installs a Beacon-owned local skill at `$DSH_HOME/skills/beacon-endpoint/SKILL.md` and supports native session backfill from `$DSH_HOME/sessions` through `beacon endpoint dsh sync`, which fills assistant text/reasoning, tool failures, and token usage that the hook bridge does not expose. It rides the Claude-shaped envelope on the hook path, but `run_code` remains `tool.invoked` because nested commands fire their own hooks.
+- fx (vercel-labs/fx) telemetry read from the session store fx commits under `~/.fx/sessions/`, covering session start, prompts, tool calls, commands with exit codes and output, file reads/creates/edits with diffs, MCP tool calls, agent messages, history compaction, and per-turn token usage plus reported cost. fx exposes no third-party hook, plugin, or OTLP surface -- its lifecycle hooks are compiled into the binary -- so collection is a read of fx's own records, run by `beacon endpoint fx sync`. Every event carries `harness.collection_method=poll`; approvals are not synthesized (fx persists permission feedback text, not a per-call decision, matching the Cline and Pi posture) and no session-end event is invented, since fx sessions are resumable. Implementation lives in `cli/beacon/internal/fxsession` and `cli/beacon/cmd/endpoint_fx.go`.
+- Claude Cowork admin-configured OpenTelemetry setup guidance and local validation.
+- OpenClaw Gateway uses a Beacon-managed plugin directory plus OpenClaw's own diagnostics OTLP guidance (`beacon endpoint integrations openclaw`). The plugin's `before_tool_call` hook is fail-closed, so the handler dispatches synchronously and returns without awaiting. Conversation hooks, including `llm_output`, require `plugins.entries.beacon-endpoint.hooks.allowConversationAccess`; without it, token and agent-message coverage is partial. Beacon reads OpenClaw JSON/JSON5 config for advice but does not rewrite it.
+- GitHub Copilot CLI uses MDM/customer-managed OTLP HTTP for live spans and approval-like activity, plus `beacon endpoint copilot sync` to backfill local session records from `~/.copilot/session-state`. Poll events carry assistant text, complete tool results, command/file details, and token usage with `harness.collection_method=poll`, plus the shutdown's session-wide `totalNanoAiu` differenced into `gen_ai.usage.cost_usd` once per shutdown (10^9 nano-AIU = one AI credit = US$0.01), only for sessions started on or after the 2026-06-01 AI-credit cutover (`cli/beacon/internal/copilotsession/cost.go`); approvals still come only from the live OTLP path and are not synthesized from persisted records.
+- Runtimes that ride shared hook/OTLP paths without a special contract worth expanding here include Antigravity CLI, Devin CLI, Devin Desktop, Factory Droid, Gemini CLI, Grok Build, Hermes Agent, Qwen Code, and VS Code. Installed hook/endpoint support is governed by `cli/beacon/cmd/endpoint_targets.go` plus the install/status switches in `cli/beacon/cmd/endpoint_hooks.go`; discovery rows live in `cli/beacon/internal/endpoint/harness`.
+- Browser chat telemetry through an optional MV3 extension (`browser-extension/`; Chrome, with a beta Firefox build) covering claude.ai and chatgpt.com. A main-world interceptor tees the streamed response, a per-site adapter parses it into a normalized turn, and the service worker POSTs OTLP GenAI logs to the local collector on `127.0.0.1:4318`; the extension never writes files and never contacts a remote endpoint. `harness.name` resolves to `claude_web` or `chatgpt_web` (already handled by `NormalizeHarnessName` in `pkg/asymptoteobserve/harness.go`, where the browser cases must stay above the generic `claude` rule) and `harness.collection_method` is `otlp`. The one build serves every Chromium browser; each event names the browser it came from in the typed `user_agent.name`/`user_agent.version` fields (OTel semconv, promoted by the exporter so Metadata-only forwarding keeps them), resolved in `browser-extension/src/shared/browser-identity.ts` from UA Client Hints brands, with a UA-string fallback that also names Firefox. Scope is deliberately narrow: only those origins' chat streams, never other tabs or general browsing. Retention defaults to `full`, so prompt and response text is retained by default; this is documented rather than defaulted down, because browser chat telemetry without content has no investigative value. Treat the adapters as experimental, since both sites' stream formats are private and undocumented. Per-browser differences live only in `browser-extension/tools/targets.mjs` (one entry per target, deriving its manifest from `src/manifest.json`; Chrome ships that file verbatim to `dist/`, Firefox gets `dist-firefox/`), and every extension API call goes through the `src/shared/browser.ts` shim (a unit test fails on direct `chrome.*` use). The Firefox Gecko ID `browser-collector@agent-beacon.asymptotelabs.ai` is pinned and must never change.
+- `beaconjson` OpenTelemetry Collector exporter that converts OTLP logs, traces, metrics, and resource attributes into Beacon endpoint JSONL.
+- Endpoint inventory (`inventory.heartbeat` / `inventory.snapshot` in `inventory_state.jsonl`) is written by a scheduled job, `com.beacon.endpoint.inventory` (`service.InventoryManager`, user LaunchAgent or system LaunchDaemon, `beacon-inventory.timer` on systemd), every six hours and once at load, on by default and reconciled by `lifecycle.ReconcileInventoryJob` on every install, repair and package upgrade (`beacon endpoint inventory install-daemon`). Agent hooks do not trigger inventory any more; the hook binary's `--cli` flag and `inventory-heartbeat` subcommand survive only as no-ops for hook commands written by older versions, and `beacon endpoint inventory heartbeat --trigger hook` is likewise retired. A system-mode run inventories the active console user's home and still writes the liveness heartbeat when nobody is logged in; the scheduled scan has no working directory, so project-scoped config is only in `beacon endpoint inventory`.
+- Beacon Cloud forwarding, the one Beacon-hosted network channel for endpoint telemetry: user-mode `beacon endpoint connect` authorizes device enrollment with the signed-in CLI account; system mode uses browser PKCE at `/cli/enroll`. Both store only the per-device key in `<BaseDir>/asymptote/vector-secrets.json` (0600, 0700 dir), render the selected privacy mode into `vector.toml` (re-rendered in place by install, repair and package upgrades, see above), validate it, and run Vector as `com.beacon.endpoint.asymptote-forwarder` / `beacon-asymptote-forwarder.service` through `service.ForwarderManager` (refused in supervised mode). `enrollment.json` and `config.json`'s `managed_ingest` block carry only non-secret identity and privacy mode; `beacon endpoint status` reports forwarder state and a live credential check (`GET /v1/ingest/health`, 3 s timeout); `disconnect` and `uninstall` remove the forwarder and credentials but never revoke server-side.
+- Asymptote Observe TypeScript SDK instrumentation for cloud applications, starting from OpenTelemetry/OpenLLMetry patterns and `observe()` wrappers.
+- Elasticsearch/Filebeat content pack generation for forwarding local Beacon JSONL into customer-managed Elastic deployments or the bundled loopback-only development stack.
+- A local-only dashboard served by `beacon endpoint dashboard`, bound to loopback by default and backed by the runtime JSONL log.
+- Token usage and runtime-reported cost capture across spans, logs, and metric datapoints, normalized into `gen_ai.usage`, with attribution rollups served by the dashboard token view (`/api/tokens`) and the `beacon token-usage` report command for local and CI logs. Every report row carries three costs (`cli/beacon/internal/tokens/cost.go`): `cost_usd` (runtime-reported, unchanged), `estimated_cost_usd` (list price of every priced token, from `internal/pricing`, computed after dedup and cumulative resolution) and `effective_cost_usd` with `cost_source` (per endpoint/harness/session scope, reported cost wins wholesale when the scope has any; otherwise the estimate; session-less events per event), plus `unpriced_events`/`unpriced_tokens` and a report-level `pricing` block (catalog provenance, per-model key, match, base rates, bands applied, fallbacks, unpriced models). Long-context bands apply only to events `requestScoped` classifies as one model request; it defaults to aggregate, so a new capture path is priced at base rates until it is added there with a test. Lens data (`LensDataV1`) carries no estimate.
+- Local threat detection via `beacon scan`, which runs the open Threat Rules format (`spec/threat-rules`; CEL match conditions over the endpoint event schema, with embedded conformance fixtures) over the runtime JSONL. The engine (`pkg/asymptoteobserve/threatrules`) ships in the binary; the rule corpus is external data loaded from a local store (`~/.beacon/endpoint/rules`) managed by `beacon rules`, so the corpus can grow without enlarging the binary. `scan` is read-only and offline; only the explicit, user-initiated `beacon rules pull <url>` reaches the network, over `https://` only (plain http just for loopback, no redirect off https), size-capped, and verified first when `--sha256` is given. A small frozen baseline is embedded so `scan` works before any rules are installed, and it stays active alongside the store: a store rule replaces a baseline rule only by id (`rulestore.LoadActiveSkipping`), so installing one rule never silently switches the baseline off; only `--rules <dir>` runs a directory alone.
+- Session handoff via `beacon handoff list|export|resume` (`cli/beacon/internal/handoff`, `cli/beacon/cmd/handoff*.go`; docs in `docs/cli/handoff.mdx` and `docs/concepts/session-handoff.mdx`). Every runtime is one entry in the registry in `cli/beacon/internal/handoff/runtimes.go`: its session source, the names it answers to, and the commands that reopen it or start it from a brief; `TestRegistryIsConsistent` checks the entries. Handoff reads the session stores of Claude Code, Codex CLI, OpenCode, Cline, Pi, Prime Agent, Factory Droid, GitHub Copilot CLI, Hermes Agent, DeepSeek Harness, fx, Grok Build, OpenClaw Gateway and Cursor read-only and never touches the network. Oh My Pi, Gemini CLI, Qwen Code, Kiro, Antigravity CLI, Devin CLI, Muse Code, OpenHands and goose have no store Beacon reads: their sessions come from the runtime log, and they take a brief as the target of `--agent`. `resume` reopens a session natively with its runtime's own command when it can, and otherwise writes a brief to `~/.beacon/endpoint/handoffs` (0700/0600) and starts a new session pointed at it. DeepSeek Harness cannot be started, and Hermes Agent and fx only reopen their own sessions, so their sessions continue in another runtime. fx, Grok Build and Cursor find a session by the directory they run in, so they are reopened natively only in the session's own directory. The brief is passed by absolute path, never inlined on a command line. Every launch keeps the runtime's approvals on: Beacon never passes a flag that turns them off, names the approval mode that asks where a CLI takes one (Cline always gets `--auto-approve false`, because Cline defaults to approving every tool call), and removes or overrides environment switches that would approve everything (`COPILOT_ALLOW_ALL`, `COPILOT_PLAN_THEN_AUTOPILOT`, `HERMES_YOLO_MODE`, `GOOSE_MODE`); `--print` shows them under `env`. Briefs run every event through `SanitizeEvent`, and quoted content goes in fences longer than any backtick run it contains, with inline fields reduced to one line, so quoted content cannot forge brief structure. A new session's first prompt ends with the `[beacon-handoff from=<harness> session=<id>]` marker (`pkg/asymptoteobserve/handoff.go`). The hook and plugin prompt paths and the session-store mappers record a `session.handoff` event with `handoff.{source_harness,source_session_id}` when they see it; that is an observed claim, not a verified identity.
+- Session sharing via `beacon share` and `beacon share refresh` (`cli/beacon/cmd/share.go`; docs in `docs/cli/share.mdx`, with the workflow guides in `docs/sharing/` kept in sync). It publishes one session the person names (or the most recent in a directory) to beacon.sh as a shared trace that is a `beacon.trace.v1` trace, the projection the dashboard uses: `BuildShareBundle` (sanitize, scrub, then `TraceEventFromEvent`/`TraceBuilder`), the wire types (`ShareTraceV1` summary body, `ShareEventsBatchV1` of `TraceEventV1`s, `ShareTraceStateV1` with `last_event_id`), `ShareExternalID` (`<harness>:<session-id>`, or a sha256 form), `ShareRelation` and `ShareEventsAfter` live in `pkg/asymptoteobserve/share.go`, and the client in `cli/beacon/internal/account/share.go` (`PUT /v1/traces/{external_id}`, `POST .../events/batch` capped at `ShareMaxEventsPerBatch`, `GET`). The chat view is derived on beacon.sh with `TraceMessages` (`pkg/asymptoteobserve/tracemessages.go`), which pairs a tool invocation and its completion by `tool_call_id` and writes a call reported twice once; messages are never uploaded. Sessions resolve through the handoff registry (store first, then the runtime log). Every event goes through `SanitizeEvent` and session-directory/home paths are rewritten in every projected field before projection, and the shared summary drops the working directory and repository path and names the project by `project.name`. `--print` shows the exact `{external_id, trace, events}` payload with no network, `public` needs confirmation (refused without a terminal unless `--yes`), a re-share upserts by stable event id, and a refresh sends only `ShareEventsAfter` the server's `last_event_id` (re-sending it and any tool call still open). After an upload it writes one `session.shared` event (`event.fidelity=inferred`, no collection method) carrying `shared_url`, `visibility`, `shared_at`/`last_refreshed_at` in raw, which the trace list reads as the sharing state; the projection skips that event. It never runs from hooks or in the background, except the opted-in pre-push sharing below. From a Metadata-only endpoint the share payload goes through `asymptoteobserve.StripToMetadata` (the same fields the Vector metadata transform removes, applied after event ids are derived) and drops the derived title. With no selector (or `--current`) it shares the session it runs inside: `BEACON_SESSION_ID`/`BEACON_HARNESS` (the Claude Code SessionStart hook appends both as `export` lines to `$CLAUDE_ENV_FILE`, plain identifiers only; a child runtime inherits them, so without `--harness` they are refused, naming both sessions, when the named session ran outside this directory and its parents or another runtime worked here more recently: `shareEnvContradiction`), then the active-session record (only when the entry was seen at least as recently as the directory's newest session, since OTLP-only and poll runtimes never write it), then the directory's most recent session. The record is `pkg/asymptoteobserve/activesession` (`~/.beacon/endpoint/active-sessions.json`, 0600 under 0700, atomic and locked, at most 256 entries, 14-day prune, an unchanged entry rewritten at most once a minute), written by the hook logger after every endpoint event with a session id, working directory and harness; it holds identifiers and paths only, never content, and hooks write it silently and never touch the network for it. Hook tests point `BEACON_ACTIVE_SESSIONS_FILE` at a temp file in `TestMain`. Auto-share (`beacon share auto enable|disable|status`, `cli/beacon/cmd/share_auto.go`, settings in `pkg/asymptoteobserve/shareauto`) is server-side publishing: when it applies to a session's working directory, the hook logger writes ONE local `session.share_requested` event per session (`event.fidelity=inferred`, `share.visibility`; deduplicated under the active-session record's lock) and Beacon Cloud forwarding ships it; beacon.sh builds and refreshes the trace with the same `BuildShareBundle` projection and `ShareExternalID`. Hooks never upload. The user file `~/.beacon/endpoint/share.json` (0600, CLI-written) holds the user-wide switch, three-state (unset, on, or off as a kill switch over every project; `auto.state`, with `auto.enabled` kept in step so older files read) and per-project choices by path, which a user-wide enable or disable never rewrites; a project marker `<repo>/.beacon/share.json` may disable on its own (and an off marker wins over the user's entry for the same directory; the closest directory with an entry or marker decides) but enables only when the user's file trusts that project, with the user's visibility, so a cloned repository can never publish someone's sessions. `ForHook` costs one failed read when nothing is enabled. Hook tests point `BEACON_SHARE_SETTINGS_FILE` at a temp file. The share projection and `handoff.LogSessions` recency skip `session.share_requested`.
+- Commit-to-session links via `beacon git setup|status|remove|link|notes` (`cli/beacon/internal/gitlink`, `cli/beacon/cmd/git*.go`; docs in `docs/cli/git.mdx`). A link is a `beacon:<harness>/<session-id>` line in a git note under `refs/notes/beacon`; it carries identifiers only, never content, because notes can be pushed. Which sessions to link is inferred from the local runtime log: a session is linked when, between the parent commit and the commit (at least two hours, at most 24), it wrote a file the commit changes (for a merge, only files that differ from every parent, so a clean merge or pull links nothing). Evidence is file write events, write-type `file.operation`s, plainly readable shell targets, and `apply_patch` envelopes; reads never count. Note updates are a compare-and-swap on the notes ref through a private `refs/notes/beacon-tx/` working ref, and every existing note line, a teammate's or a person's, is kept verbatim. `setup` installs post-commit (links HEAD in the foreground with a 3 s budget, silent, never fails the commit, skips rebase/cherry-pick/revert) and post-rewrite (normalizes the note git concatenates on amend) as standalone `beacon-<hook>` scripts called from a marked block inserted after the shebang of the repository's own hook; only shell hooks are edited, `core.hooksPath` is refused without `--hooks-path`, and `notes.rewriteRef` carries links through amend and rebase. `BEACON_GIT_HOOKS=0` disables the hooks for one command. Every link a run adds is also written to the runtime log as one `session.commit_linked` event in the linked session's timeline (`event.fidelity=inferred`, no collection method), with commit id, branch and credential-stripped remote in the OTel-shaped `vcs` block and overlap counts in `vcs.attribution`; the event deliberately carries no file, command or tool fields so it can never become attribution evidence. Sharing is opt-in (`setup --share-notes`, off by default): a non-destructive fetch refspec `+refs/notes/beacon:refs/notes/beacon-remotes/<remote>` so git's own fetch brings teammates' links into a read-only tracking ref that `beacon git notes` unions with the local one (never force-fetch into `refs/notes/beacon`: it would destroy unpushed links), and a pre-push hook that fetches, merges with `cat_sort_uniq` through the same CAS, and pushes only the notes ref with `--no-verify`, within a 10 s budget and never failing the push. That pre-push hook is the only Beacon git hook that touches the network, and only during a push the person started; `beacon git notes push|fetch` do the same by hand. A note line may carry the session's share URL as its first trailing field (`beacon:<harness>/<id> <url>`; an identifier, not content): `gitlink.ValidShareURL` admits only https URLs on beacon.sh or the configured Beacon host (`AllowShareHost`, fed by `gitAllowShareHosts`), on write and on read, and `MergeNote`/`ParseNote` prefer the line with the URL over the bare one. Post-commit and `link` take URLs only from local `session.shared` events (`localShareURLs`). `setup --share-sessions [--share-visibility]` (implies `--share-notes`; stored as `beacon.shareSessions`/`beacon.shareVisibility` in local git config; public needs confirmation or `--yes`) makes the pre-push hook, which now receives git's stdin, share sessions linked to pushed commits that have no URL (at most 100 commits/10 sessions, silent without credentials, never failing the push; the budget is enforced by the clock: the share phase runs in a goroutine delivering URLs to a collector, the hook takes what it holds after the 6 s upload budget and abandons the rest, then writes notes and pushes the notes ref with what remains of the hook's 10 s, never less than 1 s and 3 s, so only the main path ever writes notes) through `shareUpload` (`cmd/share_upload.go`: `alignShareSource` + `ShareEventsAfter`), then write the URLs into the notes before pushing them. `beacon share --follow [--interval]` (`cmd/share_follow.go`) polls the session locally, uploads through `shareUpload` only when the fingerprint of the projected trace events changed (the events only: the trace body carries its build time), stops at `session.ended` or Ctrl+C (`shareFollowWait`/`shareFollowSignals` are the test seams), and records `session.shared` after each upload, later ones as refreshes that keep the share date; `docs/cli/share.mdx` carries the API-key CI walkthrough with GitHub Actions and GitLab CI examples. Local views show sharing read-only: the trace summary (`traceFold`, which wraps `asymptoteobserve.TraceBuilder` with the local-only `traceStaleness`, and the history through `traceAggregateState`, derivation version 12) and the dashboard's `SessionRecord.Sharing` mark a shared session `stale` when an event `asymptoteobserve.ShareProjects` accepts (the one definition of what a share publishes) and that is not the share's own (`shareActivity`) is newer than what its last `session.shared` record covered (`shared_through`), and carry `asymptoteobserve.ShareRefreshCommand` for the reader to copy; the session list/page, `beacon traces` TUI and plain list display them, and nothing in them shares.
+- Beacon Cloud MCP registration via `beacon mcp connect|disconnect|status` (`cli/beacon/internal/mcpconnect`, `cli/beacon/cmd/mcp_connect.go`; docs in `docs/cli/mcp-connect.mdx`). It registers the Beacon Cloud MCP server as `beacon-managed`, a different name from the local stdio server `beacon`, in the user-level config of Claude Code, Codex CLI, Cursor, VS Code, Gemini CLI and OpenCode. It prints manual steps for runtimes without confirmed MCP OAuth support. OAuth is the default and writes only the URL; `--token-env` writes a reference to an environment variable in each harness's own syntax, never a value. `connect` never reads or copies the account token and never writes a token; minting one is the separate, explicit `beacon mcp token create`. It is explicit and interactive: never run by an unattended install; the onboarding wizard runs it only after the person chose Beacon Cloud and left "Beacon Cloud MCP" selected (that screen is the confirmation), and otherwise the install only suggests it. It is refused as root, and refused in CI or without a terminal unless `--yes` is given. Its one network request is the RFC 9728 resource-metadata check of the URL, which `--dry-run` skips. Configs are edited like the Kimi Code writer: never re-serialized, spliced as text, parsed back and compared before an atomic replace, backed up first. What was written is recorded in `~/.beacon/mcp/connections.json`, and `disconnect` removes only entries recorded there that still point at the recorded URL. `cmd/mcp_connect_e2e_test.go` runs the real harness CLIs when they are installed; re-run it when a harness changes its MCP config format.
+- An optional, off-by-default policy seam in the hook path (`cli/beacon-hooks/internal/policy`) governed by the stable contract in `pkg/asymptoteobserve/policycontract`. When `BEACON_POLICY_PROVIDER` names an executable, the `pre-tool` and `permission-request` hooks send it a JSON request describing the imminent tool call and honor an allow/deny response, returning the runtime's native deny shape and `policy.enforcement=enforce` telemetry on a deny. The seam is inert when unset and fail-open on any error (timeout, non-zero exit, malformed output), so the open build ships no enforcement of its own; all audit/enforce decision logic lives in the external provider. `rules/agent-control/agent-permission-bypass-spawn.rule.yaml` is the open detect twin that flags the same pattern in `beacon scan`.
+
+Current non-goals unless explicitly requested:
+
+- Kernel/process monitoring, EDR replacement, shell history scraping, cloud audit ingestion, general browser or SaaS activity monitoring beyond the supported chat surfaces, credential-use attribution, and MCP configuration inventory.
+- Direct hosted integrations for Datadog, Snowflake, Chronicle, Panther, or other SIEM destinations beyond explicitly supported local/customer-managed forwarding patterns and the opt-in Asymptote Managed path.
+- Dependency vulnerability scanning or package security remediation.
+
+## Common Commands
+
+Run tests for the public CLI. Build the embedded hooks binary first — several tests
+require a real one and fail against the checked-in placeholder:
+
+```bash
+cd cli/beacon
+make build-hooks-current
+go test ./...
+go test -race ./internal/endpoint/...
+```
+
+Run hook adapter tests:
+
+```bash
+cd cli/beacon-hooks
+go test ./...
+```
+
+Run packaging wrapper checks:
+
+```bash
+sh packaging/macos/test-endpoint-scripts.sh
+```
+
+Run the macOS endpoint smoke test:
+
+```bash
+sh packaging/macos/smoke-endpoint.sh
+```
+
+Build the CLI:
+
+```bash
+cd cli/beacon
+make build
+```
+
+Run Collector exporter tests:
+
+```bash
+cd collector-builder/exporter/beaconjsonexporter
+go test ./...
+```
+
+Run the observe SDK and threat-rules conformance tests:
+
+```bash
+cd pkg/asymptoteobserve
+go test ./...
+```
+
+Run the Terraform module tests (the providers are mocked, so no cloud account is needed):
+
+```bash
+for module in terraform/*/; do (cd "$module" && terraform init -backend=false && terraform test); done
+```
+
+Run the managed runtime plugin/extension checks (each verifies the checked-in copy matches its embedded twin, then runs its tests):
+
+```bash
+cd plugins/shared && bun run check && bun test
+cd ../opencode-beacon && bun run check && bun test
+cd ../cline-beacon && bun run check && bun test
+cd ../pi-beacon && bun run check && bun test
+cd ../omp-beacon && bun run check && bun test
+cd ../openclaw-beacon && bun run check && bun test
+cd ../prime-beacon && bun run check && bun test
+cd ../omo-beacon && bun run check && bun test
+```
+
+After editing a plugin or extension source, run `bun run sync` in its directory to update the
+embedded copy under `cli/beacon/internal/endpoint/hooks/assets/`; a Go test fails if the two drift.
+`openclaw-beacon` syncs three files rather than one, because OpenClaw discovers a plugin as a
+directory: the entry plus the two manifests it is declared in.
+
+The payload serializer (`safeClone` and its `maxDepth`) has one source, `plugins/shared/safe-clone.ts`.
+Every plugin except OpenCode carries a generated copy between `// BEGIN shared/safe-clone` and
+`// END shared/safe-clone`, because each installs as one self-contained file and cannot import it.
+Edit only the shared file, then run `bun run sync` in `plugins/shared` to rewrite every plugin source
+and embedded copy (OpenClaw's `.js` copy has its two type annotations stripped). Each plugin's
+`bun run check` and `plugins/shared`'s tests fail when any copy differs.
+
+Run the lens sandbox browser tests (the real dashboard plus hostile fixture lenses; the hooks
+binary must be built first). In a cloud session with a preinstalled Chromium, set `CHROMIUM_PATH`
+instead of installing one:
+
+```bash
+cd cli/beacon && make build-hooks-current
+cd internal/endpoint/dashboard/testdata/lens-e2e
+npm ci
+npx playwright install chromium   # or: export CHROMIUM_PATH=/path/to/chromium
+npx playwright test
+```
+
+Run TypeScript SDK checks:
+
+```bash
+cd packages/asymptote-sdk-js
+npm test
+npm run check
+npm run build
+npm run pack:dry-run
+```
+
+Run browser extension checks. The e2e replays recorded SSE through the real
+extension in headless Chromium, so it needs `openssl` on PATH and a one-time
+Chromium download, but no login and no network:
+
+```bash
+cd browser-extension
+npm ci
+npm run check
+npm run test:unit
+npx playwright install chromium   # one-time
+npm test                          # builds dist/, runs the replay e2e
+```
+
+Exercise the goose adapter during manual testing. There is no `--harness goose` installer yet (see
+the goose entry under Telemetry Scope), so the hooks file and the OTLP endpoint are written by hand
+and only the payload mapping can be run from the repository:
+
+```bash
+cd cli/beacon-hooks
+go test ./... -run Goose
+```
+
+Collect fx session telemetry during manual testing:
+
+```bash
+cd cli/beacon
+go run . endpoint fx status        # sessions fx has written and how much Beacon has read
+go run . endpoint fx sync --print  # map records to events without writing anything
+```
+
+Connect an endpoint to Asymptote Managed during manual testing (needs Vector 0.50+ on the machine;
+`/opt/beacon/bin/vector` from the signed package works, and a browser signed in to an org that has
+managed ingest enabled):
+
+```bash
+cd cli/beacon
+go run . endpoint connect            # browser approval → device key → forwarder service
+go run . endpoint status --json | jq .managed_ingest
+go run . endpoint disconnect         # stop the forwarder and remove the local key
+```
+
+Run the Asymptote Managed forwarder by hand instead (a device key from `beacon-ingest/scripts/mint_test_device.py`
+or a previous connect):
+
+```bash
+cd cli/beacon
+go run . endpoint asymptote install-pack --output /tmp/beacon-asymptote-pack --log-path "$HOME/.beacon/endpoint/logs/runtime.jsonl"
+BEACON_ASYMPTOTE_INGEST_URL=https://<ingest> BEACON_ASYMPTOTE_SECRETS_FILE=/path/to/secrets.json BEACON_ASYMPTOTE_DATA_DIR=/tmp/beacon-asymptote-data \
+  vector validate --skip-healthchecks /tmp/beacon-asymptote-pack/vector.toml
+go run . endpoint asymptote validate   # writes a validation event the forwarder ships
+```
+
+Run the local dashboard during manual testing:
+
+```bash
+cd cli/beacon
+go run . endpoint dashboard
+```
+
+Run local threat detection and manage rules during manual testing:
+
+```bash
+cd cli/beacon
+go run . scan                  # run active rules over the runtime log
+go run . rules list            # show active rules (store plus baseline)
+go run . rules lint ../../rules  # validate + run the repo rule pack's fixtures
+```
+
+When adding event fields a rule can match on, regenerate the field reference:
+`beacon rules fields --markdown > spec/threat-rules/FIELDS.md` (a conformance test fails if
+it drifts).
+
+## Release Deployments
+
+Homebrew releases are published by GoReleaser from `cli/beacon/.goreleaser.yaml`.
+Prefer a CI-based release workflow triggered by an annotated version tag. Use a
+local GoReleaser publish only as a fallback when CI release automation is not
+available or the maintainer explicitly asks for a local release.
+
+A pushed `v*` tag runs the full release end-to-end via
+`.github/workflows/release.yml` (no local publish steps required), in four jobs:
+
+1. `goreleaser` (ubuntu, `environment: release`) builds the collector dists,
+   publishes the GitHub release + changelog and tarballs, and updates the
+   Homebrew tap.
+2. `package` (macOS, `needs: goreleaser`, `environment: release`) builds the
+   Apple Silicon `beacon`/`beacon-hooks` package payload plus arch-matched
+   collector and Vector binaries for `darwin_arm64`, then signs, notarizes,
+   staples, and uploads the `.pkg`, `.sha256`, and `update-manifest.json`.
+   GoReleaser still publishes multi-arch CLI tarballs; the signed endpoint
+   `.pkg` is arm64-only so it can carry a current Vector release.
+3. `windows-package` (windows-2025, `needs: goreleaser`) builds the x64 MSI from
+   the published archive, installs and uninstalls it on the runner to prove it
+   works, and attaches the `.msi` and its `.sha256`. Deliberately **not** in the
+   `release` environment: that environment gates signing secrets, and the MSI is
+   unsigned, so this job has none to gate.
+4. `finalize` (ubuntu, `needs` all three, runs whenever `goreleaser` succeeded)
+   appends the `.pkg`, `.msi` and `install.sh` to `checksums.txt` from the released bytes and
+   records a GitHub build-provenance attestation (Sigstore, keyless, through the
+   workflow's OIDC token) for every file `checksums.txt` lists. It needs
+   `id-token: write` and `attestations: write` and no `release`-environment secrets.
+
+Every third-party action in `release.yml` and `release-extension.yml` is pinned to
+a full commit SHA with the version in a trailing comment, because these jobs hold
+the signing secrets. Bump them by SHA, never back to a tag.
+
+Required `release`-environment secrets: `HOMEBREW_TAP_TOKEN`,
+`DEVELOPER_ID_APP_CERT_P12`, `DEVELOPER_ID_APP_CERT_PASSWORD`,
+`DEVELOPER_ID_INSTALLER_CERT_P12`, `DEVELOPER_ID_INSTALLER_CERT_PASSWORD`,
+`NOTARY_API_KEY_P8`, `NOTARY_API_KEY_ID`, `NOTARY_API_ISSUER`; plus Variables
+`DEVELOPER_ID_APP_IDENTITY`, `DEVELOPER_ID_INSTALLER_IDENTITY`, `APPLE_TEAM_ID`.
+Keep one-time Apple-side onboarding steps out of the repo and share them with
+the release maintainer directly. Never use `pull_request_target` or build
+untrusted PR code in the signing job.
+
+Use the next semver tag requested by the maintainer, usually the next `v0.0.x`
+tag unless they explicitly decide Beacon is ready for `v1.0.0`.
+
+Before tagging:
+
+```bash
+git fetch --tags origin
+git status -sb --untracked-files=all
+git tag --sort=-v:refname | sed -n '1,8p'
+git log --oneline <previous-tag>..HEAD
+gh release view <new-tag> --json tagName,url,isDraft,isPrerelease 2>/dev/null || true
+git ls-remote --tags origin "refs/tags/<new-tag>"
+```
+
+Run the release gates before publishing:
+
+```bash
+cd cli/beacon && go test ./...
+cd ../beacon-hooks && go test ./...
+cd ../../collector-builder/exporter/beaconjsonexporter && go test ./...
+cd ../../../pkg/asymptoteobserve && go test ./...
+cd ../../packages/asymptote-sdk-js && npm test && npm run check && npm run build && npm run pack:dry-run
+cd ../..
+sh packaging/macos/test-endpoint-scripts.sh
+```
+
+When building macOS `.pkg` artifacts, always include the Vector binary by
+setting `BEACON_VECTOR_BIN` (or `VECTOR_BIN`) to the release Vector executable
+before running `packaging/macos/build-pkg.sh` or
+`packaging/macos/build-signed-notarized-pkg.sh`. The package should install
+`/opt/beacon/bin/vector` so packaged Jamf/Fleet forwarder helpers work without a
+separate Vector install.
+
+The Linux `.deb`, `.rpm`, and release archives carry Vector too. Run
+`sh packaging/linux/fetch-vector.sh` before GoReleaser: it downloads the static
+(musl) build for both arches, checks it against the checksums pinned in `packaging/vector/` (never a file from the download host) and
+for a program interpreter, and stages it under `cli/beacon/release-vector/`. The
+GoReleaser before-hook fails without it. The packages install it as
+`/opt/beacon/bin/vector`; the archives carry it as `beacon-vector`, which the
+Homebrew formula installs on Linux. The version is pinned in that script at
+0.56.0, the same as the macOS package. Vector 0.57 and 0.58 stop expanding the
+`${VAR}` references the generated packs rely on, so bump it only together with
+`packaging/linux/validate-vector-packs.sh` passing against the new version.
+
+### Preferred CI Release
+
+CI release automation should:
+
+- Trigger only on pushed tags matching `v*`.
+- Check out the tagged commit with full history (`fetch-depth: 0`) so GoReleaser
+  can compute changelogs from the previous tag.
+- Build or restore the collector binaries expected by `.goreleaser.yaml` under
+  `collector-builder/dist/beacon-otelcol/<goos>_<goarch>/beacon-otelcol`.
+- Run `goreleaser check` before publishing.
+- Run `goreleaser release --clean --parallelism 1` from `cli/beacon` because
+  the release pre-hook writes target-specific `beacon-hooks` binaries to a
+  shared embedded path.
+- Provide `GITHUB_TOKEN` for the GitHub release and `HOMEBREW_TAP_TOKEN` with
+  write access to `asymptote-labs/homebrew-tap`.
+
+The normal deployment flow is:
+
+```bash
+git fetch --tags origin
+git status -sb --untracked-files=all
+git tag -a <tag> -m "<tag>"
+git push origin <tag>
+gh run list --workflow release.yml --limit 5
+```
+
+After the workflow succeeds, verify the GitHub release assets and the Homebrew
+tap:
+
+```bash
+gh release view <tag> --json url,tagName,assets --jq '.tagName + " " + .url + " assets=" + (.assets | map(.name) | join(","))'
+gh api repos/Asymptote-Labs/homebrew-tap/contents/Formula/beacon.rb --jq '.content' | base64 --decode | sed -n '1,70p'
+gh api repos/Asymptote-Labs/homebrew-tap/commits/main --jq '.sha + " " + .commit.message'
+```
+
+Check Homebrew on Linux with a real install, since formula changes only take effect
+once a release publishes them. It should print a Vector version:
+
+```bash
+docker run --rm --platform linux/amd64 homebrew/brew sh -c \
+  'brew install asymptote-labs/tap/beacon && "$(brew --prefix)/bin/beacon-vector" --version'
+```
+
+The release should include the five GoReleaser CLI archives (four `.tar.gz` plus
+`beacon_<version>_windows_amd64.zip`), `checksums.txt`, `threat-rules.tar.gz`, `install.sh` (the Linux one-line installer from `packaging/linux/install.sh`),
+`BeaconEndpointAgent-<version>-arm64.pkg`, its `.sha256`, `update-manifest.json`,
+and `BeaconEndpointAgent-<version>-x64.msi` with its `.sha256`. `checksums.txt` lists
+the archives, the Linux packages, the `.pkg`, the `.msi` and `install.sh`, and each of those has a
+build-provenance attestation.
+
+The MSI is unsigned, so `pkgutil`/`stapler`/`spctl` have no Windows counterpart to
+run. Its `.sha256` is therefore the only integrity check it has, and the release
+job proves the package works by installing it on a runner before attaching it —
+verification by execution rather than by signature. Both change when Authenticode
+signing is added. Verify the package before announcing the release:
+
+```bash
+tmpdir="$(mktemp -d)"
+cd "$tmpdir"
+gh release download <tag> --repo Asymptote-Labs/agent-beacon --pattern 'BeaconEndpointAgent-*-arm64.pkg*' --pattern update-manifest.json
+shasum -a 256 -c BeaconEndpointAgent-*-arm64.pkg.sha256
+gh attestation verify BeaconEndpointAgent-*-arm64.pkg --repo Asymptote-Labs/agent-beacon
+pkgutil --check-signature BeaconEndpointAgent-*-arm64.pkg
+xcrun stapler validate BeaconEndpointAgent-*-arm64.pkg
+spctl --assess --type install -vv BeaconEndpointAgent-*-arm64.pkg
+jq . update-manifest.json
+```
+
+For releases that include endpoint self-update changes, validate the manual apply
+path from the prior installed package on an Apple Silicon Mac:
+
+```bash
+/opt/beacon/bin/beacon version
+sudo /opt/beacon/bin/beacon endpoint update --apply
+/opt/beacon/bin/beacon version
+/opt/beacon/bin/beacon endpoint status --system
+sudo tail -n 20 /var/log/beacon-agent/system.jsonl
+```
+
+If the workflow fails after the tag is pushed, do not create a second tag until
+the failure is understood. Fix the release workflow or source issue, then rerun
+the failed workflow for the same tag when possible. Delete and recreate a pushed
+tag only with maintainer approval.
+
+### Local Fallback Release
+
+Do not publish locally from a dirty checkout unless the maintainer explicitly
+wants those uncommitted changes in the release archive. If unrelated local
+changes are present, create a temporary clean worktree at `HEAD` and copy the
+prebuilt collector binaries into it before running GoReleaser:
+
+```bash
+rm -rf .tmp/release-<tag>
+git worktree add .tmp/release-<tag> HEAD
+mkdir -p .tmp/release-<tag>/collector-builder/dist/beacon-otelcol/{darwin_amd64,darwin_arm64,linux_amd64,linux_arm64}
+cp collector-builder/dist/beacon-otelcol/darwin_amd64/beacon-otelcol .tmp/release-<tag>/collector-builder/dist/beacon-otelcol/darwin_amd64/beacon-otelcol
+cp collector-builder/dist/beacon-otelcol/darwin_arm64/beacon-otelcol .tmp/release-<tag>/collector-builder/dist/beacon-otelcol/darwin_arm64/beacon-otelcol
+cp collector-builder/dist/beacon-otelcol/linux_amd64/beacon-otelcol .tmp/release-<tag>/collector-builder/dist/beacon-otelcol/linux_amd64/beacon-otelcol
+cp collector-builder/dist/beacon-otelcol/linux_arm64/beacon-otelcol .tmp/release-<tag>/collector-builder/dist/beacon-otelcol/linux_arm64/beacon-otelcol
+sh packaging/linux/fetch-vector.sh "$PWD/.tmp/release-<tag>/cli/beacon/release-vector"
+```
+
+Tag and publish from the clean release checkout. Prefer explicitly exported
+tokens; use `gh auth token` only as a local fallback:
+
+```bash
+git -C .tmp/release-<tag> tag -a <tag> -m "<tag>"
+git -C .tmp/release-<tag> push origin <tag>
+cd .tmp/release-<tag>/cli/beacon
+goreleaser check
+GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token)}" HOMEBREW_TAP_TOKEN="${HOMEBREW_TAP_TOKEN:-$(gh auth token)}" goreleaser release --clean --parallelism 1
+```
+
+After GoReleaser succeeds, verify both the GitHub release and the Homebrew tap:
+
+```bash
+gh release view <tag> --json url,tagName,assets --jq '.tagName + " " + .url + " assets=" + (.assets | length | tostring)'
+gh api repos/Asymptote-Labs/homebrew-tap/contents/Formula/beacon.rb --jq '.content' | base64 --decode | sed -n '1,70p'
+gh api repos/Asymptote-Labs/homebrew-tap/commits/main --jq '.sha + " " + .commit.message'
+```
+
+Clean up the temporary worktree after verification:
+
+```bash
+git worktree remove --force .tmp/release-<tag>
+```
+
+### TypeScript SDK Release
+
+Publish `@asymptote/sdk` from GitHub Actions instead of a local shell when
+possible so npm provenance remains enabled.
+
+Before tagging:
+
+```bash
+cd packages/asymptote-sdk-js
+npm test
+npm run check
+npm run pack:dry-run
+```
+
+Publish with an annotated SDK tag that matches `package.json` exactly:
+
+```bash
+git tag -a sdk-js-v<version> -m "sdk-js-v<version>"
+git push origin sdk-js-v<version>
+gh run list --workflow npm-publish-sdk.yml --limit 5
+```
+
+The `.github/workflows/npm-publish-sdk.yml` workflow validates that the pushed
+`sdk-js-v<version>` tag matches `packages/asymptote-sdk-js/package.json`, reruns
+the SDK checks, and publishes to npm with provenance.
+
+Trusted publishing must be configured in npm for this repository/workflow before
+the first CI publish. If trusted publishing is unavailable and the maintainer
+explicitly requests a local fallback, disable provenance for that one publish
+instead of changing the package defaults.
+
+Use these npm trusted publisher values:
+
+- Package: `@asymptote/sdk`
+- Publisher: GitHub Actions
+- Organization or owner: `asymptote-labs`
+- Repository: `agent-beacon`
+- Workflow filename: `npm-publish-sdk.yml`
+- Environment: leave unset unless the workflow is updated to declare one
+
+### Browser Extension Release
+
+The browser extension versions independently of the CLI. A pushed `ext-v*` tag
+runs `.github/workflows/release-extension.yml`, which creates its own GitHub
+release carrying the unpacked Chromium-family build as a zip plus a `.sha256`.
+The zip keeps its `-chrome.zip` name: `chrome` names the Chromium extension
+target family, and the same archive loads in Edge, Brave, Opera, Vivaldi and Arc.
+
+`ext-v*` and the CLI's `v*` trigger cannot collide: GitHub tag patterns anchor at
+the start, so `v*` does not match `ext-v0.1.0`.
+
+Bump the version in **both** `browser-extension/package.json` and
+`browser-extension/src/manifest.json` before tagging. The workflow requires the
+tag and both files to agree and fails otherwise.
+
+```bash
+cd browser-extension
+npm run check && npm run test:unit && npm run build
+cd ../
+git tag -a ext-v<version> -m "ext-v<version>"
+git push origin ext-v<version>
+gh run list --workflow release-extension.yml --limit 5
+```
+
+A second job, `firefox`, signs the Firefox build through AMO as an unlisted
+add-on and attaches `agent-beacon-browser-extension-<version>-firefox.xpi` plus
+its `.sha256`. It runs only when the `AMO_JWT_ISSUER` and `AMO_JWT_SECRET`
+repository secrets exist, and skips when the release already has that `.xpi`,
+because AMO signs each version once. Without the secrets it is a no-op and the
+release still succeeds with the Chrome zip alone.
+
+The zip is unsigned, so its `.sha256` is the only integrity check it has, the
+same posture as the Windows MSI. The workflow proves the artifact works by
+unzipping the published bytes and asserting they are a loadable MV3 extension.
+Verify after the run:
+
+```bash
+gh release download ext-v<version> --repo Asymptote-Labs/agent-beacon \
+  --pattern 'agent-beacon-browser-extension-*-chrome.zip*'
+shasum -a 256 -c agent-beacon-browser-extension-<version>-chrome.zip.sha256
+```
+
+Chrome Web Store publication is not yet wired. Until it is, the zip is loaded
+unpacked through Chrome's developer mode.
+
+## Implementation Notes
+
+- Prefer deterministic tests that use `t.TempDir()`, `testenv.SetHome(t, ...)` (`cli/beacon/internal/testenv`; a bare `t.Setenv("HOME", ...)` does not move `os.UserHomeDir` on Windows), fake binaries, and free local ports. Gate Unix permission-bit assertions with `testenv.HasPOSIXFileModes()` or `testenv.RequirePOSIXFileModes(t)`, and shell-script fixtures with `testenv.RequirePOSIXExecutableFixtures(t)`.
+- Avoid tests that require root, real `launchctl` service changes, Wazuh, a live collector, or external network access.
+- For macOS-only behavior, gate tests with `runtime.GOOS == "darwin"` or assert the non-Darwin contract explicitly.
+- Keep endpoint event schema fields stable: `vendor`, `product`, `schema_version`, required event fields, and Wazuh-compatible JSONL output are release contracts.
+- Preserve optional event fields for agent-native metadata (`session`, `trace`, `tool`, `file`, `command`, `mcp`, `approval`, `content`, `model`, `repository`, and `branch`) without changing existing required field semantics.
+- Reading a runtime's own on-disk session store is a `poll` collection path, not a new method: it is a pull that sees committed records after the fact, which is what `poll` means. fx is the case that exercises it (`cli/beacon/internal/fxsession`); a future runtime with the same shape uses `poll` too rather than adding a fifth value to a release-contract field. The token aggregator relies on that marker: when one session (endpoint, normalized harness, session id) has usage from both a live method and `poll`, `preferLiveOverPoll` in `cli/beacon/internal/tokens/tokens.go` keeps live usage authoritative from the first event of that live channel in the session and drops the backfill's copies from then on, so a poll mapper must keep the runtime's own session id and real record timestamps rather than deduplicating against the live log itself.
+- Set the provenance markers on every new collection path. `harness.collection_method` (`hook`, `otlp`, `plugin`, `poll`) records the mechanism; `event.fidelity` (`observed`, `inferred`) records whether the source named the action or Beacon derived it. Both are defined in `pkg/asymptoteobserve/provenance.go` and are the only sanctioned way to express that difference — do not add per-runtime confidence fields, and do not leave a derived action unmarked. A new plugin-shaped runtime must be added to `CollectionMethodForPlatform`, whose default is `hook`. An action synthesized from an adjacent observation, such as an approval built from a pre-tool notification on a runtime with no approval hook, is `inferred`.
+- Keep event identity derivable rather than asserted. `gen_ai.tool.call.id` carries the runtime's own name for one tool invocation, promoted on every capture path from the shared alias list in `pkg/asymptoteobserve.ToolCallIDKeys`; a new runtime adds its spelling there rather than in a mapper. `prompt.id` names the turn an event belongs to (one user prompt and everything done for it, until the next prompt) and is promoted the same way from `asymptoteobserve.PromptIDKeys` (hook envelope, OTLP attributes, `beacon.prompt.id`); session-store mappers set it from the turn they are reading. OTel GenAI has no turn attribute, so the name is Claude Code's own; a spelling joins the list only when the runtime's value is exactly one prompt (Copilot's per-model-call turn ids are excluded). Claude Code hooks carry none, so turn-scoped Claude hooks read the newest `promptId` from the transcript tail; `UserPromptSubmit` must not, because it runs before the prompt is recorded. A present `prompt` object no longer means "this is a prompt": test `prompt.text` or the category. `event.id` is a deterministic UUID derived by `EventIDForLine` from the event about to be written, so both capture paths name one action the same way. Its namespace constant and derivation are a contract: changing either renames every event ID Beacon has written, and a test pins the value.
+- Keep `gen_ai.usage` as the single canonical token-usage representation: normalize all runtime token telemetry (span attributes, metric datapoints, legacy `llm.usage.*` aliases) into it, mirror OTel GenAI semconv JSON names exactly, and never add parallel or per-harness token fields. `gen_ai.usage.cache_creation.ephemeral_1h_input_tokens` (optional, Anthropic's own name) is the subset of `cache_creation.input_tokens` written with a one-hour TTL: a breakdown like `reasoning` inside output, never added to a total, built with `asymptoteobserve.NewCacheCreationUsage` (clamps it to the write count) and differenced with `GenAIUsageCacheCreationInfo.Minus`. It is set by Claude Code session files, Pi-family `cacheWrite1h` and the browser extension's Claude adapter; Claude Code's OTLP export has no split, and reports price unsplit writes at the five-minute rate. `gen_ai.usage.cost_usd` carries runtime-reported cost only and is never written from a price list; list-price estimates are computed only at report time from the embedded catalog (`cli/beacon/internal/pricing`), are always labeled as estimates, and are never stored in events.
+- `cli/beacon/internal/pricing` estimates list-price cost for reports: integer-microdollar math over the gen_ai.usage counts (disjoint input/output/cache read/cache write, a one-hour write subset, reasoning inside output), long-context bands only for a single request, and a strict model-name ladder (exact, canonical via `NormalizeModelName`, dotted version, Bedrock route prefix, then stripping a `[1m]` marker, snapshot date or effort suffix) that leaves a model unpriced rather than guess, including when two entries tie with different prices. Its `catalog.json` is embedded, offline and report-time only (hooks never import it); it is generated from LiteLLM's MIT-licensed `model_prices_and_context_window.json` and records the upstream URL, commit and fetch/generation dates. Regenerate with `cd cli/beacon && go run ./internal/pricing/internal/gen` (resolves LiteLLM's main with `git ls-remote` and fetches that commit; `-src`/`-commit` for a local copy) and review the one-model-per-line diff; the generator never runs in builds or tests. Operators price what the catalog cannot (internal models, new releases, gateway aliases, negotiated rates) in a local overrides file, `<BaseDir>/pricing/overrides.json` (`pricing.DefaultOverridesPath`, user or system mode; `--pricing-file` on `beacon token-usage` and `beacon pricing` names another), schema `beacon.pricing.overrides/v1`, documented in `docs/cli/pricing.mdx`. It is offline and Beacon never writes it: the CLI reads it per run, and the dashboard re-reads it per `/api/tokens` request, read-only, falling back to the catalog with `pricing.overrides.error` when it is invalid (the CLI fails instead). Rates are USD per MTok converted exactly to microdollars; zero, negative, quoted, sub-microdollar, absurd, unknown and duplicate keys are refused with the key named. `Pricer.Lookup` runs the same ladder over the file's names first and a row replaces the catalog row whole (omitted cache rates are unpublished, priced by the usual fallbacks); aliases map a reported name to an exact row or catalog key. Reports record `source` (`override`/`catalog`), `alias`, and the file's path and SHA-256. `beacon pricing show|list|info|validate` (`cli/beacon/cmd/pricing.go`) inspects resolution, the catalog, its provenance and the file.
+- When adding a new signal, include stable identifiers/counts/hashes alongside any retained raw content, and route raw fields through redaction, sanitization, truncation, and event-size controls.
+- Keep the dashboard read-only. It should inspect local status and JSONL events but must not mutate endpoint configuration or telemetry.
+- A few no-op extension points let a separately distributed build compile in files of its own: `claudeExtraHookGroups` and `claudeSettingsChanged` (`cli/beacon/internal/endpoint/hooks/claude.go`), `version.Edition` (both modules; reported by `beacon version`, `endpoint status --json` and the inventory heartbeat only when it is not `community`), and `updatecheck.PublicReleases` (false turns off the startup notice, `beacon version check` and the self-updater). In this repository they stay unset, and with them unset Beacon must behave exactly as before: `TestInstallClaudeSettingsUnchangedWithoutExtensions` compares the written Claude settings to a golden file. Keep them neutral, with no product logic behind them here, and CI refuses any file built only with an `enterprise` tag. The one exception is `beacon endpoint enforcement enable` (`cli/beacon/cmd/endpoint_enforcement.go`), the public installer for the enterprise edition: on an Apple Silicon Mac connected in system mode, with no user-mode Beacon running for the console user, it asks `<dashboard>/api/cli/enforcement/download` for the enterprise package (`internal/endpoint/edition`), installs it with `selfupdate.Applier.InstallPackage` (the self-updater's steps after discovery, with no version gate; the package must match the checksum, be signed by the Apple team pinned in `edition.AppleTeamID`, pass Gatekeeper and report the version and `enterprise` edition once installed, or it is rolled back), then runs the installed binary's own `enable`. A build that carries enforcement sets `activateEnforcement`, which `enable` runs instead, and adds its other subcommands to `endpointEnforcementCmd`. It contains no enforcement logic, never runs from hooks or in the background, and with `activateEnforcement` unset nothing else changes.
+- The local trace history (`~/.beacon/endpoint/history.db`, `cli/beacon/internal/endpoint/dashboard/history_*.go`) is opt-in: only `beacon endpoint traces reindex`, a yes to the first-run prompt, or (later) `beacon mcp setup` creates it, and nothing non-interactive is ever prompted. Once it exists, `list`, `search` and `show` must return exactly what the JSONL scan returns for the same log (`TestHistoryAnswersExactlyLikeTheJSONLScan`), so it stores every event and projects it with the same code. A change to the trace projection bumps `historyDerivationVersion`, which rebuilds derived data from the stored lines. The stored lines keep only the raw keys in `historyRawKeys`, and a test fails if the dashboard reads one that is missing. The line dictionary (`historyLineDictionary`) must never change without a new codec.
+- The Asymptote device key has exactly one home, `<BaseDir>/asymptote/vector-secrets.json`, read by Vector's `secret` file backend. Never copy it into `config.json`, `vector.toml`, a service unit, an environment variable, a log line, or a `--json` result. Besides Vector, only the root CLI reads it, into memory, to authenticate the one request `beacon endpoint enforcement enable` makes to the platform (and that a build carrying enforcement makes to turn it on or update it); `HasSecretDestinations` is unchanged because the key is not in `config.json`. `internal/auth` is flow-agnostic (PKCE, loopback callback server with an injected exchange function, browser opener, `PostJSON`); new browser flows reuse it rather than adding a second callback server. `connect` must fail before opening a browser when Vector or a service manager is missing, or when Vector rejects the rendered config, so no key is minted or rotated that cannot be used; enrollment rotates a connected device's key in place, so every local check runs ahead of it; the steps that can only fail after the exchange (storing the key, writing the config and unit, starting the service) are covered by the `asymptote/connect-pending` marker, written as soon as the key arrives and removed only when connect finishes, so status reports an incomplete connect instead of the previous connection. A failed first connect stops and removes any partial forwarder before returning, which keeps a later local-only onboarding choice local.
+- Keep the release readiness guidance in `README.md` up to date when install, packaging, collector, or dashboard behavior changes.
+
+## CI Expectations
+
+`.github/workflows/ci.yml` runs these jobs on every pull request and on pushes to `main`:
+
+- `go-test` (macOS): `bun run check && bun test` in `plugins/shared` and all seven plugin directories, then `make build-hooks-current`, then `go test ./...` in `cli/beacon`, `go test -race ./internal/endpoint/...`, `go test ./...` in `cli/beacon-hooks`, `collector-builder/exporter/beaconjsonexporter`, and `pkg/asymptoteobserve` (includes threat-rules pack conformance), then CLI help smoke checks that also assert removed commands stay unexposed.
+- `linux-test` (ubuntu) and `windows-test` (windows-2025) rerun the Go suites per platform. The Windows job tests a measured package list rather than `./...`; the excluded packages are tracked in #318, and the scope must not be widened back to `./...`.
+- `typescript-sdk` (Node 20, 22, 24): `npm test`, `npm run check`, `npm run build`, `npm run pack:dry-run`, `npm run pack:smoke` in `packages/asymptote-sdk-js`.
+- `browser-extension` (Node 22, matrix over `chromium` and `msedge`): `npm run check`, `npm run test:unit`, `npm run build`, a check that the build is a loadable MV3 extension, `npm run lint:firefox` (the Firefox build plus `addons-linter --warnings-as-errors`), and the Playwright replay e2e running the real extension headless in that leg's browser (`BROWSER_CHANNEL`) against a local HTTPS replay server; the HTML report and traces upload on failure. Brave, Opera, Vivaldi and Arc have no Playwright channel; `BROWSER_EXECUTABLE` runs the same e2e against their binaries for the manual checklist in `docs/runtimes/browser-extension-chromium.mdx`.
+- `lens-e2e` (ubuntu): runs the real dashboard handler with hostile fixture lenses and the full `rules/` corpus installed (`cli/beacon/internal/endpoint/dashboard/e2eserver`, `testdata/lens-e2e`) and drives the session page in headless Chromium. Every escape from the lens sandbox must be refused, and a lens that throws, stalls or navigates must give way to the full session.
+- `beacon-sandbox` (ubuntu): `go build`, `go vet`, and `go test` for the verification harness. Hermetic — no Modal account, no API key, no paid resources.
+- `terraform` (ubuntu): `terraform fmt -check`, `validate`, and `terraform test` (mocked providers) for every module under `terraform/`, and `validate` for each example.
+- `cross-build` (ubuntu): builds all five release targets and asserts the Linux binaries are statically linked (no `PT_INTERP`).
+- `package-smoke` (macOS): `packaging/macos/test-endpoint-scripts.sh`, a `build-pkg.sh` payload check, and `packaging/macos/smoke-endpoint.sh`.
+- `linux-systemd-smoke` and `linux-package-smoke` (ubuntu): the real systemd install path, and installing the built `.deb` in a systemd container.
+- `windows-package-smoke` (windows-2025): `packaging/windows/test-endpoint-scripts.ps1`, then building the MSI and installing it.
+
+The Go jobs build the embedded hooks binary first (`make build-hooks-current`); `cli/beacon` tests
+fail against the placeholder because `InstallFactory` requires a real binary.

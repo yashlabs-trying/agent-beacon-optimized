@@ -1,0 +1,10 @@
+=== RUN   TestPhase2RankingAlternatives
+    phase2_token_ranking_test.go:202: RANK lexical | tune n=48 R@1=0.000 R@5=0.750 MRR=0.271 NDCG@5=0.390 | held-out n=48 R@1=0.000 R@5=0.750 MRR=0.271 NDCG@5=0.390
+    phase2_token_ranking_test.go:202: RANK semantic | tune n=48 R@1=0.208 R@5=1.000 MRR=0.568 NDCG@5=0.679 | held-out n=48 R@1=0.208 R@5=1.000 MRR=0.566 NDCG@5=0.678
+    phase2_token_ranking_test.go:202: RANK hybrid_rrf | tune n=48 R@1=0.188 R@5=1.000 MRR=0.493 NDCG@5=0.620 | held-out n=48 R@1=0.167 R@5=1.000 MRR=0.484 NDCG@5=0.614
+    phase2_token_ranking_test.go:202: RANK hybrid_semantic_heavy | tune n=48 R@1=0.208 R@5=1.000 MRR=0.568 NDCG@5=0.679 | held-out n=48 R@1=0.208 R@5=1.000 MRR=0.566 NDCG@5=0.678
+    phase2_token_ranking_test.go:202: RANK hybrid_lexical_heavy | tune n=48 R@1=0.188 R@5=1.000 MRR=0.490 NDCG@5=0.617 | held-out n=48 R@1=0.167 R@5=1.000 MRR=0.477 NDCG@5=0.608
+    phase2_token_ranking_test.go:202: RANK hybrid_identifier_boost | tune n=48 R@1=0.188 R@5=1.000 MRR=0.493 NDCG@5=0.620 | held-out n=48 R@1=0.167 R@5=1.000 MRR=0.484 NDCG@5=0.614
+--- PASS: TestPhase2RankingAlternatives (0.75s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	1.432s

@@ -1,0 +1,228 @@
+---
+title: "Browser Extension"
+description: "Install and configure the Beacon browser extension that collects Claude.ai and ChatGPT chat telemetry"
+---
+
+## Overview
+
+Beacon collects browser chat telemetry through an optional MV3 browser extension, built for Chrome and, in beta, for Firefox. It reads the chat streams of the sites you enable and relays them into the same local pipeline as agent activity, so browser conversations land in the runtime log next to CLI agent events.
+
+One extension covers both supported sites:
+
+<Columns cols={2}>
+  <Card title="Claude.ai" icon="message" href="/runtimes/claude-web">
+    Prompts, responses, and tool calls from the claude.ai chat stream.
+  </Card>
+  <Card title="ChatGPT" icon="message" href="/runtimes/chatgpt-web">
+    Prompts, responses, and tool activity from the chatgpt.com chat stream.
+  </Card>
+</Columns>
+
+This page covers install, configuration, and verification, which are the same for both sites. The site pages cover what each one captures and where each one falls short.
+
+<Note>
+The extension is in beta. It is not published on the Chrome Web Store and installs unpacked. It reads two chat streams whose APIs are private and undocumented, so a change on either site can interrupt capture until the adapter is updated.
+</Note>
+
+## Prerequisites
+
+Before installing the extension, make sure:
+
+- The Beacon endpoint is [installed](/cli/install) and running. The extension posts to the local collector on `http://127.0.0.1:4318/v1/logs`, which a default endpoint install already listens on, so no collector configuration is needed.
+- You have Chrome, Edge, or another Chromium browser that can load an unpacked MV3 extension (see [Chromium browsers](/runtimes/browser-extension-chromium) for which ones are tested), or Firefox 140 or newer for the Firefox build. Safari is not supported.
+- You have Node 22 or newer, if you are building from source rather than using a release archive.
+- You have reviewed what the extension retains. It captures full prompt and response text by default.
+- The people whose browsers it runs in know it is there, since it reads their Claude.ai and ChatGPT conversations.
+
+Confirm the endpoint is up before installing the extension:
+
+```bash
+beacon endpoint status
+```
+
+## Collection path
+
+A content script running in the page's main world tees the streamed chat response, a per-site adapter parses it into a normalized turn, and the extension's service worker posts OTLP GenAI logs to the local collector. The `beaconjson` exporter converts those into endpoint events and writes them to the runtime JSONL log, alongside every other source.
+
+The extension never writes files and never contacts a remote endpoint. Delivery is queued in local extension storage and retried with backoff, so a turn survives the service worker being suspended mid-stream and the collector being down. A queued turn is kept until it is delivered, for up to 24 hours; past 2,000 queued turns or 6 MiB, the oldest are dropped first. A turn the collector rejects outright, rather than failing to reach it, is dropped.
+
+Events collected this way carry `harness.collection_method` of `otlp`, and a harness name of `claude_web` or `chatgpt_web`, so browser activity stays distinguishable from CLI agents in the runtime log and the dashboard.
+
+Each event also names the browser it came from in `user_agent.name` and `user_agent.version`, such as `Microsoft Edge` or `Brave`. See [Which browser an event came from](/runtimes/browser-extension-chromium#which-browser-an-event-came-from) for how it is detected and where it cannot tell browsers apart.
+
+## Discovery and status
+
+Beacon treats the browser extension as a user-installed source. It is not configured by `beacon endpoint install`, has no hook or plugin file on disk, and does not appear in `beacon endpoint status`, which reports on the endpoint service rather than on browser extensions.
+
+Its presence is therefore observed rather than declared: the evidence that it is working is `claude_web` or `chatgpt_web` events arriving in the runtime log. See [Confirm it is working](#confirm-it-is-working).
+
+## Install
+
+The extension installs unpacked through Chrome's developer mode, so Chrome will not auto-update it. To move to a new version, download or build it again and reload.
+
+### Build from source
+
+No prebuilt archive is published yet, so building from source is currently the only way to get the extension. It needs Node 22 or newer and takes a few seconds:
+
+```bash
+git clone https://github.com/asymptote-labs/agent-beacon.git
+cd agent-beacon/browser-extension
+npm ci
+npm run build
+```
+
+That writes the loadable extension to `browser-extension/dist`. Note the full path, because Chrome asks for it when you load it:
+
+```bash
+pwd -P  # then append /dist
+```
+
+### Use a release archive
+
+Once an `ext-v*` release is published, you will be able to skip the build and download `agent-beacon-browser-extension-<version>-chrome.zip` with its `.sha256` from the [releases page](https://github.com/asymptote-labs/agent-beacon/releases), then verify and unzip it:
+
+```bash
+shasum -a 256 -c agent-beacon-browser-extension-<version>-chrome.zip.sha256
+unzip agent-beacon-browser-extension-<version>-chrome.zip -d agent-beacon-extension
+```
+
+The archive is unsigned, so its `.sha256` is the only integrity check it has. The unzipped folder is what you load, in place of `dist`.
+
+The `-chrome` archive is the build for every Chromium browser, including Edge, Brave, Opera, Vivaldi, and Arc. There is no separate archive per browser.
+
+### Load it in Chrome
+
+1. Open `chrome://extensions`.
+2. Turn on **Developer mode**, top right.
+3. Choose **Load unpacked**, then select the `dist` folder you built, or the unzipped release folder.
+4. Confirm the Agent Beacon browser collector now appears in the list and is enabled.
+5. Click the extension's toolbar icon to check its status and, if you want, change the retention mode before capturing anything.
+
+Other Chromium browsers load it the same way from their own extensions page, such as `edge://extensions` or `brave://extensions`. See [Chromium browsers](/runtimes/browser-extension-chromium#install).
+
+### Load it in Firefox
+
+The Firefox build is in beta. It is generated from the same sources as the Chrome build and passes Mozilla's linter in CI, but it has no automated end-to-end test, so live capture must be verified by hand.
+
+Build it with `npm run build:firefox`, which writes `browser-extension/dist-firefox`. Then:
+
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Choose **Load Temporary Add-on**, then select `dist-firefox/manifest.json`. A temporary add-on is removed when Firefox restarts. For a permanent install, use a signed `.xpi` and the [enterprise policy](#firefox-enterprise-policy) below.
+3. Click the extension's toolbar icon. If it shows **Site access not granted**, choose **Grant site access** and accept Firefox's prompt.
+
+<Warning>
+Firefox lets the user withhold an MV3 extension's host permissions. If they are withheld, the extension captures nothing, and nothing on the chat site indicates it. The popup and options page show a **Site access not granted** banner listing the missing hosts, until access is granted. All five hosts are needed: `claude.ai`, `chatgpt.com`, and `chat.openai.com` for capture, and `127.0.0.1` and `localhost` for delivery to the collector. Access can also be changed per site in `about:addons`, under the extension's **Permissions** tab.
+</Warning>
+
+## Configuration
+
+The extension is configured in its own UI, not by `beacon`. There is no CLI command and no config file on disk. Settings are split across two surfaces:
+
+| Surface | How to open it | Settings |
+|---------|----------------|----------|
+| Popup | Click the extension's toolbar icon | Capture on or off, content retention (`full`, `redacted`, `metadata`), plus live queue depth and active stream count |
+| Options page | Right-click the icon and choose **Options**, or use **Details** then **Extension options** in `chrome://extensions` | OTLP logs endpoint (loopback only: `http(s)` on `127.0.0.1`, `localhost` or `[::1]`), and per-site checkboxes for claude.ai and chatgpt.com |
+
+Both sites are enabled by default. Turn one off in the options page to collect from the other alone.
+
+## Firefox enterprise policy
+
+Firefox installs only Mozilla-signed add-ons outside development. When the release workflow is configured with AMO credentials, each `ext-v*` release carries a signed, self-distributed `agent-beacon-browser-extension-<version>-firefox.xpi` and its `.sha256`. Until then, no signed build is published, and this policy has nothing to point at.
+
+To force-install it across a fleet, use Firefox's `ExtensionSettings` policy. The add-on ID is fixed at `browser-collector@agent-beacon.asymptotelabs.ai`. In `policies.json`, placed in the `distribution` directory of the Firefox installation:
+
+```json
+{
+  "policies": {
+    "ExtensionSettings": {
+      "browser-collector@agent-beacon.asymptotelabs.ai": {
+        "installation_mode": "force_installed",
+        "install_url": "https://github.com/Asymptote-Labs/agent-beacon/releases/download/ext-v<version>/agent-beacon-browser-extension-<version>-firefox.xpi"
+      }
+    }
+  }
+}
+```
+
+The same `ExtensionSettings` value can be delivered through Group Policy on Windows, using Mozilla's ADMX templates, or through a macOS configuration profile for the `org.mozilla.firefox` domain.
+
+- `install_url` must be a direct link to the signed `.xpi`. Use the versioned release asset, because the `latest` release on this repository can be a CLI release rather than an extension release. The build declares no `update_url`, so Firefox does not update it on its own. To roll out a new version, change `install_url` to the new release.
+- `force_installed` stops users from removing or disabling the extension. It does not replace the site-access check. After the rollout, open the extension's popup on one machine and confirm there is no **Site access not granted** banner.
+- Retention still defaults to `full` and is set in the extension's popup. See [Retained content](#retained-content).
+
+## Retained content
+
+Retention defaults to `full`. Browser chat telemetry has little investigative value without content, so the default keeps it, and the tradeoff is documented rather than defaulted away.
+
+| Mode | What is retained |
+|------|------------------|
+| `full` (default) | Complete prompt text, full assistant response, tool call arguments and results |
+| `redacted` | The same text with emails and API-key-shaped tokens scrubbed in the browser |
+| `metadata` | No chat text. Actions, models, token counts, and tool names only |
+
+Retention is enforced in the browser before anything is sent, so under `metadata` the text never leaves the page. Endpoint-side redaction, sanitization, truncation, and event-size limits apply to whatever is sent.
+
+Change the mode in the extension's popup before enabling it on a machine where the same browser profile is used for personal conversations.
+
+## Confirm it is working
+
+Send one message on claude.ai or chatgpt.com, then look for the event:
+
+```bash
+grep -c '"claude_web"\|"chatgpt_web"' ~/.beacon/endpoint/logs/runtime.jsonl
+```
+
+A count of one or more means the whole path worked: the extension parsed the stream, the collector accepted the OTLP payload, and the exporter wrote a normalized event. To read one:
+
+```bash
+grep '"claude_web"\|"chatgpt_web"' ~/.beacon/endpoint/logs/runtime.jsonl | tail -1 | jq '{action: .event.action, harness: .harness.name, method: .harness.collection_method, model, session: .session.id}'
+```
+
+On a system-mode install the log lives at `/var/log/beacon-agent/runtime.jsonl` instead, and reading it needs `sudo`.
+
+Or browse the events in the [local dashboard](/cli/dashboard):
+
+```bash
+beacon endpoint dashboard
+```
+
+## Troubleshooting
+
+If nothing arrives, work through it in this order:
+
+- **The extension's toolbar popup** shows the queue depth and active streams. A growing queue means it captured the turn but cannot deliver it, which points at the collector rather than the adapter.
+- **`beacon endpoint status`** confirms the collector is running and listening on `4318`.
+- **The service worker console**, reachable from `chrome://extensions` by clicking "service worker" under the extension, shows delivery errors.
+- **A hard reload of the chat tab.** The interceptor installs at document start, so a tab opened before the extension was loaded is not instrumented until it reloads.
+- **Capture may be off, or off for that site.** Check the popup and the options page.
+
+Chrome also disables unpacked extensions on restart in some managed configurations. If capture stops after a browser restart, check that it is still enabled in `chrome://extensions`.
+
+## Telemetry coverage
+
+Coverage that is the same for both sites:
+
+| Area | Support |
+|------|---------|
+| Prompt telemetry | Supported, with full prompt text under `full` and `redacted` retention |
+| Turn identity | Supported. Each chat request's turn id is sent as `beacon.prompt.id` and lands in `prompt.id` |
+| Assistant response telemetry | Supported, including the response text and model |
+| Command and file telemetry | Not applicable. Browser chat performs no local commands or file edits |
+| Approval telemetry | Not available. Neither site exposes approval decisions to a page script |
+| Session lifecycle | Partial. Turns are correlated by conversation id; there is no session start or stop signal |
+| Local JSONL and dashboard | Supported after events reach the collector |
+| MDM deployment | Not covered by Beacon's MDM assets. Distribute through browser policy instead, such as Firefox's [`ExtensionSettings`](#firefox-enterprise-policy). Chromium force-install needs a store listing or signed package, which do not exist yet; see [Force-install through browser policy](/runtimes/browser-extension-chromium#force-install-through-browser-policy) |
+| Browser attribution | Supported. `user_agent.name` and `user_agent.version` name the browser on every event |
+
+Tool telemetry and token usage differ by site. See [Claude.ai](/runtimes/claude-web) and [ChatGPT](/runtimes/chatgpt-web).
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Supported agent harnesses" icon="list-check" href="/runtimes">
+    Return to the runtime support overview.
+  </Card>
+  <Card title="Retention and redaction" icon="shield" href="/security/retention-redaction">
+    How retained content is handled once it reaches the endpoint.
+  </Card>
+</Columns>

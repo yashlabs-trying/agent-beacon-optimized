@@ -1,0 +1,51 @@
+File: learning.test
+Build ID: 22868944051ce04e68f79973bbe44b3b7067f03d
+Type: cpu
+Time: 2026-10-23 16:39:05 UTC
+Duration: 6.44s, Total samples = 8.38s (130.19%)
+Active filters:
+   focus=SearchQuestion
+Showing nodes accounting for 3.17s, 37.83% of 8.38s total
+Dropped 284 nodes (cum <= 0.04s)
+Showing top 40 nodes out of 284
+      flat  flat%   sum%        cum   cum%
+     0.36s  4.30%  4.30%      1.73s 20.64%  modernc.org/sqlite/lib._sqlite3VdbeExec
+     0.21s  2.51%  6.80%      0.47s  5.61%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.decodeVector (inline)
+     0.19s  2.27%  9.07%      0.19s  2.27%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.cosine (inline)
+     0.19s  2.27% 11.34%      0.19s  2.27%  runtime.memmove
+     0.16s  1.91% 13.25%      0.16s  1.91%  runtime.futex
+     0.13s  1.55% 14.80%      0.13s  1.55%  internal/runtime/maps.memHashAES
+     0.13s  1.55% 16.35%      0.14s  1.67%  runtime.asyncPreempt
+     0.12s  1.43% 17.78%      0.60s  7.16%  modernc.org/sqlite/lib._sqlite3BtreeTableMoveto
+     0.12s  1.43% 19.21%      0.18s  2.15%  strings.ToLower
+     0.09s  1.07% 20.29%      0.18s  2.15%  modernc.org/sqlite/lib._btreeParseCell
+     0.08s  0.95% 21.24%      0.12s  1.43%  modernc.org/sqlite/lib._pcache1FetchNoMutex
+     0.08s  0.95% 22.20%      0.19s  2.27%  modernc.org/sqlite/lib._sqlite3BtreeIndexMoveto
+     0.08s  0.95% 23.15%      0.19s  2.27%  strings.FieldsFunc
+     0.07s  0.84% 23.99%      0.07s  0.84%  encoding/binary.littleEndian.Uint32 (inline)
+     0.07s  0.84% 24.82%      0.07s  0.84%  encoding/json/internal/jsonwire.ConsumeSimpleString (inline)
+     0.07s  0.84% 25.66%      0.07s  0.84%  internal/sync.(*Mutex).Unlock (inline)
+     0.06s  0.72% 26.37%      0.30s  3.58%  database/sql.convertAssignRows
+     0.06s  0.72% 27.09%      0.06s  0.72%  internal/runtime/syscall/linux.Syscall6
+     0.06s  0.72% 27.80%      0.94s 11.22%  runtime.mallocgc
+     0.06s  0.72% 28.52%      0.06s  0.72%  runtime.memclrNoHeapPointers
+     0.05s   0.6% 29.12%      0.05s   0.6%  cmpbody
+     0.05s   0.6% 29.71%      0.08s  0.95%  encoding/json/jsontext.(*decoderState).consumeObject
+     0.05s   0.6% 30.31%      0.05s   0.6%  modernc.org/sqlite/lib._btreeParseCellPtr
+     0.05s   0.6% 30.91%      0.23s  2.74%  modernc.org/sqlite/lib._getCellInfo
+     0.05s   0.6% 31.50%      0.10s  1.19%  modernc.org/sqlite/lib._vdbeRecordCompareString
+     0.04s  0.48% 31.98%      0.18s  2.15%  encoding/json/v2.makeSliceArshaler.func3
+     0.04s  0.48% 32.46%      0.53s  6.32%  encoding/json/v2.makeStructArshaler.func3
+     0.04s  0.48% 32.94%      3.47s 41.41%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.(*Store).semanticSearchExact
+     0.04s  0.48% 33.41%      0.04s  0.48%  internal/sync.(*Mutex).Lock (inline)
+     0.04s  0.48% 33.89%      0.04s  0.48%  modernc.org/sqlite/lib._btreeParseCellPtrIndex
+     0.04s  0.48% 34.37%      0.04s  0.48%  modernc.org/sqlite/lib._pcache1PinPage (inline)
+     0.04s  0.48% 34.84%      0.11s  1.31%  runtime.mallocgcSmallScanNoHeader
+     0.04s  0.48% 35.32%      0.19s  2.27%  runtime.mapaccess2_faststr
+     0.03s  0.36% 35.68%      0.16s  1.91%  encoding/json/jsontext.(*decoderState).consumeValue
+     0.03s  0.36% 36.04%      0.03s  0.36%  encoding/json/jsontext.Kind.normalize (inline)
+     0.03s  0.36% 36.40%      0.04s  0.48%  internal/runtime/maps.(*Map).putSlotSmallFastStr
+     0.03s  0.36% 36.75%      0.03s  0.36%  internal/runtime/maps.(*groupsReference).group (inline)
+     0.03s  0.36% 37.11%      0.08s  0.95%  modernc.org/libc.Xpthread_mutex_lock
+     0.03s  0.36% 37.47%      0.13s  1.55%  modernc.org/libc.Xpthread_mutex_unlock
+     0.03s  0.36% 37.83%      0.64s  7.64%  modernc.org/sqlite/lib._sqlite3VdbeFinishMoveto

@@ -1,0 +1,715 @@
+package cmd
+
+import (
+	"encoding/json"
+	"path/filepath"
+	"strings"
+
+	"github.com/spf13/cobra"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/config"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/diff"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/logging"
+	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve"
+)
+
+var postToolCmd = &cobra.Command{
+	Use:   "post-tool",
+	Short: "Record file-edit telemetry",
+	Long: `PostToolUse hook - triggered after Write, Edit, or MultiEdit operations.
+The public Beacon build writes local endpoint telemetry with local redaction and size limits.`,
+	Run: runPostTool,
+}
+
+func init() {
+	rootCmd.AddCommand(postToolCmd)
+}
+
+// evaluationParams holds the platform-independent fields needed for local hook handling.
+type evaluationParams struct {
+	sessionID string
+	toolName  string
+	filePath  string
+	diffStr   string
+	// fileOperation overrides the operation recordLocalEdit would otherwise write.
+	//
+	// That default is the literal string "modify", from diffFields, which is right for the
+	// majority of calls that reach this path and wrong for a creation: a file that did not exist
+	// before is recorded as a modification, so a rule matching file.operation == "create" never
+	// fires and a log reader cannot tell a new file from an edited one. It went unnoticed because
+	// most runtimes' create and edit tools both land here and neither told this function which it
+	// was.
+	//
+	// Empty means "leave the default alone", so no existing runtime's recorded shape changes: a
+	// runtime opts in by having its parser answer the question, which is where the answer is
+	// already known.
+	fileOperation string
+	extraFields   map[string]interface{}
+}
+
+func runPostTool(cmd *cobra.Command, args []string) {
+	input, err := readStdinJSON()
+	if err != nil {
+		outputJSON(emptyResponse)
+		return
+	}
+
+	// Resolve session ID early so we can use per-session logger
+	sessionID := resolveSessionID(input, platformFlag)
+	logger := newHookLogger("post-tool-async-scan", platformFlag, sessionID)
+
+	var params *evaluationParams
+
+	if isCascadePlatform(platformFlag) {
+		params = parseCascadeWriteInput(input, logger)
+		if params == nil {
+			emitCascadePostToolObserved(logger, input)
+			outputJSON(emptyResponse)
+			return
+		}
+	} else if platformFlag == "cursor" {
+		// Cursor fires two hook types through post-tool:
+		//   - afterFileEdit: has "edits" array and top-level "file_path" (no output supported)
+		//   - postToolUse: has "tool_name" and "tool_input" (supports additional_context/followup via stop)
+		// We use hook_event_name (present in all Cursor hook inputs) to distinguish them.
+		hookEvent, _ := input["hook_event_name"].(string)
+		if hookEvent != "afterFileEdit" {
+			emitPostToolObserved(logger, input)
+			maybeUploadCursorCloudTelemetry(logger)
+			outputJSON(emptyResponse)
+			return
+		}
+		// afterFileEdit exposes file-edit metadata and diffs; retention controls raw diff inclusion.
+		params = parseCursorInput(input, logger)
+	} else if platformFlag == openHandsPlatform {
+		// OpenHands is the one runtime whose single post-tool payload can describe several file
+		// edits: one apply_patch call commits a change per file and reports them together, keyed
+		// by path. The shared evaluationParams describes one file, so this branch records each
+		// edit itself rather than returning a params the loop below would flatten to the first.
+		//
+		// An empty result means this payload is not a file edit -- a view, a shell command, a tool
+		// whose observation reports no content change -- and it falls through to
+		// emitPostToolObserved with params still nil, which is where the tool call is recorded.
+		if edits := parseOpenHandsEdits(input, logger); len(edits) > 0 {
+			for _, edit := range edits {
+				recordLocalEdit(edit, input, logger)
+			}
+			outputJSON(emptyResponse)
+			return
+		}
+	} else if platformFlag == kiroPlatform {
+		// Kiro gets its own reader rather than riding parseClaudeCopilotInput because a write may
+		// name its operation in an argument rather than in the tool name, and because the argument
+		// spellings are not published -- both of which the shared reader has no way to ask about.
+		// A nil result is not a failure: it means this payload is a read, a shell command, a
+		// delete or a write this build could not read, and it falls through to the observing path
+		// below, which still records the call with its path and operation.
+		params = parseKiroEdit(input, logger)
+	} else if platformFlag == dshPlatform {
+		// DeepSeek Harness gets its own reader rather than riding parseClaudeCopilotInput for one
+		// reason the shared reader has no way to ask about: `str_replace_editor` multiplexes a
+		// read and three writes onto one tool name, selected by an argument, so whether this
+		// payload is an edit at all depends on the arguments. A nil result is not a failure -- it
+		// means this payload is a read, a shell command, an MCP call or an editor `view` -- and it
+		// falls through to the observing path below, which still records the call.
+		params = parseDshEdit(input, logger)
+	} else if platformFlag == kimiPlatform {
+		// Kimi Code gets its own reader even though parseClaudeCopilotInput already knows its two
+		// write tools by name and every argument spelling they use, because that is exactly the
+		// danger: the shared reader would build a correct diff for a write that never landed.
+		// PostToolUseFailure carries the same tool_name and tool_input as a success and differs
+		// only in the event name and in where the output lives, so the failure guard has to be
+		// asked before the diff is built. A nil result is not a failure -- it means this payload
+		// is a read, a shell command, an MCP call or a rejected write -- and it falls through to
+		// the observing path below, which still records the call.
+		params = parseKimiEdit(input, logger)
+	} else if platformFlag == goosePlatform {
+		// goose gets its own reader rather than riding parseClaudeCopilotInput for two reasons the
+		// shared reader cannot be told about: its edit tool names the replaced span `before` and
+		// `after` rather than old_string/new_string, and its failure signal is the event name
+		// rather than anything in the payload. A nil result is not a failure -- it means this
+		// payload is a read, a shell command, an MCP call or a failed write -- and it falls through
+		// to the observing path below, which still records the call.
+		params = parseGooseEdit(input, logger)
+	} else {
+		params = parseClaudeCopilotInput(input, logger)
+	}
+
+	if params == nil {
+		if platformFlag != "cursor" {
+			emitPostToolObserved(logger, input)
+		}
+		maybeUploadCursorCloudTelemetry(logger)
+		outputJSON(emptyResponse)
+		return
+	}
+
+	seedCursorCloudRunID(input)
+	recordLocalEdit(params, input, logger)
+	maybeUploadCursorCloudTelemetry(logger)
+	outputJSON(emptyResponse)
+}
+
+// parseCursorInput extracts evaluation params from Cursor's afterFileEdit format.
+func parseCursorInput(input map[string]interface{}, logger *logging.Logger) *evaluationParams {
+	sessionID := resolveSessionID(input, "cursor")
+	filePath, _ := input["file_path"].(string)
+	if sessionID == "" || filePath == "" {
+		return nil
+	}
+
+	if !config.IsScannableFile(filePath) {
+		logger.Debug("Skipping non-scannable file: " + filePath)
+		return nil
+	}
+
+	// Construct diff from Cursor's edits array
+	edits, _ := input["edits"].([]interface{})
+	if len(edits) == 0 {
+		logger.Debug("No edits in input, skipping")
+		return nil
+	}
+
+	diffStr := diff.FromCursorEdits(filePath, edits)
+	if diffStr == "" {
+		logger.Debug("Could not construct diff from edits, skipping")
+		return nil
+	}
+
+	logger.Debug("Constructed diff from cursor edits", "file_path", filePath, "num_edits", len(edits))
+
+	return &evaluationParams{
+		sessionID: sessionID,
+		toolName:  "afterFileEdit",
+		filePath:  filePath,
+		diffStr:   diffStr,
+	}
+}
+
+// parseClaudeCopilotInput extracts evaluation params from Claude/Copilot-compatible PostToolUse format.
+func parseClaudeCopilotInput(input map[string]interface{}, logger *logging.Logger) *evaluationParams {
+	var sessionID, toolName string
+	var toolInput, toolResponse map[string]interface{}
+
+	if platformFlag == "antigravity" || platformFlag == "copilot" || isDevinLikePlatform(platformFlag) || platformFlag == "grok" || platformFlag == "hermes" || platformFlag == "vscode" {
+		sessionID = resolveSessionID(input, platformFlag)
+		toolName = getFirstStr(input, "toolName", "tool_name")
+		if platformFlag == "antigravity" {
+			toolName = antigravityToolName(input)
+		}
+		toolInput = resolveToolInput(input)
+		toolResponse = resolveToolResponse(input)
+	} else {
+		sessionID, _ = input["session_id"].(string)
+		toolName, _ = input["tool_name"].(string)
+		toolInput, _ = input["tool_input"].(map[string]interface{})
+		toolResponse, _ = input["tool_response"].(map[string]interface{})
+	}
+
+	if !isFileEditTool(platformFlag, toolName) {
+		return nil
+	}
+
+	if platformFlag == "antigravity" && getFirstStr(input, "error") != "" {
+		return nil
+	}
+
+	// A failure is not an edit.
+	//
+	// Qwen's PostToolUseFailure carries the same `tool_name` and `tool_input` as a success -- the
+	// error is the only thing that distinguishes them -- so without this guard a `write_file` that
+	// hit EACCES would be sent down the diff path, and Beacon would build a diff from the content
+	// of a write that never landed and record it as a completed `file.modified`. That is worse than
+	// missing the event: the log would assert a file changed when it did not.
+	//
+	// Returning nil hands the payload back to emitPostToolObserved, which classifies it as
+	// `tool.failed` at high severity. Antigravity guards the same way just above, for the same
+	// reason. Scoped to the platform rather than applied to every runtime because the branch above
+	// establishes that each runtime's failure signal is its own; widening it would change Claude
+	// Code's recorded behavior with no fixture to say what that behavior should become.
+	if platformFlag == "qwen" && qwenToolFailed(input) {
+		return nil
+	}
+
+	filePath := diff.GetStringFromMaps("file_path", toolInput, toolResponse)
+	if filePath == "" {
+		filePath = diff.GetStringFromMaps("filePath", toolInput, toolResponse)
+	}
+	if filePath == "" {
+		filePath = diff.GetStringFromMaps("path", toolInput, toolResponse)
+	}
+	if filePath == "" {
+		filePath = diff.GetStringFromMaps("Path", toolInput, toolResponse)
+	}
+	if filePath == "" {
+		filePath = diff.GetStringFromMaps("AbsolutePath", toolInput, toolResponse)
+	}
+	if filePath == "" {
+		filePath = diff.GetStringFromMaps("absolute_path", toolInput, toolResponse)
+	}
+	// `notebook_path` completes the set: it is read by toolFieldsWithResponse, so leaving it out
+	// here made one key resolve in one reader and not its two siblings -- the exact asymmetry that
+	// produced the earlier defects on this branch.
+	//
+	// Stated plainly: adding it changes no behavior today. `notebook_edit` targets a `.ipynb`, which
+	// is not in scannableExtensions, so this path returns before the diff is built whether or not
+	// the path resolved. The event is still recorded as `file.modified` with the right path, from
+	// toolFieldsWithResponse, and still carries no diff. This exists so the three readers agree, and
+	// so the path is already resolvable if `.ipynb` ever becomes scannable.
+	if filePath == "" {
+		filePath = diff.GetStringFromMaps("notebook_path", toolInput, toolResponse)
+	}
+	filePath = diff.NormalizePath(filePath)
+
+	if (sessionID == "" && !isDevinLikePlatform(platformFlag)) || toolName == "" || filePath == "" {
+		return nil
+	}
+
+	if !config.IsScannableFile(filePath) {
+		logger.Debug("Skipping non-scannable file: " + filePath)
+		return nil
+	}
+
+	logger.Debug("Constructing diff", "tool_name", toolName, "file_path", filePath,
+		"has_tool_input", toolInput != nil, "has_tool_response", toolResponse != nil)
+
+	diffStr := diff.FromToolResponse(toolName, toolInput, toolResponse)
+	if diffStr == "" {
+		logger.Debug("Could not construct diff, skipping", "tool_name", toolName)
+		return nil
+	}
+
+	return &evaluationParams{
+		sessionID: sessionID,
+		toolName:  toolName,
+		filePath:  filePath,
+		diffStr:   diffStr,
+	}
+}
+
+// recordLocalEdit logs file-edit metadata without sending code or diffs to a hosted service.
+func recordLocalEdit(params *evaluationParams, input map[string]interface{}, logger *logging.Logger) {
+	logger.Info("File edit observed", "file_path", params.filePath, "tool_name", params.toolName)
+	fields := map[string]interface{}{}
+	for key, value := range params.extraFields {
+		fields[key] = value
+	}
+	for key, value := range diffFields(params.filePath, params.diffStr) {
+		fields[key] = value
+	}
+	// Applied after diffFields, which is what wrote the default this replaces.
+	if params.fileOperation != "" {
+		if file, ok := fields["file"].(map[string]interface{}); ok {
+			file["operation"] = params.fileOperation
+		}
+	}
+	fields["tool"] = mergeNested(fields["tool"], map[string]interface{}{"name": params.toolName, "path": params.filePath})
+	if params.sessionID != "" {
+		fields["session"] = mergeNested(fields["session"], map[string]interface{}{"id": params.sessionID})
+	}
+	applyWorkspaceFields(fields, input, filepath.Dir(params.filePath))
+	// This emitter writes its event without going through emitHookEvent, so it
+	// has to promote the call ID itself. Every file edit in the log is recorded
+	// twice -- once here, once from OTLP -- and this is the field that lets the
+	// writer tell that the two are one edit.
+	applyToolCallID(fields, input)
+	// The same gap costs runtimes with raw payload retention their raw payload: emitHookEvent is
+	// what attaches it, and it lands on exactly the events these runtimes' taxonomies exist to
+	// produce. Successful Qwen and dsh edits are classified `file.modified` and routed here, so
+	// runtime-native context would survive on failed and non-edit tools and vanish on successful
+	// edits unless this path restores it.
+	//
+	// Scoped to runtimes with pinned raw payload fixtures rather than applied to every runtime with
+	// a raw convention. grok, hermes and vscode have the same gap on this path, and closing it would
+	// change their recorded event shape with no fixture here to say what it should become; that is
+	// a stated limit rather than a silent one.
+	if platformFlag == "qwen" {
+		fields["raw"] = mergeNested(fields["raw"], map[string]interface{}{"qwen": input})
+	}
+	if platformFlag == "dsh" {
+		fields["raw"] = mergeNested(fields["raw"], map[string]interface{}{"dsh": input})
+	}
+	applyPromptID(fields, input)
+	logger.EndpointEvent("file.modified", "file", "info", "File edit observed", fields)
+}
+
+// resolveToolInput extracts tool input from Copilot's various formats.
+func resolveToolInput(input map[string]interface{}) map[string]interface{} {
+	if toolCall, ok := input["toolCall"].(map[string]interface{}); ok {
+		if args, ok := toolCall["args"].(map[string]interface{}); ok {
+			return args
+		}
+	}
+	if m, ok := input["tool_input"].(map[string]interface{}); ok {
+		return m
+	}
+	if m, ok := input["toolInput"].(map[string]interface{}); ok {
+		return m
+	}
+	// Fallback: some Copilot versions send toolArgs as stringified JSON
+	if argsStr, ok := input["toolArgs"].(string); ok && argsStr != "" {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(argsStr), &parsed); err == nil {
+			return parsed
+		}
+	}
+	if m, ok := input["toolArgs"].(map[string]interface{}); ok {
+		return m
+	}
+	return nil
+}
+
+// resolveToolResponse extracts tool response from Copilot's various formats.
+func resolveToolResponse(input map[string]interface{}) map[string]interface{} {
+	if platformFlag == "antigravity" {
+		response := map[string]interface{}{}
+		if errMsg := getFirstStr(input, "error"); errMsg != "" {
+			response["error"] = errMsg
+		}
+		if result, ok := input["toolResult"]; ok {
+			response["result"] = result
+		}
+		if result, ok := input["toolResult"].(map[string]interface{}); ok {
+			for key, value := range result {
+				response[key] = value
+			}
+		}
+		if len(response) > 0 {
+			return response
+		}
+	}
+	if m, ok := input["tool_response"].(map[string]interface{}); ok {
+		return m
+	}
+	if m, ok := input["toolResponse"].(map[string]interface{}); ok {
+		return m
+	}
+	if m, ok := input["toolResult"].(map[string]interface{}); ok {
+		return m
+	}
+	if platformFlag == "hermes" {
+		if extra := hermesExtra(input); extra != nil {
+			if result, ok := extra["result"].(map[string]interface{}); ok {
+				return result
+			}
+			if result, ok := extra["result"].(string); ok && result != "" {
+				return map[string]interface{}{"result": result}
+			}
+		}
+	}
+	// Cursor's postToolUse puts the result under `tool_output`, as a JSON-encoded string. Scoped to
+	// Cursor because Kimi Code uses the same key with its own reader (applyKimiToolResult).
+	if platformFlag == "cursor" {
+		if output := strings.TrimSpace(getFirstStr(input, "tool_output")); output != "" {
+			var parsed map[string]interface{}
+			if strings.HasPrefix(output, "{") && json.Unmarshal([]byte(output), &parsed) == nil && len(parsed) > 0 {
+				return parsed
+			}
+			return map[string]interface{}{"result": output}
+		}
+	}
+	// Claude Code sends an MCP tool's result as a bare list of content blocks. A list from any
+	// other runtime is read the same way: until this, every list response was dropped.
+	if content, ok := input["tool_response"].([]interface{}); ok {
+		return contentBlockResponse(content)
+	}
+	// If tool_response is a plain string, wrap it for downstream compatibility
+	if respStr, ok := input["tool_response"].(string); ok && respStr != "" {
+		return map[string]interface{}{"result": respStr}
+	}
+	return nil
+}
+
+// contentBlockResponse is a tool result that arrived as a list of content blocks, in the shape every
+// capture path records one: under "content", where an MCP CallToolResult holds its blocks, so a
+// result reads the same whichever path or runtime recorded it, with each block's encoded bytes
+// replaced by their size and digest. An empty list is a result with no content.
+func contentBlockResponse(blocks []interface{}) map[string]interface{} {
+	if len(blocks) == 0 {
+		return nil
+	}
+	return map[string]interface{}{"content": asymptoteobserve.SummarizeEncodedContent(blocks)}
+}
+
+func emitPostToolObserved(logger *logging.Logger, input map[string]interface{}) {
+	if platformFlag == "cursor" && emitCursorPostHookObserved(logger, input) {
+		return
+	}
+	toolName := getFirstStr(input, "tool_name", "toolName")
+	if platformFlag == "antigravity" {
+		toolName = antigravityToolName(input)
+	}
+	hookEvent := getFirstStr(input, "hook_event_name", "hookEventName")
+	// goose spells it `event`, and that spelling is deliberately not added to the shared list
+	// above: `event` is an ordinary key that other runtimes' payloads use for other things, so
+	// widening the list would make one of those the hook event name for a runtime that has nothing
+	// to do with goose. Reading it here is what lets the failure check below fire, since goose
+	// reports a failed call only by sending `PostToolUseFailure` -- whose payload is otherwise
+	// identical to a success -- and the check already matches that exact spelling.
+	if platformFlag == goosePlatform {
+		hookEvent = gooseHookEvent(input)
+	}
+	toolInput := resolveToolInput(input)
+	if toolInput == nil {
+		if nested, ok := input["tool_input"].(map[string]interface{}); ok {
+			toolInput = nested
+		}
+	}
+	sessionID := resolveSessionID(input, platformFlag)
+	fields := sessionFields(sessionID, input)
+	toolResponse := resolveToolResponse(input)
+	for key, value := range toolFieldsWithResponse(toolName, toolInput, toolResponse) {
+		fields[key] = value
+	}
+	// A Bash command that ran and exited non-zero is recorded the way the OTLP and transcript paths
+	// record the same call: command.executed, high severity. As tool.failed it would never match
+	// their copies, and each copy would keep the command's output in the log.
+	if platformFlag == "claude" && applyClaudeBashResult(fields, input, toolName, toolResponse) {
+		emitHookEvent(logger, "command.executed", "command", "high", "Shell command failed", input, fields)
+		return
+	}
+	// Kimi Code's result is read before the shared failure branch below, unlike every other
+	// runtime's, and the ordering is the whole point. Kimi Code reports a failure by sending
+	// `PostToolUseFailure` -- the exact spelling that branch matches -- so it is the branch that
+	// fires, and a reader placed after it would never run on the events that carry the most
+	// worthwhile output: a failing command's own stderr and the exit code inside it.
+	//
+	// The result is neither an object nor under a key resolveToolResponse reads: a successful call
+	// carries `tool_output` and a failed one carries an `error` object, both as siblings of
+	// `tool_name`. So this is passed the whole payload rather than a tool response.
+	if platformFlag == kimiPlatform {
+		applyKimiToolResult(fields, toolName, toolInput, input)
+	}
+	if hookEvent == "PostToolUseFailure" || hookEvent == "postToolUseFailure" || hookEvent == "post_tool_use_failure" || getFirstStr(input, "error") != "" {
+		emitHookEvent(logger, "tool.failed", "tool", "high", "Tool execution failed", input, fields)
+		return
+	}
+	// One predicate decides "did this tool fail", for both the diff-path guard in
+	// parseClaudeCopilotInput and the classification here.
+	//
+	// It was two, and they disagreed: `qwenToolFailed` reads three signals -- the failure event
+	// name, a non-empty `error`, and `is_interrupt` -- while the check above reads only the first
+	// two. An interrupt carrying an empty error therefore skipped the diff path as a failure and
+	// then arrived here to be classified a successful `file.modified`: the exact false positive
+	// this runtime's mapping exists to prevent, reintroduced by the gap between two spellings of
+	// the same question. Calling the predicate rather than restating its logic is what stops that
+	// pair drifting a second time.
+	if platformFlag == "qwen" && qwenToolFailed(input) {
+		emitHookEvent(logger, "tool.failed", "tool", "high", "Tool execution failed", input, fields)
+		return
+	}
+	// OpenHands reports a failure nowhere near the two places checked above: there is no failure
+	// event name and no top-level `error`, only `is_error` on the observation. Same predicate the
+	// diff path uses, called rather than restated, so the two cannot drift the way the Qwen pair
+	// once did.
+	if platformFlag == openHandsPlatform {
+		applyOpenHandsToolResult(fields, toolName, toolInput, toolResponse)
+		if openHandsToolFailed(toolResponse) {
+			emitHookEvent(logger, "tool.failed", "tool", "high", "Tool execution failed", input, fields)
+			return
+		}
+	}
+	// Kiro says so on the result itself: its documented tool_response carries `success`. Same
+	// predicate the diff path uses, called rather than restated, so the two cannot drift the way
+	// the Qwen pair once did.
+	if platformFlag == kiroPlatform {
+		applyKiroToolResult(fields, toolName, toolInput, toolResponse)
+		if kiroToolFailed(toolResponse) {
+			emitHookEvent(logger, "tool.failed", "tool", "high", "Tool execution failed", input, fields)
+			return
+		}
+	}
+	// DeepSeek Harness has no failure predicate beside its result reader, and that asymmetry is
+	// the point: the bridge flattens a tool result to text before a hook sees it, so nothing
+	// distinguishes a tool that threw from one that returned. What the result does carry is a
+	// shell command's output and, when it is non-zero, its exit code.
+	if platformFlag == dshPlatform {
+		applyDshToolResult(fields, toolName, toolInput, toolResponse)
+	}
+	// The shared branch above catches almost every Kimi Code failure, because Beacon binds
+	// `PostToolUseFailure` to this subcommand and the event name is right there. This is the
+	// remainder: a payload that reached this build without its event name -- a replay, a future
+	// runner that fires one event for both outcomes -- still says which it was by carrying an
+	// error object, and `error` is an object here so the shared `getFirstStr` check above finds
+	// nothing in it. Same predicate the diff path uses, called rather than restated, so the two
+	// cannot drift the way the Qwen pair once did.
+	if platformFlag == kimiPlatform && kimiToolFailed(input) {
+		emitHookEvent(logger, "tool.failed", "tool", "high", "Tool execution failed", input, fields)
+		return
+	}
+	action := actionForTool(hookEvent, toolName, toolInput, toolResponse)
+	applyIngestedToolResult(fields, action, toolName, toolResponse)
+	category := "tool"
+	if strings.HasPrefix(action, "file.") {
+		category = "file"
+	} else if strings.HasPrefix(action, "command.") {
+		category = "command"
+	} else if strings.HasPrefix(action, "mcp.") {
+		category = "mcp"
+	}
+	message := "Tool execution observed"
+	if action == "command.executed" {
+		message = "Shell command executed"
+	}
+	emitHookEvent(logger, action, category, "info", message, input, fields)
+}
+
+func emitCursorPostHookObserved(logger *logging.Logger, input map[string]interface{}) bool {
+	hookEvent := getFirstStr(input, "hook_event_name", "hookEventName")
+	sessionID := resolveSessionID(input, "cursor")
+	fields := sessionFields(sessionID, input)
+	switch hookEvent {
+	case "afterShellExecution":
+		command := getFirstStr(input, "command")
+		commandFields := map[string]interface{}{"command": command}
+		if output := getFirstStr(input, "output"); output != "" {
+			commandFields["output"] = output
+			fields["content"] = retainedContentFields(output)
+		}
+		if duration, ok := input["duration"]; ok {
+			commandFields["duration_ms"] = duration
+		}
+		fields["command"] = commandFields
+		emitHookEvent(logger, "command.executed", "command", "info", "Shell command executed", input, fields)
+		return true
+	case "postToolUseFailure":
+		toolName := getFirstStr(input, "tool_name", "toolName")
+		toolInput := resolveToolInput(input)
+		toolResponse := resolveToolResponse(input)
+		for key, value := range toolFieldsWithResponse(toolName, toolInput, toolResponse) {
+			fields[key] = value
+		}
+		fields["tool"] = mergeNested(fields["tool"], map[string]interface{}{
+			"name":         toolName,
+			"failure_type": getFirstStr(input, "failure_type"),
+			"error":        getFirstStr(input, "error_message", "error"),
+		})
+		emitHookEvent(logger, "tool.failed", "tool", "high", "Tool execution failed", input, fields)
+		return true
+	case "postToolUse":
+		toolName := strings.ToLower(getFirstStr(input, "tool_name", "toolName"))
+		if isCursorCloudMode() {
+			// Cloud setups also register dedicated read/shell hooks, so avoid
+			// emitting a second generic postToolUse event for the same action.
+			if toolName == "read" || toolName == "shell" || strings.Contains(toolName, "terminal") {
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+// isFileEditTool returns true if the tool name represents a file edit operation.
+func isFileEditTool(platform, toolName string) bool {
+	if platform == "copilot" || platform == "vscode" {
+		lower := strings.ToLower(toolName)
+		return strings.Contains(lower, "edit") ||
+			strings.Contains(lower, "write") ||
+			strings.Contains(lower, "create") ||
+			strings.Contains(lower, "patch")
+	}
+	if platform == "factory" {
+		return toolName == "Write" || toolName == "Edit" || toolName == "MultiEdit" || toolName == "Create"
+	}
+	if isDevinLikePlatform(platform) {
+		lower := strings.ToLower(toolName)
+		return lower == "edit" || lower == "write"
+	}
+	if isCascadePlatform(platform) {
+		lower := strings.ToLower(toolName)
+		return lower == "post_write_code" || lower == "write_code"
+	}
+	if platform == "grok" {
+		lower := strings.ToLower(toolName)
+		return lower == "search_replace" || lower == "write_file" || strings.Contains(lower, "edit") || strings.Contains(lower, "write")
+	}
+	if platform == "hermes" {
+		lower := strings.ToLower(toolName)
+		return strings.Contains(lower, "edit") ||
+			strings.Contains(lower, "write") ||
+			strings.Contains(lower, "create") ||
+			strings.Contains(lower, "patch")
+	}
+	if platform == "antigravity" {
+		lower := strings.ToLower(toolName)
+		return strings.Contains(lower, "edit") ||
+			strings.Contains(lower, "write") ||
+			strings.Contains(lower, "create") ||
+			strings.Contains(lower, "patch")
+	}
+	if platform == "qwen" {
+		return isQwenFileEditTool(toolName)
+	}
+	// Kiro's write tools are named things the Claude Code fallback below does not recognize --
+	// `fs_write`, `str_replace`, `fs_append` -- and the one it would recognize by substring,
+	// `delete_file`, is not an edit that can produce a diff. The taxonomy answers both, from the
+	// same table the action classifier reads, so the two cannot disagree about what a write is.
+	//
+	// nil arguments, deliberately: this predicate takes only a name, and the one Kiro case that
+	// needs more -- a multiplexed `write` whose `command` argument says "delete" -- never reaches
+	// here, because kiroToolAction answers first for every tool in the table. Threading the
+	// arguments through this shared signature for a branch that cannot be taken would change six
+	// runtimes' call sites to document one that does not happen.
+	if platform == kiroPlatform {
+		return isKiroFileEditTool(toolName, nil)
+	}
+	// DeepSeek Harness's `write` and `edit` would in fact be caught by the lowercase entries in the
+	// Claude Code fallback below, but `str_replace_editor` would not -- and the fallback would also
+	// claim `read_mcp_resource` and `session_event_read` by substring. The taxonomy answers all of
+	// them from the same table the action classifier reads, so the two cannot disagree.
+	//
+	// nil arguments, deliberately, for the reason the Kiro branch above gives: the one dsh case
+	// that needs them -- an editor `view`, which is a read rather than an edit -- never reaches
+	// here, because dshToolAction answers first for every tool in the table. Passing nil makes
+	// `str_replace_editor` fall back to its table entry, `create`, which is an edit; that is the
+	// safe direction, since reaching the diff path with a `view` payload would simply produce no
+	// diff.
+	if platform == dshPlatform {
+		return isDshFileEditTool(toolName, nil)
+	}
+	// Kimi Code's `Write` and `Edit` would in fact be caught by the Claude Code fallback at the
+	// end of this function -- they are the same two PascalCase names -- but the taxonomy answers
+	// from the same table the action classifier reads, so the two cannot disagree about what a
+	// write is, and the fallback would also miss that `Write` is not always one.
+	//
+	// nil arguments, deliberately, for the reason the Kiro and DeepSeek branches above give. The
+	// one Kimi Code case that needs them is an appending `Write`, and that is still an edit -- it
+	// is reclassified from create to modify, not out of the set -- so the answer here is the same
+	// either way and threading the arguments through this shared signature would document a
+	// difference that does not exist.
+	if platform == kimiPlatform {
+		return isKimiFileEditTool(toolName, nil)
+	}
+	// Muse Code's tool names are not published, and the fallback below is Claude Code's PascalCase
+	// set, which a snake_case runtime never matches -- so without a branch here a Muse file edit
+	// would never reach the diff path and never be recorded as file.modified. The names that ARE
+	// confirmed are snake_case (`read_skill`, `subagent_spawn`), which is what makes the generic
+	// substring rule the right shape rather than a guessed literal list: it matches whatever
+	// spelling Meta chose, and a literal list guessed wrong would silently capture nothing.
+	//
+	// Same rule as hermes, antigravity and copilot above, and it is a heuristic in all four cases.
+	// Its false-positive direction is bounded: toolFields only attaches a `file` block when the
+	// tool's own arguments carry a path, so a non-file tool whose name happens to contain "write"
+	// yields file.modified with no path rather than a fabricated edit. None of the six confirmed
+	// subagent_* control tools contain any of these substrings, so the agent's own control loop is
+	// not classified as file activity.
+	if platform == "muse" {
+		lower := strings.ToLower(toolName)
+		return strings.Contains(lower, "edit") ||
+			strings.Contains(lower, "write") ||
+			strings.Contains(lower, "create") ||
+			strings.Contains(lower, "patch")
+	}
+	return toolName == "Write" || toolName == "Edit" || toolName == "MultiEdit"
+}
+
+func antigravityToolName(input map[string]interface{}) string {
+	if toolCall, ok := input["toolCall"].(map[string]interface{}); ok {
+		if name, ok := toolCall["name"].(string); ok {
+			return name
+		}
+	}
+	return getFirstStr(input, "tool_name", "toolName")
+}

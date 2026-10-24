@@ -1,0 +1,15 @@
+{
+  "health": {
+    "model": "BAAI/bge-small-en-v1.5",
+    "dim": 384,
+    "device": "mps"
+  },
+  "batch_size": 32,
+  "batches": 5,
+  "batch_throughput_texts_per_second": 707.38,
+  "single_query_p50_ms": 14.78,
+  "single_query_p95_ms": 22.71,
+  "single_query_p99_ms": 22.86,
+  "normalized": true,
+  "finite": true
+}

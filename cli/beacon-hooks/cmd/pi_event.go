@@ -1,0 +1,78 @@
+package cmd
+
+import (
+	"github.com/spf13/cobra"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/logging"
+)
+
+// pi-event is the single entry point for every Pi lifecycle payload.
+//
+// Pi delivers its events to an in-process extension whose handlers all fire in the same process, so
+// one command receiving a typed envelope fits better than the command-per-hook shape used for
+// runtimes that exec a separate hook per event. This mirrors how opencode and Cline are integrated.
+//
+// The mapping itself lives in pi_family.go, shared with Oh My Pi, which kept Pi's extension event
+// shapes when it forked. What is not shared is identity: the two runtimes are recorded under
+// separate harness names and each event carries its own runtime's block in `raw`.
+var piEventCmd = &cobra.Command{
+	Use:   "pi-event",
+	Short: "Record Pi hook telemetry",
+	Long:  `pi-event receives raw Beacon Pi extension payloads and writes local endpoint telemetry.`,
+	Run:   runPiEvent,
+}
+
+func init() {
+	rootCmd.AddCommand(piEventCmd)
+}
+
+func runPiEvent(cmd *cobra.Command, args []string) {
+	runPiFamilyEvent(piRuntime)
+}
+
+// runPiFamilyEvent reads one envelope from stdin and writes the events it justifies.
+//
+// Shared by pi-event and omp-event because the transport is identical -- the extension spawns the
+// hook binary and writes one JSON object to its stdin -- and only the runtime it describes differs.
+//
+// The reply, {"recorded": n}, is how many events reached the log, a duplicate the log already holds
+// included. It is the only way the extension can learn that: the exit status is 0 whether or not
+// anything was written, because a hook that fails must not fail the run it observes, and an
+// envelope that did not parse, a log that cannot be written, a log that is not configured and an
+// event type this build does not map all end the same way.
+func runPiFamilyEvent(runtime piFamily) {
+	input, err := readStdinJSON()
+	if err != nil {
+		outputJSON(map[string]interface{}{"recorded": 0})
+		return
+	}
+	sessionID := resolveSessionID(input, runtime.platform)
+	logger := newHookLogger(runtime.platform+"-event", runtime.platform, sessionID)
+	recorded := 0
+	for _, event := range runtime.endpointEvents(input, sessionID) {
+		if event.action == "" {
+			continue
+		}
+		if logger.EndpointEvent(event.action, event.category, event.severity, event.message, event.fields) == nil && logging.EndpointLogConfigured() {
+			recorded++
+		}
+	}
+	outputJSON(map[string]interface{}{"recorded": recorded})
+}
+
+// supportedPiEventTypes lists every Pi event type this mapper handles.
+//
+// These strings are the contract between the managed extension's subscription list and the mapper.
+// A typo on either side produces no telemetry rather than an error, so both sides pin the list and
+// a test asserts each entry still maps to an event.
+func supportedPiEventTypes() []string {
+	return []string{
+		"session_start",
+		"session_shutdown",
+		"input",
+		"tool_call",
+		"tool_result",
+		"user_bash",
+		"message_end",
+	}
+}

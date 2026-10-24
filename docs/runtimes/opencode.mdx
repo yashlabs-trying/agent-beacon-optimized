@@ -1,0 +1,102 @@
+---
+title: "OpenCode"
+description: "Beacon support details for OpenCode endpoint telemetry"
+---
+
+## Runtime overview
+
+Beacon supports OpenCode through a managed local plugin that invokes `beacon-hooks`.
+
+Beacon can also read OpenCode's committed local session store with `beacon endpoint opencode sync`.
+That poll path backfills historical or uninstrumented sessions, while the managed plugin remains the
+live path for hook-time events and approval telemetry.
+
+## Prerequisites
+
+Before enabling OpenCode telemetry, make sure:
+
+- OpenCode is installed and available as the `opencode` executable or has a local config directory.
+- `beacon endpoint install` has run so shared endpoint config and runtime log paths exist.
+- Beacon's OpenCode plugin is installed with `beacon endpoint hooks install --harness opencode`.
+- OpenCode is restarted after plugin install or removal so new sessions load the updated plugin.
+
+## Collection path
+
+Beacon installs an owned OpenCode plugin at `~/.config/opencode/plugins/beacon.ts` for user-level hooks or `./.opencode/plugins/beacon.ts` for project-level hooks. The plugin forwards supported OpenCode hook payloads to Beacon's hook adapter.
+
+The one plugin file loads in both OpenCode 1.x and OpenCode 2.x. Its default export carries the plugin `id`, the 1.x `server` entry, and the 2.x `setup` entry. On 2.x, `setup` registers the session `prompt` hook and the tool `execute.before`/`execute.after` hooks, and it subscribes to the event stream. It translates those into the same payloads the 1.x hooks produce, so events from either version look the same in the runtime log. After upgrading OpenCode from 1.x to 2.x, run `beacon endpoint hooks install --harness opencode` again, because a plugin written by an older Beacon exports only the 1.x factory, and OpenCode 2.x refuses to load it ("Plugin must export a default definition with an id and an effect or setup function").
+
+The integration is plugin-based. OpenCode's native OTLP export is neither configured nor required by Beacon.
+
+For backfill, `beacon endpoint opencode sync` reads OpenCode's local `opencode.db` when present and falls back to the legacy `storage/session`, `storage/message`, `storage/part`, and `storage/project` tree. Those events are marked `harness.collection_method=poll` because Beacon reads committed records after the fact; nothing on that path can hold or deny a tool call.
+
+## Discovery and status
+
+Beacon detects OpenCode through the `opencode` executable or `~/.config/opencode`, then checks for Beacon plugin configuration.
+
+Use `beacon endpoint hooks status --harness opencode` to inspect OpenCode plugin status.
+Use `beacon endpoint opencode status` to inspect persisted session-store collection progress.
+
+## Install or configuration support
+
+`beacon endpoint install` prepares shared endpoint config and runtime log paths. Install OpenCode hooks separately:
+
+```bash title="Install runtime hooks"
+beacon endpoint hooks install --harness opencode
+```
+
+```bash title="Backfill committed local sessions"
+beacon endpoint opencode sync
+```
+
+## Telemetry coverage
+
+| Area | Support |
+|------|---------|
+| Prompt telemetry | Supported through `chat.message` hooks |
+| Assistant output and reasoning | Completed text and reasoning parts, correlated by session/message/part IDs; committed text and reasoning can also be recovered from the session store |
+| Tool lifecycle | Invocation, completion, result, duration, and failure using `tool.execute.before`, `tool.execute.after`, and terminal tool parts |
+| Command telemetry | Model-invoked Bash/shell tools plus successful OpenCode custom commands |
+| File telemetry | Read/search/glob and write/edit/patch activity with agent-derived paths; empty session diffs are ignored |
+| Web and MCP telemetry | Web tool arguments/results and normalized MCP server/tool/resource context |
+| Approval telemetry | Requests plus `once`, `always`, and `reject` replies from the live plugin, normalized as requested, allowed, and denied. Approval telemetry is not recovered from the session-store poll path |
+| Model and usage | Provider/model, finish reason, token usage, cache usage, reasoning tokens, and runtime-reported cost where OpenCode reports them. Since v1.3.16 OpenCode stores output tokens with reasoning taken out; Beacon adds reasoning back into `output_tokens` so reasoning stays a subset of output, as for every other runtime, and counts once in totals. Messages from earlier releases already include it, and their `tokens.total` tells the two apart |
+| Session telemetry | Live create, busy/idle/end, retry, and error boundaries through the plugin; persisted sessions can be backfilled through `beacon endpoint opencode sync` |
+| Local JSONL and dashboard | Supported |
+| MDM deployment | Supported for the endpoint agent. OpenCode plugins are installed separately in the logged-in user's context |
+
+## Data handling
+
+OpenCode prompts, completed assistant text and reasoning, tool arguments and results, commands, command output, paths, and diffs are retained in local or customer-controlled logs. Beacon applies local secret redaction and per-string limits before writing. Each content-bearing event includes a hash and byte count for the original value. Events over the 64 KiB limit drop raw and retained content, preserve stable metadata, and set `field_truncated`.
+
+The plugin uses OpenCode session, message, part, permission request, and tool call identifiers for correlation. The poll path uses OpenCode's persisted session, message, part, and tool call identifiers. It does not create file events without an agent-derived path, so object-storage ingestion paths are not treated as files the agent touched.
+
+## Deployment notes
+
+Restart OpenCode after installing or removing hooks so new sessions pick up the updated plugin configuration.
+
+For local troubleshooting, set `BEACON_OPENCODE_DEBUG=1` in the environment that launches OpenCode to emit best-effort plugin debug logs. The adapter has a bounded local subprocess timeout and remains fail-open, so telemetry failures do not interrupt OpenCode execution.
+
+For historical collection or deployments where OpenCode did not load the plugin, run `beacon endpoint opencode sync --print` to preview mapped events, then `beacon endpoint opencode sync` to append them to the runtime log. Use `--watch` or a scheduler if you want the poll path to stay current.
+
+Validate a system-mode installation after restarting OpenCode:
+
+```bash
+/opt/beacon/bin/beacon endpoint hooks status --harness opencode --level user
+/opt/beacon/bin/beacon endpoint doctor --system
+/opt/beacon/bin/beacon endpoint dashboard --system --open
+```
+
+## Related
+
+<Columns cols={3}>
+  <Card title="Supported agent harnesses" icon="list-check" href="/runtimes">
+    Return to the runtime support overview.
+  </Card>
+  <Card title="Hooks" icon="plug" href="/cli/hooks">
+    Install, inspect, and uninstall runtime hook integrations.
+  </Card>
+  <Card title="beacon endpoint opencode" icon="rotate" href="/cli/endpoint-opencode">
+    Backfill OpenCode sessions from the local session store.
+  </Card>
+</Columns>

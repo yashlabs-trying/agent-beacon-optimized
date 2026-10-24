@@ -1,0 +1,27 @@
+{
+  "task": "b4-162",
+  "suite": "B",
+  "category": "B4_decision",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "b4-162-good"
+  ],
+  "required_evidence": [
+    "b4-162-good"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The recommended approach for the new billing change is to use structured logging.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 12.668,
+  "agent_seconds": 1.332,
+  "prompt_tokens": 119,
+  "gen_tokens": 15
+}

@@ -1,0 +1,29 @@
+{
+  "task": "a2-27",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-27-new",
+    "a2-27-old",
+    "a2-27-decoy"
+  ],
+  "required_evidence": [
+    "a2-27-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The current profile worker count is 32.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.024,
+  "prompt_tokens": 148,
+  "gen_tokens": 11
+}

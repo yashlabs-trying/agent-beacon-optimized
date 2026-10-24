@@ -1,0 +1,149 @@
+---
+title: "beacon endpoint doctor"
+description: "Run local Beacon endpoint health checks"
+---
+
+## Command overview
+
+`beacon endpoint doctor` runs local health checks for the Beacon endpoint agent and exits non-zero when any hard check fails. Add `--fix` to apply safe remediations for supported findings.
+
+```bash title="Command syntax"
+beacon endpoint doctor
+```
+
+Use doctor when rollout automation, support scripts, or an operator needs a pass/fail health signal. For a broader status view that includes collector readiness, service state, discovered harnesses, and last-event state, use [`beacon endpoint status`](/cli/endpoint-status).
+
+`beacon doctor` is a top-level alias for `beacon endpoint doctor`.
+
+## Checks
+
+Doctor verifies:
+
+- Endpoint configuration file
+- Endpoint configuration validity
+- Collector configuration file
+- Runtime JSONL log path
+- Runtime log permissions
+- Service definition: launchd plist on macOS, systemd unit on Linux
+- Configured harness telemetry and recent observed events
+- Whether DeepSeek Harness hooks are actually recording live events (`dsh_hook_capture`)
+- Whether Beacon's git hooks ran out of time recently (`git_hook_budget`)
+- Whether a real user's agent runtime points at the collector (system mode only)
+
+The runtime log itself can be missing before the first event is written. In that case, doctor reports a warning instead of a hard failure.
+
+### `console_user_configured`
+
+System-mode only, and worth understanding because it is the one failure that a completely healthy endpoint can still report.
+
+A system endpoint runs as root, so it has to work out whose agent settings to configure, and the collector is useless if nothing exports to it. This check asks whether that happened:
+
+```
+console_user_configured: fail target=alice (alice has no agent runtime pointed at this
+  collector, so their sessions are not being captured)
+  action="sudo beacon endpoint user-config repair-installed --system"
+```
+
+Everything else can be green when this fails. The collector is running, the service is loaded, and the harness check passes, because `doctor --system` runs as root and sees the settings the install wrote for root. The person whose sessions matter is the one with nothing.
+
+If no logged-in user can be identified at all, this reports a warning rather than a failure: an unattended host legitimately has nobody to configure, and that is not something an operator can act on.
+
+### `dsh_hook_capture`
+
+This check runs only when DeepSeek Harness is detected and Beacon's hooks for it are installed. It catches a failure no other check sees: the hooks are loaded, but they cannot write the runtime log because `dsh` runs them inside its session sandbox. `harness_observed` stays green in this state, because `beacon endpoint dsh sync` fills the log with poll events under the same harness name.
+
+```
+dsh_hook_capture: warn target=deepseek_harness (2 DeepSeek Harness session(s) ran without a live
+  hook event (newest 2026-09-21T11:00:00Z; no hook event since the hooks were installed). The usual
+  cause is dsh's sandbox: ...)
+  action="run `beacon endpoint dsh sync` to backfill those sessions from DeepSeek's session store; ..."
+```
+
+Doctor cannot reproduce the sandbox, because running the hook command from doctor runs it outside `dsh`, where it succeeds. So the check compares evidence instead. It counts native sessions that DeepSeek wrote after the hooks were installed and more than a few minutes after the last event with `harness.collection_method=hook`. The live log and every rotated archive are searched for that event. Each of those sessions is one the live hooks did not capture. Once rotation has started discarding history, sessions older than the oldest retained event are not counted, because their hook events may have rotated out. Evidence doctor cannot read, such as a missing hooks file, is reported as a warning rather than a pass. The other cause is a `dsh` process that was already running when the hooks were installed and has not been restarted.
+
+This is a warning, not a failure. The sandbox mode is the operator's choice in `dsh`, and Beacon does not change it. `--fix` lists the check as a manual skip. See [Live hooks and the DeepSeek Harness sandbox](/runtimes/deepseek-harness#live-hooks-and-the-deepseek-harness-sandbox).
+
+### `git_hook_budget`
+
+This check appears only when one of Beacon's [git hooks](/cli/git#hook-runs-that-run-out-of-time) ran out of time in the last seven days, in any repository. It counts the `git.hook_budget_exceeded` events in the runtime log and names the most recent.
+
+```
+git_hook_budget: warn target=/work/my-repo (2 hook run(s) ran out of time in the last 7 days, 1 cut short;
+  last 2026-10-14T09:00:03Z: post-commit in attribute, 3.3s of 3s, cut short)
+  action="run `beacon git status` in the repository to see its overruns, and `beacon git link <commit>` to link a commit the hook left unlinked"
+```
+
+It warns when a run was cut short, because a commit may have been left unlinked; runs that only finished late are reported as ok. The budgets are fixed, so `--fix` lists the check as a manual skip.
+
+## Fix mode
+
+`beacon endpoint doctor --fix` plans and applies safe remediations for supported findings. It can create a missing runtime log, and recreate managed collector configuration and the service definition (a launchd plist or a systemd unit) when the endpoint configuration is valid. On a Windows system install it also resets the log directory ACL, from an elevated shell, when interactive users cannot append to the runtime log or when they hold more than append (an older install's Modify grant): the same ACL a fresh install applies, described in [Windows](/platforms/windows#what-the-install-does).
+
+Fix mode deliberately skips cases that need operator intent, such as invalid endpoint configuration, missing harness setup, missing observed runtime events, unsafe runtime log permissions, or service repair on a host with no service manager to repair. If a collector service repair fails, Beacon rolls back the files and service state it changed where possible, then refreshes doctor results so the printed checks reflect any partial fixes that succeeded.
+
+JSON output includes applied and skipped fix details so deployment scripts can distinguish remediated checks from findings that still need manual action.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--user` | Use per-user endpoint paths. Enabled by default |
+| `--system` | Use system endpoint paths and launch daemon |
+| `--log-path <path>` | Runtime JSONL log path |
+| `--fix` | Apply safe remediations for supported failed or warning checks |
+| `--json` | Print doctor results as JSON |
+
+## Examples
+
+Run health checks with the default per-user paths:
+
+```bash title="Run health checks with the default per-user paths"
+beacon endpoint doctor
+```
+
+Run health checks and apply supported fixes:
+
+```bash title="Run health checks and apply supported fixes"
+beacon endpoint doctor --fix
+```
+
+Check a root-managed endpoint deployment:
+
+```bash title="Check a root-managed endpoint deployment"
+sudo beacon endpoint doctor --system
+```
+
+Repair supported root-managed findings:
+
+```bash title="Repair supported root-managed findings"
+sudo beacon endpoint doctor --system --fix
+```
+
+Print machine-readable check results:
+
+```bash title="Print machine-readable check results"
+beacon endpoint doctor --json
+```
+
+Print machine-readable results with applied and skipped fix details:
+
+```bash title="Print machine-readable results with applied and skipped fix details"
+beacon endpoint doctor --fix --json
+```
+
+Use the top-level alias:
+
+```bash title="Use the top-level alias"
+beacon doctor
+```
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Endpoint status" icon="circle-info" href="/cli/endpoint-status">
+    Inspect collector, service, harness, diagnostics, and runtime-log state.
+  </Card>
+  <Card title="Endpoint inventory" icon="clipboard-list" href="/cli/endpoint-inventory">
+    Show configured, detected, and observed endpoint inventory.
+  </Card>
+</Columns>

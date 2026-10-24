@@ -1,0 +1,165 @@
+---
+title: "Cross-Harness Memory"
+description: "Turn reviewed Beacon traces into project memory that future agents can reuse"
+---
+
+## Overview
+
+Beacon memory is an opt-in, local-first learning loop built on Beacon's existing
+cross-harness trace capture.
+
+Beacon already records normalized agent activity across Claude Code, Cursor, Codex,
+OpenCode, and other supported harnesses. The memory workflow lets you explicitly
+evaluate selected traces, review high-signal candidates, approve them into project
+memory, and expose approved knowledge back to future agents through MCP or Agent
+Skills.
+
+Nothing in this workflow runs from hooks. Normal endpoint capture stays local and
+does not call Jev or any other external evaluator.
+
+## Workflow
+
+The loop is:
+
+1. Capture traces from local agent harnesses.
+2. Produce candidates, either by scoring traces with `beacon memory evaluations run`
+   or by reading a trace and writing the lesson with `beacon memory candidates create`.
+3. Review candidates with `beacon memory candidates`.
+4. Approve candidates into project memory, supplying the lesson text for a scored
+   candidate as you do.
+5. Reuse approved memory through Beacon MCP or install it as an Agent Skill.
+
+This is deliberately review-gated. Evaluator probabilities help rank and classify traces;
+they do not automatically rewrite instructions, install skills, or execute actions.
+
+## Jev evaluation
+
+`beacon memory evaluations run` can call TypeSafe Jev's System One API with a
+bounded, redacted trace projection. Beacon sends typed yes/no questions such as:
+
+- Did the trace complete the engineering task successfully?
+- Does the trace contain a reusable correction or debugging pattern?
+- Is the reusable lesson supported by concrete trace evidence?
+
+Jev returns probabilities. TypeSafe System One models do not generate
+explanations or rationale. Beacon stores those probabilities with the trace
+provenance, evaluator model, and usage metadata when the API reports it.
+
+The candidate therefore says that no lesson text was extracted instead of
+presenting the scores as a lesson. Review the source trace before approving it.
+A compatible internal evaluator using the legacy `questions` or `results`
+response shape can also provide a stored `reason`.
+
+A trace becomes a candidate only when the task succeeded (`task_success` of at
+least 0.50) and the mean of the three probabilities is at least 0.60. The
+success answer is a precondition rather than one vote in the mean, so a failed
+task cannot be promoted on the strength of the other two answers.
+
+Use `--dry-run` first to preview selected traces and estimated calls without making
+a network request.
+
+The evaluator uses the hosted TypeSafe endpoint and `jev-latest` by default. Set
+`TYPESAFE_API_KEY` or `BEACON_JEV_API_KEY` for hosted evaluation, or pass
+`--jev-endpoint` / `BEACON_JEV_ENDPOINT` and `--jev-model` / `BEACON_JEV_MODEL`
+to target an internal compatible evaluator.
+
+SubQ's [Decisions API](https://docs.subq.ai/endpoints/decisions-api/) speaks the same
+System One contract, so `--evaluator subq` (or `BEACON_EVALUATOR=subq`) sends the same
+projection and questions to `https://api.subq.ai/v1/systemone` with `subq-snap-preview`,
+using `SUBQ_API_KEY` or `BEACON_SUBQ_API_KEY`. See
+[`beacon memory`](/cli/memory#subq) for its flags.
+
+## Local storage and scope
+
+Learning artifacts are stored in `memory.db` next to the endpoint runtime log base
+directory. The database is durable local state, unlike the rebuildable trace index.
+
+Approved memory is scoped to the resolved project. Cross-project or user-global
+memory is not automatic. If you install a skill, Beacon writes it under the current
+project's `.agents/skills/<slug>/SKILL.md`.
+
+When a command starts from a trace, project scope comes from the repository the trace
+recorded, so a session in one repository becomes memory for that repository even if
+you run the command from another, and a linked worktree counts as its main checkout.
+Commands that list or look up records scope to the current working directory. Use
+`--project <path>` to override either, for example when a client needs to retrieve
+memory for a specific project.
+
+## Reuse surfaces
+
+Beacon exposes approved memory in two local ways:
+
+- `beacon mcp serve` provides `search_memory`, `get_memory`, and `get_memory_context`
+  as read-only MCP tools.
+- `beacon memory skills preview|install` renders an approved candidate as an Agent
+  Skill with Beacon provenance in the frontmatter.
+
+`beacon memory list|show` reads the same approved records from the CLI.
+
+This is what makes the memory portable across harnesses: one agent's reviewed trace
+can become project knowledge that another MCP-capable or skill-capable agent can
+retrieve later.
+
+## Memory in Beacon Cloud
+
+When an endpoint forwards its sessions to Beacon Cloud, the same loop runs over
+[Beacon Cloud MCP](/deployment/managed-mcp#memory) on [Beacon Cloud Pro](/deployment/plans), so any agent connected to it can turn a
+forwarded session into memory, whatever machine or harness the session came from. Sessions
+are read from Beacon Cloud, so the agent needs no local trace history or CLI:
+
+- `beacon_memory_candidate_create` files a lesson the agent drafted from a session, with the
+  event IDs it rests on, once the user confirms it.
+- `beacon_memory_candidates_list` and `beacon_memory_candidate_get` read candidates back.
+- `beacon_memory_candidate_review` approves a candidate with the reviewed text, rejects it, or
+  supersedes it with an existing memory.
+- `beacon_memory_search` and `beacon_memory_get` recall approved memory.
+- `beacon_memory_skill` renders an approved memory as the same Agent Skill
+  `beacon memory skills install` writes, for the agent to save in the repository.
+
+Records use the same `beacon.learning.v1` shapes and IDs as the local store. Beacon Cloud has no
+evaluator, so every candidate there is drafted by the agent and confirmed by you, which is the
+same path as [writing a candidate yourself](/cli/memory#write-a-candidate-yourself). Memory approved in Beacon Cloud stays in
+Beacon Cloud and local memory stays on the machine; neither is copied to the other. Filing and
+reviewing need a connection with write access.
+
+## Beacon memory skills
+
+The workflow itself ships as installable Agent Skills, so an agent in any harness can
+drive it:
+
+- `beacon-memory-recall` retrieves approved memory before a task.
+- `beacon-memory-distill` runs the loop above. It dry-runs first, asks before the
+  evaluation call, drafts each lesson from the source trace, and approves only what the
+  user confirms.
+- `beacon-memory-promote` installs approved memory as a project skill.
+
+Install them with the harness's plugin marketplace, or with the skills CLI for any
+skills-capable agent:
+
+```bash
+# Claude Code
+/plugin marketplace add asymptote-labs/agent-beacon
+/plugin install beacon@beacon
+
+# Codex, GitHub Copilot CLI, and Factory Droid read the same marketplace
+codex plugin marketplace add asymptote-labs/agent-beacon
+
+# Cursor, OpenCode, Amp, goose, Cline, and others
+npx skills add asymptote-labs/agent-beacon
+```
+
+The skills live in `agent-skills/` in the Beacon repository. See its README for the full
+install and publishing matrix.
+
+## Privacy boundary
+
+- Hooks never call Jev or SubQ.
+- Dry runs do not call an evaluator.
+- Evaluator calls are made only by the explicit `beacon memory evaluations run` command.
+- Trace projections are bounded and redacted before being sent.
+- Candidate approval and skill installation are explicit CLI actions.
+- The dashboard's Memory page is read-only; review transitions and skill writes stay
+  in the CLI.
+
+If your organization forbids external evaluation, skip `beacon memory evaluations run`
+or point it at an internal compatible evaluator.

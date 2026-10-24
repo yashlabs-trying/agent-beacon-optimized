@@ -1,0 +1,27 @@
+{
+  "task": "c4-271",
+  "suite": "C",
+  "category": "C4_long_history",
+  "difficulty": "extreme",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "c4-271-gold"
+  ],
+  "required_evidence": [
+    "c4-271-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The ledger rate limit is 35 req/min.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 13.025,
+  "agent_seconds": 1.492,
+  "prompt_tokens": 122,
+  "gen_tokens": 12
+}

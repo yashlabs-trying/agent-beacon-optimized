@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "dataset_id": "beacon-v6-phase3-agent-tasks-v1",
+  "status": "locked_unrun",
+  "model_visibility": "The agent may read source and request; objective tests and expected behavior labels stay with the evaluator. Both memory arms receive the same approved project note and the same distractor note.",
+  "tasks": [
+    {
+      "id": "retry_after",
+      "filename": "retry_after.py",
+      "source": "def delay(value):\n    return int(value)\n",
+      "request": "Make delay(value) parse a Retry-After seconds value. Return None for malformed values and clamp negative seconds to zero. Edit only retry_after.py.",
+      "approved_note": "The project treats Retry-After as a whole number of seconds; invalid values are ignored, and a negative count means wait zero seconds.",
+      "distractor_note": "Socket idle timeouts use a separate connection setting and do not parse HTTP Retry-After.",
+      "tests": "import unittest\nfrom retry_after import delay\nclass RetryAfterTests(unittest.TestCase):\n    def test_valid(self):\n        self.assertEqual(delay('7'), 7)\n        self.assertEqual(delay(' 12 '), 12)\n    def test_negative(self):\n        self.assertEqual(delay('-4'), 0)\n    def test_invalid(self):\n        self.assertIsNone(delay('later'))\n        self.assertIsNone(delay('1.5'))\n"
+    },
+    {
+      "id": "stable_cursor",
+      "filename": "cursor.py",
+      "source": "def next_cursor(rows):\n    return rows[-1]['id'] if rows else None\n",
+      "request": "Return a continuation cursor containing both the last row's sort key and ID. Return None for an empty page. Edit only cursor.py.",
+      "approved_note": "Mutable pagination resumes from the last stable (sort_key, id) pair; an ID by itself does not preserve ordering.",
+      "distractor_note": "Offset pagination is acceptable for an immutable archive but not for changing result sets.",
+      "tests": "import unittest\nfrom cursor import next_cursor\nclass CursorTests(unittest.TestCase):\n    def test_pair(self):\n        self.assertEqual(next_cursor([{'sort_key': 4, 'id': 'a'}, {'sort_key': 4, 'id': 'b'}]), {'sort_key': 4, 'id': 'b'})\n    def test_empty(self):\n        self.assertIsNone(next_cursor([]))\n"
+    },
+    {
+      "id": "event_dedup",
+      "filename": "events.py",
+      "source": "def unique(events):\n    return list(events)\n",
+      "request": "Deduplicate event dictionaries by event_id, preserving the first occurrence and input order. Edit only events.py.",
+      "approved_note": "On queue redelivery, keep the first event for each event_id and preserve original order; repeated IDs must not repeat a side effect.",
+      "distractor_note": "Cache entries may be evicted by TTL; that rule does not define durable event deduplication.",
+      "tests": "import unittest\nfrom events import unique\nclass EventTests(unittest.TestCase):\n    def test_order_and_first(self):\n        rows = [{'event_id':'a','v':1},{'event_id':'b','v':2},{'event_id':'a','v':9}]\n        self.assertEqual(unique(rows), rows[:2])\n    def test_empty(self):\n        self.assertEqual(unique([]), [])\n"
+    },
+    {
+      "id": "utc_conversion",
+      "filename": "clock.py",
+      "source": "from datetime import timezone\ndef as_utc(dt):\n    return dt.replace(tzinfo=timezone.utc)\n",
+      "request": "Convert an aware datetime to the same instant in UTC. Raise ValueError for a naive datetime. Edit only clock.py.",
+      "approved_note": "Keep the instant when converting zones: aware datetimes use astimezone(UTC); a naive local time lacks enough information and must be rejected.",
+      "distractor_note": "Request-signature clock skew tolerance does not resolve ambiguous local calendar times.",
+      "tests": "import unittest\nfrom datetime import datetime, timedelta, timezone\nfrom clock import as_utc\nclass ClockTests(unittest.TestCase):\n    def test_offset(self):\n        local = datetime(2026, 1, 2, 12, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))\n        self.assertEqual(as_utc(local), datetime(2026, 1, 2, 6, 30, tzinfo=timezone.utc))\n    def test_naive(self):\n        with self.assertRaises(ValueError):\n            as_utc(datetime(2026, 1, 2, 12, 0))\n"
+    },
+    {
+      "id": "lease_fence",
+      "filename": "lease.py",
+      "source": "def can_write(held_token, current_token, renewal_ok):\n    return renewal_ok\n",
+      "request": "Permit a protected write only when renewal succeeded and the held fencing token equals the current token. Edit only lease.py.",
+      "approved_note": "A stale distributed lease holder must stop writes after failed renewal or when its fencing token no longer matches the current owner.",
+      "distractor_note": "SQLite busy_timeout handles a local transaction lock; it does not protect distributed lease ownership.",
+      "tests": "import unittest\nfrom lease import can_write\nclass LeaseTests(unittest.TestCase):\n    def test_owner(self):\n        self.assertTrue(can_write(8, 8, True))\n    def test_stale(self):\n        self.assertFalse(can_write(7, 8, True))\n        self.assertFalse(can_write(8, 8, False))\n"
+    },
+    {
+      "id": "cache_key",
+      "filename": "cache_key.py",
+      "source": "def key(toolchain, lock_digest):\n    return toolchain\n",
+      "request": "Build a deterministic CI dependency cache key from both toolchain and lockfile digest. Edit only cache_key.py.",
+      "approved_note": "A dependency cache key includes the active toolchain and the lockfile digest so either change invalidates stale packages.",
+      "distractor_note": "Memory search cache invalidation uses a generation counter, not the CI dependency lockfile digest.",
+      "tests": "import unittest\nfrom cache_key import key\nclass KeyTests(unittest.TestCase):\n    def test_both_inputs(self):\n        self.assertEqual(key('go1.27', 'abc'), key('go1.27', 'abc'))\n        self.assertNotEqual(key('go1.27', 'abc'), key('go1.28', 'abc'))\n        self.assertNotEqual(key('go1.27', 'abc'), key('go1.27', 'xyz'))\n"
+    }
+  ]
+}

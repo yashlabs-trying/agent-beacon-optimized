@@ -1,0 +1,38 @@
+File: learning.test
+Build ID: 22868944051ce04e68f79973bbe44b3b7067f03d
+Type: alloc_space
+Time: 2026-10-23 16:39:04 UTC
+Showing nodes accounting for 1090.67MB, 97.47% of 1118.97MB total
+Dropped 102 nodes (cum <= 5.59MB)
+Showing top 30 nodes out of 71
+      flat  flat%   sum%        cum   cum%
+  213.04MB 19.04% 19.04%   333.55MB 29.81%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.significantTerms
+  165.02MB 14.75% 33.79%   165.02MB 14.75%  strings.FieldsFunc
+  107.01MB  9.56% 43.35%   107.01MB  9.56%  internal/bytealg.MakeNoZero
+   99.52MB  8.89% 52.24%   213.54MB 19.08%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.resolveSupersessions
+   73.52MB  6.57% 58.81%  1066.66MB 95.32%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.(*Store).SearchQuestion
+   71.02MB  6.35% 65.16%   511.08MB 45.67%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.SelectTrustContext
+   41.50MB  3.71% 68.87%       43MB  3.84%  modernc.org/sqlite.newRows
+   39.01MB  3.49% 72.35%   135.01MB 12.07%  database/sql.(*DB).queryDC
+   37.51MB  3.35% 75.71%    37.51MB  3.35%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.selectWholeQuestionContext
+   35.01MB  3.13% 78.84%    64.01MB  5.72%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.analyzeQuestion
+      33MB  2.95% 81.78%       33MB  2.95%  database/sql.driverArgsConnLocked
+      30MB  2.68% 84.47%    45.01MB  4.02%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.trustTokens
+      21MB  1.88% 86.34%   113.51MB 10.14%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.queryIsSelective
+      16MB  1.43% 87.77%   131.52MB 11.75%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.questionIntent.memoryTerms (inline)
+      16MB  1.43% 89.20%   178.52MB 15.95%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.candidatePairs
+      12MB  1.07% 90.28%       12MB  1.07%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.termTrigrams (inline)
+      11MB  0.98% 91.26%       11MB  0.98%  modernc.org/sqlite.newStmt
+   10.50MB  0.94% 92.20%    10.50MB  0.94%  database/sql.(*Rows).close
+    9.01MB  0.81% 93.00%     9.51MB  0.85%  runtime.mallocgc
+       9MB   0.8% 93.81%        9MB   0.8%  modernc.org/sqlite.(*conn).bind
+    8.50MB  0.76% 94.57%    82.01MB  7.33%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.metaValue
+    5.50MB  0.49% 95.06%     9.50MB  0.85%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.rebuildMemoryIndexTx
+    5.50MB  0.49% 95.55%     9.50MB  0.85%  database/sql.(*DB).execDC
+       5MB  0.45% 96.00%     7.50MB  0.67%  database/sql.(*Rows).nextLocked
+       4MB  0.36% 96.35%   140.51MB 12.56%  database/sql.(*DB).QueryRowContext (inline)
+       4MB  0.36% 96.71%   136.51MB 12.20%  database/sql.(*DB).query
+    3.50MB  0.31% 97.02%    32.50MB  2.90%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.(*Store).PutMemory
+    2.50MB  0.22% 97.25%       54MB  4.83%  modernc.org/sqlite.(*stmt).query
+       2MB  0.18% 97.43%        8MB  0.71%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.ensureSearchSchema
+    0.50MB 0.045% 97.47%       33MB  2.95%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.profileStore

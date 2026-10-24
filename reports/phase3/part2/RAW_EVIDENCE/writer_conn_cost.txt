@@ -1,0 +1,2 @@
+P3B_CONN open_close n=2000 total_ms=13.1 per_us=6.6
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.029s

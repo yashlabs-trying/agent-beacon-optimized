@@ -1,0 +1,33 @@
+{
+  "task": "a5-95",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-95-gold",
+    "a5-95-n0",
+    "a5-95-n1",
+    "a5-95-n2",
+    "a5-95-n5",
+    "a5-95-n3",
+    "a5-95-n4"
+  ],
+  "required_evidence": [
+    "a5-95-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The profile rate limit is 15 req/min.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.198,
+  "prompt_tokens": 211,
+  "gen_tokens": 12
+}

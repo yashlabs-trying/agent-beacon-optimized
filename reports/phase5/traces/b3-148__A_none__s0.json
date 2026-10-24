@@ -1,0 +1,26 @@
+{
+  "task": "b3-148",
+  "suite": "B",
+  "category": "B3_multi_hop",
+  "difficulty": "extreme",
+  "arm": "A_none",
+  "seed": 0,
+  "retrieved_ids": [],
+  "required_evidence": [
+    "b3-148-svc",
+    "b3-148-port"
+  ],
+  "evidence_recall": 0.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.981,
+  "prompt_tokens": 109,
+  "gen_tokens": 8
+}

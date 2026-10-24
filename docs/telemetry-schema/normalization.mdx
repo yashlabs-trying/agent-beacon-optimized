@@ -1,0 +1,284 @@
+---
+title: "Schema Normalization"
+description: "How Beacon maps OTLP attributes and hook payloads into normalized events"
+---
+
+## Normalization rules
+
+Beacon normalizes [OTLP](/concepts/core-concepts#otlp) attributes and [hook](/concepts/core-concepts#hooks) payloads into the same event contract. The collector exporter looks for common runtime fields, while hook telemetry builds those fields directly from hook payloads.
+
+## Model names
+
+`model` is canonicalized at the point of writing, on both capture paths, the same way `harness.name` is. The value is trimmed and lowercased, and a provider prefix is removed: `Anthropic/Claude-Sonnet-4-5`, `anthropic/claude-sonnet-4-5` and `claude-sonnet-4-5` all record as `claude-sonnet-4-5`.
+
+This matters because every token report groups by this field. Before canonicalization, one model reached through two runtimes -- an OTLP runtime reporting the bare id, a plugin runtime reporting a provider-qualified one -- produced two rows in the `BY MODEL` rollup, with a reader having no way to tell that from two genuinely different models.
+
+The prefix is not discarded. It is recorded as `gen_ai.provider.name`, so a provider stays queryable in its own field rather than packed into a model string. A provider the runtime reported itself always wins: a prefix parsed out of a model name is only used when the runtime named no provider of its own.
+
+Model ids themselves are never rewritten. Date suffixes, dots and vendor spellings are preserved as the runtime reported them, because a rule that folds `claude-sonnet-4.6` into `claude-sonnet-4-6` also turns `gpt-4.1` into `gpt-4-1`, which is not a model under any name. A split row is visible to a reader; an invented id is not.
+
+## Context size is not usage
+
+`gen_ai.usage` is additive: every report sums it to answer what a session spent. `gen_ai.context` is a level at one moment -- how full the model's window was on a call -- and summing it answers nothing.
+
+Qwen Code is the runtime that forced the split. Its `Stop` hook reports the prompt token count for a turn, which in a multi-turn session already contains every prior turn; added up, a session's total grows with roughly the square of its length. Read as context occupancy the same number is exact, so it is recorded in a block nothing sums:
+
+| Source signal | Normalized field |
+|---------------|------------------|
+| `input_tokens` alongside a reported limit, `gen_ai.context.used_tokens` | `gen_ai.context.used_tokens` |
+| `context_limit`, `gen_ai.context.limit_tokens` | `gen_ai.context.limit_tokens` |
+
+Both halves are required before either is recorded. `input_tokens` is also the ecosystem's usual name for a genuine additive usage count, so a reported limit beside it is what distinguishes a payload describing window occupancy from one reporting spend. Without that pairing the rule would reclassify other runtimes' spend as context.
+
+A reported `limit_tokens` also takes precedence over Beacon's static context-window table when computing utilization, because it reflects the tier the call actually ran under rather than the default for a model name.
+
+## Source mapping
+
+| Source signal | Normalized field or action |
+|---------------|----------------------------|
+| `gen_ai.request.model`, `gen_ai.response.model`, `model`, `ai.model` | `model`, canonicalized, plus `gen_ai.provider.name` from any provider prefix |
+| `gen_ai.tool.name`, `tool.name`, `beacon.tool.name`, `function_name`, `tool_name` | `tool.name` and `gen_ai.tool.name` |
+| `gen_ai.tool.call.arguments`, `function_args`, `arguments` | `tool.command` when command-like, plus `gen_ai.tool.call.arguments` |
+| `gen_ai.tool.call.id`, `tool_use_id`, `call_id`, `tool_call_id`, `callId` | `gen_ai.tool.call.id` |
+| `gen_ai.tool.call.result` | `gen_ai.tool.call.result` |
+| `mcp.method.name`, `mcp.protocol.version`, `mcp.resource.uri`, `mcp.session.id` | `mcp.method.name`, `mcp.protocol.version`, `mcp.resource.uri`, `mcp.session.id` |
+| `mcp.tool`, `beacon.mcp.tool`, `mcp.tool.name` | `mcp.tool` |
+| `mcp.server`, `beacon.mcp.server`, `mcp.server.name` | `mcp.server` |
+| `mcp__<server>__<tool>` or `MCP:<tool>` tool name, when structured `mcp.*` attributes are absent (e.g. Claude Code's OTel logs) | `mcp.server`, `mcp.tool` |
+| `jsonrpc.*`, `rpc.response.status_code`, `network.*`, `server.*`, `error.type` | `jsonrpc`, `rpc`, `network`, `server`, and `error` |
+| `process.command_line` | `command.command` |
+| `file.path` | `file.path` |
+| `conversation.id` | `session.id` |
+| `gen_ai.conversation.id` | `gen_ai.conversation.id` |
+| `vcs.repository.url` | `repository` |
+| `git.branch` | `branch` |
+| `beacon.origin` | `origin` |
+| `beacon.run.*` | `run.*` |
+| Prompt-like events | `prompt.submitted` |
+| Shell or exec events | `command.executed` |
+| MCP events | `mcp.tool_invoked` |
+| File, write, or edit events | `file.modified` |
+| Approval events | `approval.requested` |
+| Other tool activity | `tool.invoked` |
+
+### OpenCode plugin mapping
+
+OpenCode's managed plugin maps `chat.message` to `prompt.submitted`;
+`tool.execute.before` to `tool.invoked`; and successful terminal tool events to
+`command.executed`, `file.read`, `file.modified`, `mcp.tool_invoked`, or
+`tool.completed` according to tool semantics. Terminal tool errors become
+`tool.failed`.
+
+Completed assistant message metadata supplies model, finish reason,
+runtime-reported cost, and canonical `gen_ai.usage`. Completed text and reasoning
+parts use `gen_ai.output.messages`; reasoning additionally uses
+`agent.reasoning`. Permission replies map `once` and `always` to
+`approval.allowed`, `reject` to `approval.denied`, and unknown states to
+`approval.requested`.
+
+Structured `session.diff` arrays emit file events only for entries containing a
+real path and change. Empty/cumulative duplicate diffs do not create pathless
+`file.modified` records.
+
+### Cline plugin mapping
+
+Cline's managed plugin maps run start to `session.started`, and to
+`prompt.submitted` when the payload carries the message that started the task;
+`beforeTool` to `tool.invoked`; `afterTool` to `command.executed`, `file.read`,
+`file.modified`, `mcp.tool_invoked`, or `tool.completed` according to tool
+semantics, and to `tool.failed` when the payload reports an error; run end to
+`session.ended`; task cancels to `session.ended` at info severity with
+`session.cancel_reason` set, since a cancel is an end rather than a failure; and
+task errors to `session.error`.
+
+Run end is read for its outcome rather than assumed to be a success. The plugin
+surface has a single run-completion handler for every outcome and reports the
+difference as a status on the context, so an aborted run normalizes to the cancel
+shape and a failed one to `session.error`, exactly as the separately named
+file-based hooks do. A run that states no outcome, or states one Beacon does not
+recognize, stays a completion: mislabelling a finished task as failed is worse
+than missing a label.
+
+The same mapping accepts Cline's file-based hook names (`TaskStart`,
+`UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `TaskComplete`, `TaskCancel`)
+alongside its plugin handler names, so both of Cline's hook surfaces normalize
+identically. Stage names are matched on letters and digits only, so
+`tool_call_before`, `beforeTool`, and `PreToolUse` all resolve to the same
+lifecycle point. Lifecycle points Beacon does not map emit no event rather than a
+generic record.
+
+A file action whose payload carries no agent-derived path is recorded as
+`tool.completed` rather than a pathless `file.read` or `file.modified`. Cline
+addresses files relative to the workspace root, so paths are resolved against
+that root before being written; an already-absolute path is untouched, and a
+relative path with no resolvable root stays relative.
+
+Canonical `gen_ai.usage` comes from the run-end payload only, including cache
+reads and runtime-reported cost. Recording usage at a per-model-call boundary as
+well would double-count every task's tokens in usage rollups.
+
+## Event identity
+
+Every event carries two identity fields, and both are filled on the hook path and the OTLP path alike.
+
+`gen_ai.tool.call.id` is the runtime's own name for one tool invocation, read from whichever
+attribute that runtime uses: Claude Code writes `tool_use_id`, Codex and OpenCode write `call_id`,
+Cline writes `callId`, and Qwen Code writes `tool_use_id` or `tool_call_id`. It is what links a tool call to its result, an approval to the execution it
+approved, and a hook event to the OTLP event describing the same action. Where two events share
+one, they describe one call, and the writer records that call once rather than twice.
+
+`event.id` is Beacon's own identity for the event: a deterministic UUID, so the same event is
+named the same way in any process and any release. Where the runtime named the action itself, the
+UUID is derived from the session, action, target, and call ID, and nothing else, so the hook's
+report and the collector's report of one action carry one `event.id` even though they are written
+seconds apart with different fields. Otherwise it is derived from the event's own content, which
+makes re-reading a log produce the IDs it already had.
+
+## OpenTelemetry GenAI fields
+
+Beacon preserves OpenTelemetry GenAI semantic convention fields under the nested `gen_ai` object and also projects selected fields into Beacon's common investigation fields. This keeps the raw GenAI context available without forcing downstream rules to parse runtime-specific attribute names.
+
+| Source signal | Normalized field |
+|---------------|------------------|
+| `gen_ai.agent.description`, `gen_ai.agent.id`, `gen_ai.agent.name`, `gen_ai.agent.version` | `gen_ai.agent.*` |
+| `gen_ai.data_source.id` | `gen_ai.data_source.id` |
+| `gen_ai.embeddings.dimension.count` | `gen_ai.embeddings.dimension_count` |
+| `gen_ai.evaluation.name`, `gen_ai.evaluation.explanation`, `gen_ai.evaluation.score.label`, `gen_ai.evaluation.score.value` | `gen_ai.evaluation.*` |
+| `gen_ai.input.messages`, legacy `gen_ai.prompt.*`, `llm.prompts`, `gen_ai.prompts` | `gen_ai.input.messages` |
+| `gen_ai.output.messages`, legacy `gen_ai.completion.*`, `llm.completions`, `gen_ai.completions` | `gen_ai.output.messages` |
+| `gen_ai.output.type` | `gen_ai.output.type` |
+| `gen_ai.operation.name` | `gen_ai.operation.name` |
+| `gen_ai.prompt.name` | `gen_ai.prompt.name` |
+| `gen_ai.provider.name`, `gen_ai.system` | `gen_ai.provider.name` |
+| `gen_ai.system_instructions` | `gen_ai.system_instructions`, always a list of parts: a plain string becomes one `text` part and a single part object a one-part list |
+| `gen_ai.retrieval.query.text`, `gen_ai.retrieval.documents` | `gen_ai.retrieval.*` |
+| `gen_ai.token.type` | `gen_ai.token.type` |
+| `gen_ai.workflow.name` | `gen_ai.workflow.name` |
+
+### Request and response metadata
+
+| Source signal | Normalized field |
+|---------------|------------------|
+| `gen_ai.request.model`, `llm.request.model` | `gen_ai.request.model` |
+| `gen_ai.request.choice.count` | `gen_ai.request.choice_count` |
+| `gen_ai.request.encoding_formats` | `gen_ai.request.encoding_formats` |
+| `gen_ai.request.frequency_penalty` | `gen_ai.request.frequency_penalty` |
+| `gen_ai.request.max_tokens`, `llm.request.max_tokens` | `gen_ai.request.max_tokens` |
+| `gen_ai.request.presence_penalty` | `gen_ai.request.presence_penalty` |
+| `gen_ai.request.seed` | `gen_ai.request.seed` |
+| `gen_ai.request.stop_sequences` | `gen_ai.request.stop_sequences` |
+| `gen_ai.request.stream` | `gen_ai.request.stream` |
+| `gen_ai.request.temperature`, `llm.request.temperature` | `gen_ai.request.temperature` |
+| `gen_ai.request.top_k`, `gen_ai.request.top_p` | `gen_ai.request.top_k`, `gen_ai.request.top_p` |
+| `gen_ai.response.id`, `gen_ai.response.model`, `llm.response.model` | `gen_ai.response.id`, `gen_ai.response.model` |
+| `gen_ai.response.finish_reasons` | `gen_ai.response.finish_reasons` |
+| `gen_ai.response.time_to_first_chunk` | `gen_ai.response.time_to_first_chunk` |
+
+### Usage metadata
+
+| Source signal | Normalized field |
+|---------------|------------------|
+| `gen_ai.usage.input_tokens`, `llm.usage.prompt_tokens`, `gen_ai.usage.prompt_tokens` | `gen_ai.usage.input_tokens`, less the cache read and cache creation counts reported beside it (see below) |
+| `gen_ai.usage.output_tokens`, `llm.usage.completion_tokens`, `gen_ai.usage.completion_tokens` | `gen_ai.usage.output_tokens` |
+| `gen_ai.usage.cache_creation.input_tokens`, `gen_ai.usage.cache_write.input_tokens` | `gen_ai.usage.cache_creation.input_tokens` |
+| `gen_ai.usage.cache_creation.ephemeral_1h_input_tokens` (browser extension), Anthropic `usage.cache_creation.ephemeral_1h_input_tokens` (Claude Code session files), Pi `cacheWrite1h` | `gen_ai.usage.cache_creation.ephemeral_1h_input_tokens`: the subset of `cache_creation.input_tokens` written with a one-hour TTL, clamped to it and never added to a total |
+| `gen_ai.usage.cache_read.input_tokens` | `gen_ai.usage.cache_read.input_tokens` |
+| `gen_ai.usage.reasoning.output_tokens` | `gen_ai.usage.reasoning.output_tokens` |
+| `gen_ai.usage.cost`, runtime `*.cost.usage` metric datapoints | `gen_ai.usage.cost_usd` |
+
+Beacon's `gen_ai.usage.input_tokens` is uncached input only, disjoint from cache reads and cache creation. The OTel GenAI semantic conventions define the source attribute the other way: `gen_ai.usage.input_tokens` "SHOULD include all types of input tokens, including cached tokens", and each cache count "SHOULD be included in `gen_ai.usage.input_tokens`". OpenAI-style `prompt_tokens` likewise counts cached prompt tokens. So for those three names Beacon stores the input count minus the cache read and cache creation counts on the same span or log record. If the input is smaller than those cache counts it cannot contain them, the source is already reporting uncached input, and it is stored unchanged. Claude Code's bare `input_tokens` attribute is Anthropic's uncached count and is never reduced, and `raw` keeps the value as reported. The semconv `gen_ai.client.token.usage` metric has only `input` and `output` token types, so its input datapoint has no cache count to reduce and is stored as reported.
+
+Usage also arrives as metric datapoints, not just span and log attributes. Claude Code's `claude_code.token.usage` and `claude_code.cost.usage` are expanded per datapoint. Codex's live source is its completed turn span, whose input, cache-read, cache-write, output, and reasoning attributes map into the same `gen_ai.usage` fields with `thread.id` promoted to `session.id`. Legacy `codex.turn.token_usage` metric rows remain supported for older logs. `gen_ai.usage.cost_usd` carries runtime-reported cost only and is never derived from a local pricing table. Token reports add a separately labeled list-price estimate at report time; it is never written into an event (see [Cost: reported, estimated, effective](/cli/token-usage#cost-reported-estimated-effective)). See [How token attribution works](/cli/token-usage#how-token-attribution-works) for how these normalized fields aggregate into local reports.
+
+## Prompt and content handling
+
+Prompt text can come from `gen_ai.prompt`, `prompt`, `user_prompt`, `input.prompt`, `copilot_chat.user_request`, or the first meaningful text value in `gen_ai.input.messages`. Empty input message arrays do not create prompt events by themselves.
+
+Beacon accepts empty `content.retention` values for compatibility with older records. Truncation can be represented by top-level `field_truncated` and, for event-specific content state, `content.truncated`.
+
+## Category inference
+
+When a runtime omits `event.category`, Beacon infers it from `event.action`:
+
+| Action pattern | Inferred category |
+|----------------|-------------------|
+| `prompt.*` | `prompt` |
+| `command.*` | `command` |
+| `file.*` | `file` |
+| `mcp.*` | `mcp` |
+| `approval.*` or `policy.*` | `approval` |
+| `metric.*` | `metric` |
+| `tool.*` | `tool` |
+
+## Action inference and fidelity
+
+Actions are resolved in order, and where the answer comes from is recorded on the event as
+[`event.fidelity`](/telemetry-schema/event-schema#provenance-how-beacon-knows-what-it-wrote):
+
+| Resolution step | Fidelity |
+|-----------------|----------|
+| An explicit `beacon.event.action`, `event.action`, `gen_ai.agent.action`, or `ai.agent.action` attribute | `observed` |
+| A structured attribute naming the operation: `mcp.method.name`, `gen_ai.operation.name`, a `gen_ai.tool.call.*` value, a known Copilot `event.name` | `observed` |
+| A known runtime event name resolved after conversion: a Codex `event.name`, a recognized `claude_code.*` event | `observed` |
+| A pattern match over the log body, span name, or joined event text | `inferred` |
+| An unrecognized `claude_code.*` event, which falls back to `session.activity` | `inferred` |
+| Nothing matched, which falls back to `tool.invoked` | `inferred` |
+
+The distinction is structural rather than semantic: it records whether the source named the
+operation or Beacon pattern-matched prose, not whether a given mapping is ideal. An action resolved
+from a runtime's own event name overrides an earlier pattern match, and the fidelity is raised with
+it, so a runtime that names its events well is not penalized for also carrying a prose body.
+
+Hook and plugin telemetry is `observed` by construction, because a hook fires for a named lifecycle
+event. The exception is approval synthesis: on runtimes that expose a pre-tool notification but no
+approval hook, Beacon emits an `approval.allowed` event carrying `approval.required` so
+approval-shaped detections have something to match. Nothing was gated there, so those events are
+`inferred`.
+
+## Downstream consumers
+
+Beacon Cloud MCP searches and reads the session history an endpoint forwards to Beacon Cloud,
+and it works from this normalized schema. A schema change can therefore change what Beacon Cloud
+search finds, in three ways:
+
+1. **Searchable fields.** Beacon Cloud grep searches these fields: `prompt`, `message`,
+   `gen_ai.{input,output,system_instructions,tool,retrieval}`, `tool`, `command`, `file`, `mcp`,
+   `approval`, `policy`, `error`, and `health`. Content in a new field is forwarded and stored, but
+   grep does not find it until Beacon Cloud searches that field too.
+2. **Event types and message shapes.** Beacon Cloud presents events the way the local trace view
+   (`internal/endpoint/dashboard/traces.go`) does. A new event type or message shape appears there
+   as a generic event until Beacon Cloud supports it.
+3. **Harness names.** Beacon Cloud groups sessions by the canonical names `NormalizeHarnessName`
+   in `pkg/asymptoteobserve/harness.go` produces. A new harness or spelling is grouped correctly in
+   Beacon Cloud only once Beacon Cloud knows it too.
+
+Release a change to any of these together with the matching Beacon Cloud change.
+
+### What Beacon Cloud grep cannot see
+
+Two limits on what Beacon Cloud grep and read return come from the endpoint, and both are intended:
+
+- **Per-string limit.** `DefaultStringLimit = 4096` in `pkg/asymptoteobserve/privacy.go` caps each
+  retained string before it is written. Text past the first 4 KB of a long tool output, command
+  output, or diff is never written locally, so it is never forwarded and Beacon Cloud grep cannot
+  match it. The event records the cut with `field_truncated` and `content.truncated`. This trades
+  completeness for privacy and a bounded event size; see
+  [Redaction and size limits](/security/retention-redaction).
+- **Metadata-only forwarding.** An endpoint connected to Beacon Cloud in Metadata-only mode
+  removes prompts, responses, reasoning, tool arguments and results, command output, and diffs
+  before upload. Those are the fields grep searches, so for such endpoints Beacon Cloud grep and
+  read return little beyond identifiers, counts, and token usage.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Unified telemetry schema" icon="code" href="/telemetry-schema/event-schema">
+    Return to the schema overview.
+  </Card>
+  <Card title="Schema fields" icon="table-list" href="/telemetry-schema/fields">
+    Review entities, optional context, and shared top-level fields.
+  </Card>
+  <Card title="Open Source Architecture" icon="diagram-project" href="/architecture/architecture">
+    See where normalization fits in the local telemetry architecture.
+  </Card>
+</Columns>

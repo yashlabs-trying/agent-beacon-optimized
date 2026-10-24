@@ -1,0 +1,28 @@
+{
+  "task": "a2-32",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-32-new",
+    "a2-32-old"
+  ],
+  "required_evidence": [
+    "a2-32-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The current notify buffer size is 41 KB.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 15.34,
+  "agent_seconds": 1.42,
+  "prompt_tokens": 133,
+  "gen_tokens": 12
+}

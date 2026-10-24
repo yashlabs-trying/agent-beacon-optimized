@@ -1,0 +1,29 @@
+{
+  "task": "a1-12",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-12-fixed",
+    "a1-12-failed",
+    "a1-12-noise"
+  ],
+  "required_evidence": [
+    "a1-12-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the ledger pool size problem, validate the input.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.023,
+  "prompt_tokens": 162,
+  "gen_tokens": 13
+}

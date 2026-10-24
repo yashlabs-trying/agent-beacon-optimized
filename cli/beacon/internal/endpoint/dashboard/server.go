@@ -1,0 +1,607 @@
+package dashboard
+
+import (
+	"embed"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
+	"net"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/auth"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/detect"
+	endpointhooks "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/inventory"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lensstore"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/pricing"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/tokens"
+	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve"
+)
+
+const DefaultAddr = "127.0.0.1:8765"
+
+//go:embed static/*
+var staticFiles embed.FS
+
+type Options struct {
+	Addr     string
+	LogPath  string
+	UserMode bool
+	// LensFiles are lens files served alongside the built-ins, read from disk on every request.
+	// They are for developing a lens; the dashboard never writes them.
+	LensFiles []string
+}
+
+type StatusResponse struct {
+	Version     string                     `json:"version"`
+	ConfigPath  string                     `json:"config_path"`
+	LogPath     string                     `json:"log_path"`
+	RuntimeLog  lifecycle.RuntimeLogSource `json:"runtime_log"`
+	Harnesses   interface{}                `json:"harnesses"`
+	Collector   interface{}                `json:"collector"`
+	Service     interface{}                `json:"service"`
+	Diagnostics interface{}                `json:"diagnostics"`
+}
+
+// InventoryResponse is the richer agent inventory served to the dashboard's
+// dedicated Agent Inventory tab. It combines runtime telemetry detection
+// (harnesses) with the local configuration/MCP-server scan, mirroring the
+// shape of `beacon endpoint inventory --json`.
+type InventoryResponse struct {
+	GeneratedAt string                `json:"generated_at"`
+	UserScope   inventory.UserScope   `json:"user_scope"`
+	Harnesses   interface{}           `json:"harnesses"`
+	Hooks       []HookStatus          `json:"hooks"`
+	Configs     []inventory.Config    `json:"configs"`
+	MCPServers  []inventory.MCPServer `json:"mcp_servers"`
+	Skills      []inventory.Skill     `json:"skills"`
+}
+
+type HookStatus struct {
+	Target     string `json:"target"`
+	Status     string `json:"status"`
+	Installed  bool   `json:"installed"`
+	Path       string `json:"path,omitempty"`
+	BinaryPath string `json:"binary_path,omitempty"`
+	Message    string `json:"message,omitempty"`
+}
+
+type MemoryResponse struct {
+	Status      asymptoteobserve.LearningStatusV1       `json:"status"`
+	Evaluations []asymptoteobserve.LearningEvaluationV1 `json:"evaluations"`
+	Candidates  []asymptoteobserve.LearningCandidateV1  `json:"candidates"`
+	Memories    []asymptoteobserve.LearningMemoryV1     `json:"memories"`
+}
+
+var (
+	resolveRuntimeLog = lifecycle.ResolveRuntimeLog
+	getEndpointStatus = lifecycle.GetStatus
+	scanInventory     = inventory.Scan
+)
+
+func Handler(opts Options) (http.Handler, error) {
+	requestedUserMode := opts.UserMode
+	requestedLogPath := opts.LogPath
+	rulesUserMode := opts.UserMode
+	runtimeLog := resolveRuntimeLog(requestedUserMode, requestedLogPath)
+	opts.LogPath = runtimeLog.EffectiveLogPath
+	opts.UserMode = runtimeLog.EffectiveUserMode
+	staticRoot, err := fs.Sub(staticFiles, "static")
+	if err != nil {
+		return nil, err
+	}
+	lenses, err := loadBuiltinLenses(builtinLensFiles)
+	if err != nil {
+		return nil, err
+	}
+	if err := lenses.addLensFiles(opts.LensFiles); err != nil {
+		return nil, err
+	}
+	lenses.storeDir = lensstore.Dir(rulesUserMode)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		status := getEndpointStatus(requestedUserMode, requestedLogPath)
+		writeJSON(w, StatusResponse{
+			Version:     status.Version,
+			ConfigPath:  status.ConfigPath,
+			LogPath:     status.LogPath,
+			RuntimeLog:  runtimeLog,
+			Harnesses:   status.Harnesses,
+			Collector:   status.Collector,
+			Service:     status.Service,
+			Diagnostics: status.Diagnostics,
+		})
+	})
+	mux.HandleFunc("/api/inventory", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		status := getEndpointStatus(requestedUserMode, requestedLogPath)
+		scan := scanInventory(inventory.Options{})
+		writeJSON(w, InventoryResponse{
+			GeneratedAt: scan.GeneratedAt,
+			UserScope:   scan.UserScope,
+			Harnesses:   status.Harnesses,
+			Hooks:       hookStatuses(opts.LogPath, opts.UserMode),
+			Configs:     scan.Configs,
+			MCPServers:  scan.MCPServers,
+			Skills:      scan.Skills,
+		})
+	})
+	mux.HandleFunc("/api/summary", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		// Summary cards must describe the same dataset as total_events, so
+		// aggregate over every matched event rather than the page-limited
+		// slice a small ?limit= would leave behind.
+		query := parseQuery(r, maxEventLimit)
+		query.NoLimit = true
+		events, err := ReadEvents(opts.LogPath, query)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, BuildSummary(events))
+	})
+	mux.HandleFunc("/api/events", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		events, err := ReadEvents(opts.LogPath, parseQuery(r, defaultEventLimit))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, events)
+	})
+	mux.HandleFunc("/api/sessions", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		sessions, err := ReadSessions(opts.LogPath, parseQuery(r, defaultEventLimit))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, sessions)
+	})
+	mux.HandleFunc("/api/session", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		id := strings.TrimSpace(r.URL.Query().Get("id"))
+		if id == "" {
+			writeError(w, http.StatusBadRequest, fmt.Errorf("session id is required"))
+			return
+		}
+		detail, ok, err := ReadSessionDetail(opts.LogPath, id)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusNotFound, fmt.Errorf("session not found"))
+			return
+		}
+		writeJSON(w, detail)
+	})
+	mux.HandleFunc("/api/traces", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		traces, err := ReadTraceList(opts.LogPath, ParseTraceQuery(r, defaultEventLimit))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, traces)
+	})
+	mux.HandleFunc("/api/trace/search", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		results, err := SearchTraces(opts.LogPath, ParseTraceQuery(r, defaultEventLimit))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, results)
+	})
+	mux.HandleFunc("/api/trace", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		id := r.URL.Query().Get("id")
+		if strings.TrimSpace(id) == "" {
+			writeError(w, http.StatusBadRequest, fmt.Errorf("trace id is required"))
+			return
+		}
+		trace, ok, err := ShowTrace(opts.LogPath, id, ParseTraceQuery(r, defaultEventLimit))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusNotFound, fmt.Errorf("trace not found"))
+			return
+		}
+		writeJSON(w, trace)
+	})
+	mux.HandleFunc("/api/lenses", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		writeJSON(w, lenses.list())
+	})
+	mux.HandleFunc(lensFramePrefix, lenses.serveLensFrame)
+	// Lens data is what one lens frame receives from window.beacon.getTrace(). The session page
+	// fetches it and hands it to the frame over a MessageChannel; the frame itself never calls
+	// this route, because its sandbox and CSP give it no network.
+	mux.HandleFunc("/api/lens-data", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		// The session page asks by session (the events it lists); other callers ask by trace.
+		trace := strings.TrimSpace(r.URL.Query().Get("trace"))
+		session := strings.TrimSpace(r.URL.Query().Get("session"))
+		if (trace == "") == (session == "") {
+			writeError(w, http.StatusBadRequest, fmt.Errorf("exactly one of trace or session is required"))
+			return
+		}
+		lensOpts := LensDataOptions{UserMode: rulesUserMode}
+		var (
+			data LensDataV1
+			ok   bool
+			err  error
+		)
+		if trace != "" {
+			data, ok, err = BuildLensData(opts.LogPath, trace, lensOpts)
+		} else {
+			data, ok, err = BuildSessionLensData(opts.LogPath, session, lensOpts)
+		}
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusNotFound, fmt.Errorf("trace not found"))
+			return
+		}
+		writeJSON(w, data)
+	})
+	mux.HandleFunc("/api/memory", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		resp, err := ReadMemory(opts.LogPath, parseMemoryQuery(r))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, resp)
+	})
+	mux.HandleFunc("/api/tokens", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		// Token rollups need the full matching log in append order, plus
+		// unfiltered SessionStart context for user attribution. tokenOptions
+		// carries the session, so AggregateScopedWithContexts applies the exact
+		// session filter; the dashboard never scopes by run.
+		events, contexts, err := ReadTokenEventsAppendOrder(opts.LogPath, parseQuery(r, maxEventLimit))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		tokenOpts := tokenOptions(r)
+		// The same overrides file `beacon token-usage` reads by default, re-read on every request
+		// so an edit shows on the next reload. The dashboard only reads it. An invalid file does
+		// not fail the view: the estimate falls back to list prices and the response's
+		// pricing.overrides.error says why.
+		tokenOpts.Pricer, _ = pricing.LoadPricer(pricing.Default(), pricing.DefaultOverridesPath(rulesUserMode), false)
+		writeJSON(w, tokens.AggregateScopedWithContexts(events, contexts, "", tokenOpts))
+	})
+	// Coverage answers a different question from the rollup above -- "is this all of it" rather
+	// than "what did it cost" -- so it gets its own route rather than a flag on /api/tokens. A
+	// caller asking for spend and a caller asking whether spend is complete want different
+	// filters, and the answers have no fields in common.
+	mux.HandleFunc("/api/tokens/coverage", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		// Only the time window and the harness scope are honored, matching the CLI. The other
+		// filters select usage-bearing events almost by definition -- an event carries no model
+		// unless it carried a model call -- so coverage computed over them would find every
+		// runtime covered and prove nothing. Silence is what this route exists to show, and a
+		// filter that hides the silent rows defeats it.
+		query := parseQuery(r, maxEventLimit)
+		events, _, err := ReadTokenEventsAppendOrder(opts.LogPath, EventQuery{
+			Since: query.Since,
+			Until: query.Until,
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, buildTokenCoverage(events, query.Harness))
+	})
+	mux.HandleFunc("/api/detections", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		resp, err := BuildDetections(rulesUserMode, "")
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, resp)
+	})
+	mux.HandleFunc("/api/findings", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		q := r.URL.Query()
+		resp, err := RunScan(rulesUserMode, opts.LogPath, "", q.Get("session"), q.Get("min_severity"))
+		var noRules *detect.NoRulesError
+		if errors.As(err, &noRules) && len(noRules.Skipped) > 0 {
+			// Every rule needs a newer Beacon: keep the error status, and carry the
+			// skip list so the UI can say which rules and versions.
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": err.Error(), "skipped": detect.SkippedStrings(noRules.Skipped)})
+			return
+		}
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err)
+			return
+		}
+		writeJSON(w, resp)
+	})
+	mux.HandleFunc("/api/event", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		id := r.URL.Query().Get("id")
+		record, ok, err := FindEvent(opts.LogPath, id)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusNotFound, fmt.Errorf("event not found"))
+			return
+		}
+		writeJSON(w, record)
+	})
+	mux.Handle("/", http.FileServer(http.FS(staticRoot)))
+	return securityHeaders(mux), nil
+}
+
+func ListenAndServe(opts Options) error {
+	if opts.Addr == "" {
+		opts.Addr = DefaultAddr
+	}
+	if err := ValidateLoopbackAddr(opts.Addr); err != nil {
+		return err
+	}
+	handler, err := Handler(opts)
+	if err != nil {
+		return err
+	}
+	server := &http.Server{
+		Addr:              opts.Addr,
+		Handler:           RequireLoopbackHost(handler),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	return server.ListenAndServe()
+}
+
+func ValidateLoopbackAddr(addr string) error {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return err
+	}
+	ip := net.ParseIP(host)
+	if ip == nil || !ip.IsLoopback() {
+		return fmt.Errorf("dashboard address must bind to a loopback IP")
+	}
+	return nil
+}
+
+// RequireLoopbackHost rejects requests whose Host header is not a loopback name.
+//
+// Binding to loopback keeps other machines out, but not a web page that DNS-rebinds its own
+// hostname to 127.0.0.1: the browser then treats this server as same-origin with that page and
+// lets it read every response. The Host header still carries the page's hostname, so it is the
+// one place the request can be told apart from a local client.
+func RequireLoopbackHost(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := r.Host
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+		host = strings.Trim(host, "[]")
+		ip := net.ParseIP(host)
+		if !strings.EqualFold(host, "localhost") && (ip == nil || !ip.IsLoopback()) {
+			writeError(w, http.StatusForbidden, fmt.Errorf("request host must be a loopback address"))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func URL(addr string) string {
+	if addr == "" {
+		addr = DefaultAddr
+	}
+	return "http://" + addr
+}
+
+// OpenBrowser is auth.OpenBrowser, which checks for a display on Linux before exec'ing xdg-open.
+// This used to be a second copy of the opener without that check.
+func OpenBrowser(url string) error {
+	return auth.OpenBrowser(url)
+}
+
+func parseQuery(r *http.Request, fallbackLimit int) EventQuery {
+	q := r.URL.Query()
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	if limit == 0 {
+		limit = fallbackLimit
+	}
+	query := EventQuery{
+		Limit:        limit,
+		Q:            q.Get("q"),
+		Harness:      q.Get("harness"),
+		Model:        q.Get("model"),
+		Action:       q.Get("action"),
+		Severity:     q.Get("severity"),
+		Category:     q.Get("category"),
+		Repository:   q.Get("repository"),
+		Session:      q.Get("session"),
+		Trace:        q.Get("trace"),
+		File:         q.Get("file"),
+		Command:      q.Get("command"),
+		MCP:          q.Get("mcp"),
+		Approval:     q.Get("approval"),
+		Decision:     q.Get("decision"),
+		Policy:       q.Get("policy"),
+		Review:       q.Get("review"),
+		WazuhLevel:   q.Get("wazuh_level"),
+		SessionState: q.Get("session_state"),
+	}
+	if since := q.Get("since"); since != "" {
+		if parsed, err := time.Parse(time.RFC3339, since); err == nil {
+			query.Since = parsed
+		}
+	}
+	if until := q.Get("until"); until != "" {
+		if parsed, err := time.Parse(time.RFC3339, until); err == nil {
+			query.Until = parsed
+		}
+	}
+	return query
+}
+
+func tokenOptions(r *http.Request) tokens.Options {
+	q := r.URL.Query()
+	opts := tokens.Options{SessionID: q.Get("session")}
+	if bucket := q.Get("bucket"); bucket != "" {
+		if parsed, err := time.ParseDuration(bucket); err == nil && parsed > 0 {
+			opts.BucketSize = parsed
+		}
+	}
+	if top, err := strconv.Atoi(q.Get("top")); err == nil && top > 0 {
+		opts.TopLimit = top
+	}
+	return opts
+}
+
+func hookStatuses(logPath string, userMode bool) []HookStatus {
+	out := []HookStatus{}
+	add := func(target string, installed bool, path, binaryPath, message string) {
+		status := "not_installed"
+		if installed {
+			status = "configured"
+		}
+		out = append(out, HookStatus{
+			Target:     target,
+			Status:     status,
+			Installed:  installed,
+			Path:       path,
+			BinaryPath: binaryPath,
+			Message:    message,
+		})
+	}
+	level := endpointhooks.LevelUser
+	antigravity := endpointhooks.AntigravityHookStatus(endpointhooks.AntigravityOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("antigravity", antigravity.Installed, antigravity.ConfigPath, antigravity.BinaryPath, antigravity.Message)
+	cline := endpointhooks.ClineHookStatus(endpointhooks.ClineOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("cline", cline.Installed, cline.PluginPath, cline.BinaryPath, cline.Message)
+	cursor := endpointhooks.CursorHookStatus(endpointhooks.CursorOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("cursor", cursor.Installed, cursor.HooksJSONPath, cursor.BinaryPath, cursor.Message)
+	devin := endpointhooks.DevinHookStatus(endpointhooks.DevinOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("devin-cli", devin.Installed, devin.ConfigPath, devin.BinaryPath, devin.Message)
+	devinDesktop := endpointhooks.DevinDesktopHookStatus(endpointhooks.DevinDesktopOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("devin-desktop", devinDesktop.Installed, devinDesktop.ConfigPath, devinDesktop.BinaryPath, devinDesktop.Message)
+	factory := endpointhooks.FactoryHookStatus(endpointhooks.FactoryOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("factory", factory.Installed, factory.SettingsPath, factory.BinaryPath, factory.Message)
+	grok := endpointhooks.GrokHookStatus(endpointhooks.GrokOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("grok", grok.Installed, grok.HooksPath, grok.BinaryPath, grok.Message)
+	hermes := endpointhooks.HermesHookStatus(endpointhooks.HermesOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("hermes", hermes.Installed, hermes.ConfigPath, hermes.BinaryPath, hermes.Message)
+	opencode := endpointhooks.OpenCodeHookStatus(endpointhooks.OpenCodeOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("opencode", opencode.Installed, opencode.PluginPath, opencode.BinaryPath, opencode.Message)
+	openhands := endpointhooks.OpenHandsHookStatus(endpointhooks.OpenHandsOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("openhands", openhands.Installed, openhands.HooksPath, openhands.BinaryPath, openhands.Message)
+	kiro := endpointhooks.KiroHookStatus(endpointhooks.KiroOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("kiro", kiro.Installed, kiro.HooksPath, kiro.BinaryPath, kiro.Message)
+	// The hooks file is the path reported, because it is the one a person would open. The patch
+	// file that mounts the bridge at it is not shown here -- this row carries one path -- and
+	// `beacon endpoint hooks status` reports both.
+	dsh := endpointhooks.DshHookStatus(endpointhooks.DshOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("dsh", dsh.Installed, dsh.HooksPath, dsh.BinaryPath, dsh.Message)
+	kimi := endpointhooks.KimiHookStatus(endpointhooks.KimiOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("kimi", kimi.Installed, kimi.HooksPath, kimi.BinaryPath, kimi.Message)
+	muse := endpointhooks.MuseHookStatus(endpointhooks.MuseOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("muse", muse.Installed, muse.HooksPath, muse.BinaryPath, muse.Message)
+	qwen := endpointhooks.QwenHookStatus(endpointhooks.QwenOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("qwen", qwen.Installed, qwen.SettingsPath, qwen.BinaryPath, qwen.Message)
+	vscode := endpointhooks.VSCodeHookStatus(endpointhooks.VSCodeOptions{Level: level, LogPath: logPath, UserMode: userMode})
+	add("vscode", vscode.Installed, vscode.HooksPath, vscode.BinaryPath, vscode.Message)
+	return out
+}
+
+func writeJSON(w http.ResponseWriter, value interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(value)
+}
+
+func writeError(w http.ResponseWriter, status int, err error) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+}
+
+func methodNotAllowed(w http.ResponseWriter) {
+	writeError(w, http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"))
+}
+
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("X-Frame-Options", "DENY")
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("Cache-Control", "no-store")
+		}
+		next.ServeHTTP(w, r)
+	})
+}

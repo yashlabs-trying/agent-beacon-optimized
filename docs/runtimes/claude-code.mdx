@@ -1,0 +1,238 @@
+---
+title: "Claude Code"
+description: "Beacon support details for Claude Code endpoint telemetry"
+---
+
+## Runtime overview
+
+Beacon supports Claude Code through local OpenTelemetry export to Beacon's localhost collector, optional hook telemetry for richer lifecycle and tool activity, and local session-file sync for historical backfill.
+
+## Prerequisites
+
+Before enabling Claude Code telemetry, make sure:
+
+- Claude Code is installed and available as the `claude` executable for the user or managed endpoint.
+- `beacon endpoint install` has run so the local collector, endpoint config, and runtime log path exist.
+- The install includes the `claude` harness, either through the default harness list or an explicit `--harness claude` value.
+- Your team has reviewed content handling and destination access for prompt telemetry.
+
+## Collection paths
+
+Claude Code exports OTLP telemetry to the local Beacon collector. Beacon writes normalized [endpoint events](/concepts/core-concepts#endpoint-event) to the configured runtime JSONL log and makes them available in the local dashboard.
+
+The OTLP export carries prompts, tool calls, commands, approvals, and token usage, but no session start or end, file reads or diffs, or subagent lifecycle. Those come from Claude Code hooks, which use the same hook adapter as the other supported runtimes, so `beacon endpoint install` writes the user-level hooks together with the OTLP settings whenever the `claude` harness is selected. Check or manage them with the hooks commands:
+
+```bash title="Inspect or remove Claude Code hooks"
+beacon endpoint hooks status --harness claude
+beacon endpoint hooks uninstall --harness claude
+```
+
+User-level hooks are written to `~/.claude/settings.json`, or to `$CLAUDE_CONFIG_DIR/settings.json` when `CLAUDE_CONFIG_DIR` is set, as Claude Code reads it. Project-level hooks are written to `./.claude/settings.json`:
+
+```bash title="User-level hooks are written to ~/.claude/settings.json. Project-level hooks are written to ./.claude/settings.json"
+beacon endpoint hooks install --harness claude --level project
+```
+
+For backfill, Beacon can also read Claude Code's committed JSONL session files under `~/.claude/projects` (`$CLAUDE_CONFIG_DIR/projects` when `CLAUDE_CONFIG_DIR` is set, as Claude Code does):
+
+```bash title="Sync Claude Code session files"
+beacon endpoint claude status
+beacon endpoint claude sync
+```
+
+The sync path is local and offline. It appends mapped events to the runtime log with `harness.collection_method=poll`, so it can recover historical sessions or sessions that ran before hooks were installed, but it cannot hold, approve, deny, or delay tool calls. Use `beacon endpoint claude sync --print` to preview mapped events without writing the runtime log or advancing the cursor.
+
+Install, hook install, discovery, inventory, session sync, `beacon handoff`, `beacon mcp connect` and Beacon's skills install honor `CLAUDE_CONFIG_DIR` as Claude Code does: when it is set, `settings.json`, `.claude.json`, `skills` and `projects` are read and written there instead of `~/.claude` and `~/.claude.json`. The scheduled inventory job starts without your shell's environment, so a per-user `beacon endpoint install` or `repair` writes the `CLAUDE_CONFIG_DIR` it resolved into the job's launchd or systemd definition. If you change `CLAUDE_CONFIG_DIR` later, run `beacon endpoint repair` from a shell that has the new value. System-mode installs do not record it.
+
+## Claude Code Cloud Agents
+
+Beacon also supports proof-of-concept telemetry capture from Claude Code
+cloud agents. The cloud setup path installs ephemeral Beacon hooks inside the
+Claude cloud sandbox, writes `/tmp/beacon/runtime.jsonl`, and uploads the
+session log to customer-managed Google Cloud Storage.
+
+Start with [Claude Code Cloud Agents](/runtimes/claude-code-cloud-agents) when you want to
+test Claude Code cloud agent telemetry without deploying Beacon Cloud.
+
+<Warning>
+  The self-serve GCS path passes a scoped service-account credential to the
+  Claude Code cloud environment. Use it for evaluation and prototypes. For
+  production enterprise deployments, use [Beacon Cloud](/deployment/managed)
+  or contact Beacon about secure forwarding in your own customer-managed
+  infrastructure.
+</Warning>
+
+## Discovery and status
+
+Beacon detects Claude Code through the `claude` executable and Claude settings paths. Use `beacon endpoint discover` or `beacon endpoint status` to confirm that Claude Code is present and configured for local telemetry. Use `beacon endpoint claude status` to inspect local session files and how far the sync cursor has read.
+
+## Install or configuration support
+
+`beacon endpoint install` configures Claude telemetry settings so Claude Code sends OTLP data to the local collector. It enables detailed tool logging so tool-result events include inputs such as Bash commands, file paths, URLs, search patterns, and MCP server/tool arguments. Claude bounds or truncates some input values.
+
+`beacon endpoint hooks install --harness claude` adds Beacon-managed Claude Code hooks while preserving existing Claude settings and non-Beacon hooks. `beacon endpoint hooks uninstall --harness claude` removes only Beacon-managed Claude hook entries. Install, repair, and uninstall write every non-Beacon hook back exactly as they found it, including `http`, `prompt`, and `agent` hooks and any fields Beacon does not use itself, such as an http hook's `url` and `headers`.
+
+### Model context from API bodies
+
+Some of what Claude Code gives the model appears in no OTLP event except its API-body logs (`OTEL_LOG_RAW_API_BODIES`). Those logs also carry the system prompt, the whole conversation, tool definitions, and tool results on every model call, so Beacon leaves them off unless you opt in:
+
+```bash title="Record model context Claude Code reports only in its API bodies"
+beacon endpoint install --claude-capture-model-context
+```
+
+With the flag, install and repair set `OTEL_LOG_RAW_API_BODIES=1` in `~/.claude/settings.json`, and the choice is recorded as `claude_capture_model_context` in Beacon's `config.json`. Without it, they remove an inline setting (`1` or `true`), so a repair without the flag turns capture off. Neither touches `0` (off) or `file:<dir>` (bodies written to files). `beacon ci exec` does not set the variable; a CI job opts in by setting `OTEL_LOG_RAW_API_BODIES=1` (or `true`) in its own environment, and the job's collector then keeps the same context an opted-in endpoint does.
+
+Whatever turned the bodies on, the collector filters them in its `claude_api_body` processor. The processor runs before every destination, including the local runtime log, Falcon, and Splunk HEC. With capture on, it keeps only the context listed below. With capture off, it drops every body, so turning `OTEL_LOG_RAW_API_BODIES` on yourself sends Beacon nothing it keeps. The `claude_code.api_request` event already records each model call.
+
+The generated collector config names the `claude_api_body` processor, which collectors older than this release do not have. Install checks the collector binary it is about to use and stops with an error if the processor is missing, for example when an older `beacon-otelcol` is earlier on `PATH` or passed with `--collector`.
+
+#### Fetched web pages
+
+Claude Code's WebFetch tool does not return the page to the main model. It sends the page to a separate summarizer model call, and the main model only receives the summary. The only place Claude Code reports that page is the summarizer call's API request body.
+
+- **The WebFetch summarizer request** (`query_source=web_fetch_apply`) is kept, but only the text of its user messages: the fetched page and the summarizer prompt. Beacon removes `body` and `body_ref` and forwards that text as `beacon.web_fetch.input`, with secrets redacted and capped at 2048 characters. It never includes the summarizer's system prompt, tool definitions, or non-text blocks.
+- **The summarizer's response is dropped** with every other body.
+
+In the runtime log, the page is a `tool.invoked` event for the `WebFetch` tool, with the text in `gen_ai.tool.call.result`. It is not recorded as `prompt.text`, because it is third-party content, not something the user typed. Threat rules see it as `e.gen_ai.tool.call.result_text`, the same as fetched pages from other runtimes, and `indirect-injection-in-tool-result` evaluates it.
+
+Limits:
+
+- Every destination gets the same copy: secrets redacted, then at most 2048 characters. The `content` marker describes that stored copy, and `content.redacted` and `content.truncated` say what was done to it.
+- Claude Code truncates long inline bodies and sets `body_truncated`. Beacon then keeps the page text up to the cut and marks the event `content.truncated`.
+- Beacon never reads body files, so `file:<dir>` mode does not record the page.
+- Beacon selects the summarizer request by its `query_source` value, as observed in Claude Code 2.1.291. If a later release renames that value, the page is no longer recorded.
+
+#### MCP tool descriptions
+
+Every model request carries the tool definitions Claude Code shows the model, and its API request body is the only place Claude Code reports them. A description is server-authored text the model reads before it decides to call anything, which is where tool poisoning puts its instructions.
+
+- **From each request body,** Beacon keeps only the name and description of each MCP tool (`mcp__<server>__<tool>`). Built-in tools, input schemas, the conversation, and the system prompt are not kept. Each description is redacted and capped at 4096 characters.
+- **Each tool is listed once per session,** and again only when its description changes. Every request repeats the whole tools array, so the processor remembers what it has sent for each session and forwards only what is new, as `beacon.mcp.tools`, in place of the body. A collector restart forgets that, which costs one more listing per tool.
+- **In the runtime log,** each tool is an `mcp.tool_listed` event with `mcp.server`, `mcp.tool`, `gen_ai.tool.name`, and `gen_ai.tool.description`. It is an advertisement, not a call, so it is never counted as MCP activity. `mcp-poisoned-tool-description` matches it, so a poisoned description raises an alert when the model is shown it rather than only once the tool runs.
+
+Limits:
+
+- Claude Code lists MCP tools after its built-in tools, and the tools array comes after the conversation and system prompt. With capture on, install sets `CLAUDE_CODE_OTEL_CONTENT_MAX_LENGTH=262144` for inline bodies unless you set a limit yourself, and turning capture off removes it unless you changed it. A request cut short keeps only the tools that arrived whole. In a one-prompt session the MCP tools start about 72 KB in.
+- With the flag, the local OTLP receiver accepts gRPC messages up to 32 MiB, so a Claude Code export that carries several request bodies is not rejected along with the events batched with it.
+- Beacon never reads body files, so `file:<dir>` mode does not record descriptions.
+- The processor counts a tool as listed when it hands the record on. Exports run later, and their errors do not reach the processor, so a listing that a destination fails to write is not sent again for that session until the description changes or the collector restarts. Without the processor, the local log and Falcon count a listing only once they have written it.
+
+Managed-ingest privacy is a separate forwarding policy and does not switch off local collection.
+
+## Telemetry coverage
+
+| Area | Support |
+|------|---------|
+| Prompt telemetry | Supported when emitted through Claude Code OTLP or hooks |
+| Agent responses | Supported live. The `Stop` hook records the turn's final reply from the payload's `last_assistant_message` as `agent.message`, with the text in `gen_ai.output.messages`; nothing is written for a turn that ended without one. `beacon endpoint claude sync` also recovers every committed assistant message from transcripts |
+| Turn identity | Supported. Claude Code's `prompt.id` is kept as `prompt.id` on OTLP events; hook events after the prompt read the same id from the session transcript, and `beacon endpoint claude sync` reads it from `promptId`. The hook-recorded prompt itself takes its id from the OTLP `user_prompt` event, because the hook runs before Claude Code records the prompt |
+| Command, tool, and file telemetry | Supported through Claude Code OTLP with detailed tool inputs enabled. Command output requires hooks |
+| Token usage and cost | Supported through OTLP token and cost metrics, with per-model and per-session attribution |
+| Hook lifecycle and tool telemetry | Optional through `beacon endpoint hooks install --harness claude` |
+| Historical session sync | Supported through `beacon endpoint claude sync`; marked as poll collection |
+| Claude Code cloud agent sessions | Supported through cloud sandbox hooks with GCS upload |
+| Model-visible skill listings | Supported through Claude transcript `attachment.type=skill_listing`, one part per skill in `gen_ai.system_instructions`, with the skills named in `system_context`; invoked skill file bodies remain excluded |
+| Model-visible MCP tool descriptions | Opt-in with `--claude-capture-model-context`. One `mcp.tool_listed` per MCP tool per session; see [MCP tool descriptions](#mcp-tool-descriptions) |
+| Local JSONL and dashboard | Supported |
+| MDM deployment | Supported through the system-mode package or MDM-managed settings |
+
+Claude Code hooks cover `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `Stop`, `SubagentStart`, `SubagentStop`, `PermissionRequest`, and `SessionEnd`. Pre-tool matching includes common Claude tools such as `Bash`, `Edit`, `Write`, `MultiEdit`, `Read`, `Glob`, `Grep`, `WebFetch`, `WebSearch`, `Agent`, and `mcp__.*`.
+
+The `SessionStart` hook also appends `export BEACON_SESSION_ID=<id>` and `export BEACON_HARNESS=claude_code` to the file Claude Code names in `CLAUDE_ENV_FILE`, so the shell commands of the session know which session they belong to and [`beacon share --current`](/cli/share#sharing-this-session) can share it. Nothing else is written there, and an id that is not a plain identifier is never written.
+
+The `PostToolUse` hook records an MCP tool's result on its live `mcp.tool_invoked` event, in `gen_ai.tool.call.result.content`. Claude Code rewrites the server's result before the hook sees it: an image stays an image, and text, audio, embedded resources and resource links arrive as text blocks, with audio and binary resources as notes naming the file Claude Code saved them to. Beacon stores an image as its media type, decoded size and SHA-256 rather than its bytes. Detection rules match the text blocks.
+
+## Normalized OTLP events
+
+Beacon maps Claude Code's OTLP logs into canonical endpoint actions instead of
+treating every unrecognized record as a tool invocation:
+
+- `user_prompt` becomes `prompt.submitted`.
+- A successful or failed `Bash` `tool_result` becomes `command.executed`, with
+  the decoded command in `command.command` and the reported duration in
+  `command.duration_ms`.
+- `Read` results become `file.read`; `Write`, `Edit`, and `NotebookEdit` results
+  become `file.modified`, with the decoded path in `file.path`.
+- Accepted and rejected `tool_decision` records become `approval.allowed` and
+  `approval.denied`. Bash decisions also retain the full command when Claude
+  provides it.
+- API requests, assistant responses, hooks, plugins, skills, compaction, and
+  other ordinary lifecycle records become session activity. API and internal
+  errors become `session.error`; refusals and permission-mode changes become
+  `session.status`.
+- MCP server connection lifecycle records become `mcp.connection`, not
+  `mcp.tool_invoked`.
+
+Claude reports tool success and duration but does not provide an exact process
+exit status, so Beacon does not invent `command.exit_code`. The original OTLP
+attributes remain under `raw.attributes`, subject to the configured redaction
+and event-size controls. Future full-body `claude_code.*` lifecycle records
+default to `session.activity` until Beacon assigns a more specific mapping.
+
+Optional hooks add detail that OTLP does not report. A pre-tool hook can appear
+as `tool.invoked`, and the Bash post-tool hook records the command's output in
+`command.output`. For a successful command, Claude reports stdout and stderr
+separately, so Beacon stores stdout first and stderr after it. When a command
+exits with a non-zero status, Beacon also records the exit code in
+`command.exit_code` and sets the event's severity to `high`. Output is redacted
+and size-limited like other retained content.
+
+Detailed tool inputs can contain sensitive command arguments, paths, URLs, search terms, and MCP request data. Beacon sends this telemetry only to the configured local collector during normal endpoint execution; apply the same access, retention, and redaction controls used for other retained prompt and tool data.
+
+## Session-file sync
+
+`beacon endpoint claude sync` reads committed Claude Code transcripts after Claude has written them. The cursor is stored in Beacon endpoint state, not in Claude's directory, and tracks files by line so scheduled runs do not re-append the same records. A partly written trailing record is left for the next sweep.
+
+Claude Code writes one streamed API response as several transcript lines, one per content block (thinking, text, each tool call), and every line carries a copy of the response's `message.usage`. The sync emits one `token.usage` event per response, not per line: lines are grouped by `message.id` and `requestId`, and the event carries the snapshot with the largest output count, because lines written before the stream finished carry a placeholder output count. When a sweep lands between two lines of one response, the next sweep adds only what the later lines report beyond what was already counted, so the total is the same however the response is split across sweeps. A forked or resumed session that replays earlier responses into another file is counted once when both files are read in the same sweep.
+
+When Claude Code records an `attachment` whose type is `skill_listing`, sync emits
+`session.context` with one `text` part per skill in `gen_ai.system_instructions`,
+split on the skill names the attachment reports, and a `system_context` block
+(`kind: skill_listing`, `source: transcript`) naming each skill with the same
+`skill_name_hash` the configuration inventory records. Rules match the text as
+`e.gen_ai.system_instructions_text`. This is the model-visible index (skill
+names and descriptions), not an operator prompt, so it is never written to
+`prompt` or `gen_ai.input`. Other attachments and invoked skill bodies are not
+captured by this mapping. Metadata-only managed forwarding removes the listing
+text before upload and keeps `system_context`.
+
+Run `beacon endpoint claude sync --watch`, or schedule one-shot sweeps, if you want the poll path to stay current. The live OTLP and hook paths remain the real-time integrations; the poll path is for backfill and catch-up.
+
+### Large backfills and log rotation
+
+The runtime log keeps the live file plus five archives, 10 MiB each, and every rotation deletes the oldest archive. A first sync over a long Claude Code history can produce far more than that window. A sweep never rotates out its own output. When writing the next event would delete a log file that holds the sweep's output, the sweep stops. It decides from where its files are at that moment, so it holds even when the hooks or the collector rotate the log during the sweep. It leaves the cursors of the remaining sessions (including the one it stopped inside) where they were and exits non-zero:
+
+```text
+claude sync: 3496 sessions, 168 changed, 33689 events (33689 retained), 0 errors
+  stopped before log rotation would discard this sweep's own events; 3329 session(s) left pending for the next sweep.
+```
+
+With `--json`, the summary carries `events_retained` (events this sweep wrote that are still in the log or its archives when it finishes), `events_rotated_out` (events another writer's rotations discarded during the sweep, which also makes the sweep exit non-zero), `retention_limited`, and `sessions_pending`.
+
+The next sweep continues where this one stopped. The guard covers one sweep at a time, so the next sweep's rotations can discard the previous sweep's output. That includes `--watch`, which sweeps again on every interval. If you need every event, ship or copy the log files between sweeps. To backfill in one sweep, raise the file size for this sync only:
+
+```bash
+beacon endpoint claude sync --rotate-bytes 1073741824
+```
+
+`--rotate-bytes` cannot be smaller than the default 10 MiB. The archive count stays at five, because the hooks and the collector prune any archive past five on their next rotation. After the sync, those writers keep rotating at 10 MiB, so the large file becomes an ordinary archive and stays readable until five more rotations have happened. Hooks and the collector also rotate at 10 MiB while the sync runs, so live agent activity during a large backfill can stop the sweep early. The sweep then stops at the window, and none of its events are lost. Run large backfills while agents are idle.
+
+## Deployment notes
+
+For MDM deployments, use the signed and notarized macOS `.pkg` so endpoint events land in `/var/log/beacon-agent/runtime.jsonl`. The package installs the endpoint agent under `/opt/beacon`, creates system endpoint configuration, and loads the local collector LaunchDaemon.
+
+If a system collector is running while the CLI is reading the default per-user log, `beacon endpoint status` and the local dashboard surface a runtime-log source warning so you can tell where OTLP events are being written.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Supported agent harnesses" icon="list-check" href="/runtimes">
+    Return to the runtime support overview.
+  </Card>
+  <Card title="Agent harness integration model" icon="plug" href="/runtimes/integration-model">
+    See how Beacon discovers and configures supported runtimes.
+  </Card>
+  <Card title="Runtime hooks" icon="plug" href="/cli/hooks">
+    Install, inspect, and uninstall Claude Code hook telemetry.
+  </Card>
+</Columns>

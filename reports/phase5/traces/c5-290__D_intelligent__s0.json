@@ -1,0 +1,28 @@
+{
+  "task": "c5-290",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-290-alpha",
+    "c5-290-beta"
+  ],
+  "required_evidence": [
+    "c5-290-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's gateway retry count is 6.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.085,
+  "prompt_tokens": 131,
+  "gen_tokens": 11
+}

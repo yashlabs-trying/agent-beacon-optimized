@@ -1,0 +1,155 @@
+---
+title: "Data Inventory"
+description: "Runtime coverage and endpoint event fields Beacon can write"
+---
+
+## Data categories
+
+Beacon writes normalized endpoint events only when supported runtimes provide telemetry through a configured local surface. Each event includes required event, endpoint, and harness context. Optional entities are present only when the source payload provides that context and the configured retention mode allows it.
+
+## Runtime inventory
+
+| Agent harness | Collection path | Commonly available telemetry |
+|---------------|-----------------|------------------------------|
+| Claude Code | Local OTLP export | Prompt, command, tool, and file telemetry when emitted through OTLP |
+| Codex CLI | Local OTLP logs and a selective usage trace plus endpoint hooks | Session, prompt, approval, and tool-result activity; per-user/session/model token usage; metadata-only user context and inventory triggers from hooks |
+| Codex Desktop | Local OTLP logs and a selective usage trace through Codex app-server | Session, prompt, approval, and tool-result activity; per-session/model token usage |
+| Gemini CLI | Opt-in local OTLP | Prompts, tool calls, MCP activity, file operations, and approval-related events emitted through OTLP |
+| Grok Build | Native hooks | Session, prompt, pre-tool, post-tool, failed tool, stop, session-end, command, and file telemetry |
+| OpenCode | Managed plugin hooks | Prompts, assistant text/reasoning, model and usage metadata, tool inputs/results/failures, commands and output, file activity/diffs, web/MCP calls, approvals, and session lifecycle/errors |
+| Cline | Managed plugin hooks | Prompts, model and task usage metadata, tool inputs/results/failures, commands and output, file activity/diffs, MCP calls, and task lifecycle/errors |
+| Qwen Code | Native hooks | Session, prompt, pre-tool, post-tool, failed tool, permission request/approval, subagent, stop, session-end, command, and file telemetry; the verbatim hook payload is retained under `raw.qwen` |
+| Devin CLI | Native hooks | Session, prompt, pre-tool, post-tool, permission request, stop, session-end, approval, and file telemetry |
+| Devin Desktop | Cascade/Windsurf hooks | Prompt, command, MCP tool, file read, and file write telemetry where Desktop exposes Cascade hook payloads |
+| Factory Droid | OTLP HTTP plus optional hooks plus local session-store sync | Session, prompt, assistant messages, reasoning, tool calls/results, write/edit/create hook payloads, token usage, stop, session-end, and available OTLP telemetry |
+| Cursor | Native hooks | Prompt, tool, shell command, MCP-like, approval, and file edit telemetry |
+| DeepSeek Harness | Managed native hooks plus local session-store sync | Live session, prompt, tool, command, file, MCP, subagent, and policy activity; committed assistant text/reasoning, failed tools, persisted results, and token usage from session backfill |
+| GitHub Copilot CLI | Customer-managed OTLP HTTP plus local session-store sync | Live session, prompt, tool, and approval-like activity; committed assistant text/reasoning, complete tool results, commands, file activity, and token usage from session backfill |
+| Kimi Code | Managed native hooks | Session, prompt, tool and failed-tool activity, commands with output and exit code, file reads/edits with diffs, MCP calls, subagents, compaction, and observed permission decisions; no token usage because hooks do not expose it |
+| Claude Cowork | Admin-configured OTLP | Prompt and assistant response content; approvals; command, tool, file, and MCP activity; session lifecycle; model and token usage; runtime-reported cost; source user identifier and cloud origin when emitted through Cowork OTLP |
+| OpenClaw Gateway | Managed plugin, plus gateway-configured OTLP/HTTP | Prompts (the inbound chat message, with the sender and the chat channel), tool inputs and results, commands with exit code and output, file activity and diffs, MCP calls, agent response text, token usage, session and subagent lifecycle, and compaction; the verbatim hook envelope is retained under `raw.openclaw`. Gateway traces and metrics come separately from OpenClaw's own diagnostics export |
+| [Claude.ai](/runtimes/claude-web) (`claude_web`) | Managed browser extension over local OTLP | Prompt text, assistant response text, request and response model, tool call id/name/arguments/results, conversation id, and token usage when the stream carries it, from the claude.ai chat stream |
+| [ChatGPT](/runtimes/chatgpt-web) (`chatgpt_web`) | Managed browser extension over local OTLP | Prompt text, assistant response text, model, tool call activity, and conversation id from the chatgpt.com chat stream. ChatGPT web does not report token usage in its stream |
+
+The browser extension is the only surface that reads content from a site the
+person is signed into personally, so its boundaries are worth stating explicitly.
+It observes the chat request and response streams on `claude.ai`, `chatgpt.com`,
+and `chat.openai.com`, and nothing else. It has no access to other tabs, browsing
+history, or page content elsewhere, and it never writes files.
+
+Its retention setting defaults to `full`, so complete prompt and assistant
+response text is retained in the local runtime log unless an operator changes it
+in the extension's options page. `redacted` scrubs emails and API-key-shaped
+tokens; `metadata` retains no chat text at all. Retention is applied in the
+browser before anything is sent, so under `metadata` the text never leaves the
+page.
+
+## Local inventory metadata
+
+`beacon endpoint inventory` can also report local agent configuration metadata that is not emitted by a runtime event:
+
+| Inventory area | Data retained |
+|----------------|---------------|
+| Configuration files | Runtime, scope, parser status, path/path hash, file hash, modified time, Beacon-managed state, and MCP server counts |
+| MCP servers | Runtime, source path hash, server name/hash, transport, command name/hash, argument count, safe env-key names/counts, and definition hash |
+| Agent skills | Runtime/source family, scope, skill name/hash, root and manifest path/hash, file hash, modified time, and parser status |
+
+By default, inventory is metadata- and hash-only. Beacon hashes config, hook, and `SKILL.md` files for change detection but does not retain file bodies, full MCP server definitions, or skill instruction bodies in inventory JSON, dashboard responses, or inventory snapshot events.
+
+Operators can opt into capturing full definitions with the `--contents` flag (CLI) or the `include_contents` config setting (snapshot telemetry). When enabled, configs, hooks, and skills gain a redacted `content` block and MCP servers gain a full `definition` block. Captured contents always pass through local secret redaction and a per-file size cap (64 KiB by default, configurable with `max_content_bytes`). Redaction replaces values under keys matching `TOKEN`, `SECRET`, `PASSWORD`, `KEY`, `AUTH`, or `CREDENTIAL` with `***REDACTED***`.
+
+Inventory heartbeat telemetry uses a separate local JSONL file, `inventory_state.jsonl`, so `runtime.jsonl` stays scoped to agent runtime activity. A scheduled local job (every 6 hours, and once at install, boot, or upgrade) writes:
+
+- `inventory.heartbeat`, a small event showing that Beacon checked local agent configuration inventory and recording counts plus a snapshot digest.
+- `inventory.snapshot`, a snapshot written when the digest changes or inventory is first initialized. Metadata-only unless `include_contents` is enabled. Scheduled snapshots cover user-level configuration; project-scoped files appear only in `beacon endpoint inventory` output.
+
+By default, snapshots include config-file metadata, MCP server metadata, skill metadata, and hook config metadata across supported local runtimes. They do not include skill instruction bodies, MCP secret values, full environment values, full command arguments, or unrelated config content. When `include_contents` is enabled, snapshots additionally carry redacted, size-limited `content` and `definition` blocks as described above.
+
+## Local memory metadata
+
+`beacon memory` writes a local SQLite store, `memory.db`, next to the endpoint log
+base directory. The store is separate from `runtime.jsonl` and keeps reviewed
+learning artifacts scoped to the resolved project:
+
+| Memory area | Data retained |
+|-------------|---------------|
+| Evaluations | Trace identity, project identity, bounded trace summary, Jev or SubQ question results, evaluator model, usage metadata when returned, and evaluation timestamps |
+| Candidates | Candidate title, body, kind, state, evidence pointers, source evaluation, project identity, and review transition metadata |
+| Approved memories | Approved title, body, kind, project identity, provenance, and review metadata |
+
+Approved memory can be read through local MCP tools (`search_memory`,
+`get_memory`, and `get_memory_context`) and can be rendered into an Agent Skill
+with `beacon memory skills install`. That skill write is an explicit CLI action
+to `.agents/skills/<slug>/SKILL.md`; Beacon hooks and the dashboard never install
+skills or mutate memory review state.
+
+`beacon memory evaluations run` is the only command in this workflow that can call
+an evaluator. Dry runs do not make a network request. When evaluation is enabled, Beacon
+sends a bounded, redacted trace projection to the configured System One endpoint:
+TypeSafe Jev by default, SubQ with `--evaluator subq`, or a compatible internal
+endpoint. Normal endpoint capture, MCP reads, dashboard views, candidate review, and
+skill preview/install do not call an evaluator.
+
+## Required fields
+
+| Field | Meaning |
+|-------|---------|
+| `timestamp` | UTC event time |
+| `vendor` | Always `beacon` |
+| `product` | Always `endpoint-agent` |
+| `schema_version` | Public schema version |
+| `event.kind` | Event family, currently `agent_runtime` |
+| `event.action` | Normalized action such as `command.executed` or `tool.invoked` |
+| `event.category` | Runtime-provided or inferred event category |
+| `severity` | Event severity |
+| `endpoint` | Host and operating system context |
+| `harness` | Runtime that produced the signal |
+
+## Optional entities
+
+| Entity | Purpose | Common fields |
+|--------|---------|---------------|
+| `endpoint` | Device and agent context | `hostname`, `os`, `agent_version` |
+| `user` | Local operating system user context | `name`, `uid` |
+| `harness` | Agent harness context | `name`, `version`, `executable_path`, `config_path` |
+| `session` | Conversation or runtime session context | `id`, `working_directory` |
+| `tool` | Tool invocation context | `name`, `command`, `path` |
+| `file` | File activity context | `path`, `operation`, `language`, `diff_hash`, `diff_bytes` |
+| `command` | Shell or process execution context | `command`, `exit_code`, `duration_ms` |
+| `mcp` | MCP-like server and tool context | `server`, `tool` |
+| `approval` | Approval or policy decision context | `required`, `decision`, `reason` |
+| `policy` | Policy metadata when available | `id`, `name`, `decision`, `enforcement`, `reason` |
+| `prompt` | Prompt text when retention allows it | `text` |
+| `content` | Content handling state | `retention`, `included`, `redacted`, `truncated` |
+| `destination` | Output or validation destination state | `type`, `mode`, `status` |
+| `tenant` | Added by Beacon's ingest service to forwarded events only; never written locally | `organization_id`, `device_id`, `user_id`, `key_id`, `received_at` |
+| `health` | Endpoint or component health state | `component`, `status`, `reason` |
+
+Top-level `model`, `repository`, `branch`, `message`, `raw`, and `field_truncated` fields can add shared context across entities. Content-bearing fields follow the configured retention mode.
+
+For hook-based runtimes, `branch` is derived locally from the workspace's `.git/HEAD` file when the runtime payload does not provide one. This is a local file read only: no git command runs and nothing leaves the machine. Disable it with `BEACON_DISABLE_GIT_METADATA=1`.
+
+OpenCode's managed plugin retains full prompt, completed assistant/reasoning,
+tool argument/result, command output, and diff content in local or
+customer-controlled logs. All values pass through secret redaction and
+per-string truncation. Content events carry original hashes and byte counts;
+oversized events discard raw/content payloads, set `field_truncated`, and remain
+within the endpoint event-size limit.
+
+Cline's managed plugin retains full prompt, tool argument/result, command output,
+and diff content under the same redaction, truncation, hashing, and event-size
+controls. It forwards the remaining hook payload under `raw.cline` after dropping
+functions and cyclic references from Cline's live hook context. Nothing is sent
+anywhere but the local runtime log: Cline's own OpenTelemetry export and its
+hosted prompt-storage feature are neither configured nor used.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Schema fields" icon="table-list" href="/telemetry-schema/fields">
+    Review the full entity model and common fields.
+  </Card>
+  <Card title="Agent harnesses" icon="list-check" href="/runtimes">
+    Compare runtime-specific collection surfaces and telemetry coverage.
+  </Card>
+</Columns>

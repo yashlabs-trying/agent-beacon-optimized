@@ -1,0 +1,24 @@
+=== RUN   TestANNPhase1Matrix
+ANN_MATRIX n=100 M=16 seed=7 recall@1=1.0000 recall@10=0.9531 build_ms=1 p50_us=9 p95_us=13 p99_us=24 heap_mb=0.7 build_alloc_mb=0.1 search_allocs=5.0
+ANN_MATRIX n=100 M=32 seed=7 recall@1=1.0000 recall@10=0.9984 build_ms=2 p50_us=12 p95_us=18 p99_us=33 heap_mb=0.8 build_alloc_mb=0.2 search_allocs=5.0
+ANN_MATRIX n=100 M=64 seed=7 recall@1=1.0000 recall@10=1.0000 build_ms=5 p50_us=14 p95_us=26 p99_us=80 heap_mb=1.0 build_alloc_mb=0.3 search_allocs=5.0
+ANN_MATRIX n=1000 M=16 seed=7 recall@1=0.9531 recall@10=0.8641 build_ms=40 p50_us=14 p95_us=35 p99_us=54 heap_mb=2.7 build_alloc_mb=1.4 search_allocs=7.0
+ANN_MATRIX n=1000 M=32 seed=7 recall@1=0.9844 recall@10=0.9625 build_ms=92 p50_us=21 p95_us=35 p99_us=89 heap_mb=2.3 build_alloc_mb=2.1 search_allocs=7.0
+ANN_MATRIX n=1000 M=64 seed=7 recall@1=1.0000 recall@10=0.9953 build_ms=195 p50_us=34 p95_us=42 p99_us=109 heap_mb=3.9 build_alloc_mb=3.6 search_allocs=7.0
+ANN_MATRIX n=5000 M=16 seed=7 recall@1=0.7656 recall@10=0.7609 build_ms=274 p50_us=14 p95_us=33 p99_us=49 heap_mb=6.8 build_alloc_mb=7.5 search_allocs=8.0
+ANN_MATRIX n=5000 M=32 seed=7 recall@1=0.9844 recall@10=0.9844 build_ms=729 p50_us=24 p95_us=48 p99_us=125 heap_mb=11.5 build_alloc_mb=11.1 search_allocs=8.0
+ANN_MATRIX n=5000 M=64 seed=7 recall@1=1.0000 recall@10=1.0000 build_ms=1999 p50_us=49 p95_us=118 p99_us=132 heap_mb=15.9 build_alloc_mb=19.2 search_allocs=8.0
+ANN_MATRIX n=10000 M=16 seed=7 recall@1=0.8125 recall@10=0.7969 build_ms=646 p50_us=28 p95_us=60 p99_us=105 heap_mb=14.1 build_alloc_mb=15.7 search_allocs=8.0
+ANN_MATRIX n=10000 M=32 seed=7 recall@1=0.9844 recall@10=0.9844 build_ms=1909 p50_us=34 p95_us=66 p99_us=80 heap_mb=17.5 build_alloc_mb=22.9 search_allocs=8.0
+ANN_MATRIX n=10000 M=64 seed=7 recall@1=1.0000 recall@10=1.0000 build_ms=5430 p50_us=69 p95_us=119 p99_us=150 heap_mb=32.3 build_alloc_mb=38.9 search_allocs=8.0
+--- PASS: TestANNPhase1Matrix (11.71s)
+=== RUN   TestANNRecallSynthetic
+ANN synthetic recall@10: 1.0000 (n=5000 dim=128 clusters=32 M=64 ef=100)
+--- PASS: TestANNRecallSynthetic (1.51s)
+=== RUN   TestANNRecallFlatSpace
+    ann_test.go:164: ANN vs hashed-embedder exact recall@10 = 0.000 (informational: flat space)
+--- PASS: TestANNRecallFlatSpace (2.21s)
+=== RUN   TestHybridANNPath
+--- PASS: TestHybridANNPath (0.61s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	16.048s

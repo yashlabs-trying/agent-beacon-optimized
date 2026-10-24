@@ -1,0 +1,271 @@
+---
+title: "beacon git"
+description: "Link git commits to the agent sessions that wrote them"
+---
+
+## Command overview
+
+`beacon git` records which agent sessions produced a commit, as a git note on the commit.
+
+```bash title="Command syntax"
+beacon git setup [flags]
+beacon git status [flags]
+beacon git remove [flags]
+beacon git link [<commit>] [flags]
+beacon git notes [<revision>] [flags]
+beacon git notes push [<remote>] [flags]
+beacon git notes fetch [<remote>] [flags]
+```
+
+`beacon git setup` installs hooks so every new commit in the repository is linked as it is made. `beacon git link` links one commit by hand, which is also how to link commits made before setup.
+
+A link names a session by its harness and session id, for example `beacon:claude_code/0f8e2c1a-…`. The note carries identifiers only, never prompts, output, or diffs: notes can be shared with a remote, and the session's content stays in the local runtime log. `beacon handoff export <session-id>` reads a linked session back.
+
+## How sessions are matched to a commit
+
+Beacon already records every file a supported runtime writes, so matching a commit to its sessions is a read of the local runtime log. No state file is kept and nothing touches the network.
+
+1. **Window.** Beacon reads the log from the parent commit's time up to the commit. The window always covers at least `--min-lookback` (2 hours) and never more than `--max-lookback` (24 hours) before the commit. Events after the commit are ignored, because they cannot have produced it.
+2. **Evidence.** A session wrote a file when the log has, for that session, a `file.created`, `file.modified` or `file.deleted` event, a tool event whose `file.operation` is a write, a shell command whose target is plain to read (`rm`, `mv`, `cp`, `touch`, `tee`, `sed -i`, `git mv`, output redirection), or an `apply_patch` envelope. Reads do not count.
+3. **Overlap.** Beacon compares those paths with the files the commit changes, counting both sides of a rename. A session that wrote at least one of them is linked. Sessions are ordered by how many of the commit's files they wrote, then by how recently.
+
+For a merge commit, only files where the result differs from every parent count: conflict resolutions and edits made while merging. The files a merge brings in were written by the other side's commits, so a clean merge or a `git pull` links nothing.
+
+A link is an inference, not an observation. A session that edited a file a person then rewrote by hand is still linked, and a session that wrote nothing the commit kept is not.
+
+## `beacon git setup`
+
+Installs Beacon's git hooks in the current repository.
+
+```bash
+cd my-repo
+beacon git setup
+```
+
+```text title="Example output"
+created   /work/my-repo/.git/hooks/post-commit (calls beacon-post-commit)
+created   /work/my-repo/.git/hooks/post-rewrite (calls beacon-post-rewrite)
+set       notes.rewriteRef = refs/notes/beacon
+```
+
+- **post-commit** links the new commit, exactly as `beacon git link` would. It reads the local runtime log and writes a git note, typically in tens of milliseconds, and gives up after three seconds rather than hold a commit, recording in the runtime log that it did ([see below](#hook-runs-that-run-out-of-time)). It never prints, never touches the network, and never fails a commit.
+- **post-rewrite** runs after `git commit --amend` and `git rebase` and tidies the note on each rewritten commit, folding the note git copied from the old commit into the one the post-commit hook just wrote.
+- **`notes.rewriteRef`** makes git copy a commit's links to the commit that replaces it when you amend or rebase.
+
+Rebases, cherry-picks and reverts are not attributed afresh: they replay existing commits, and their links, if any, travel with `notes.rewriteRef`.
+
+A hook already in place keeps working. Beacon writes its own `beacon-post-commit` and `beacon-post-rewrite` scripts and adds a short marked block to the top of the hook that calls them, so a hook ending in `exit 0` still runs Beacon's part. Only shell hooks are edited: if the hook is another language, `setup` stops and prints the line to add yourself. The scripts call Beacon by the absolute path it had at setup and fall back to `beacon` on `PATH`, so a GUI git client without Beacon on its `PATH` still links commits.
+
+Hooks live in the repository's shared hooks directory, so one `setup` covers every linked worktree.
+
+| Flag | Description |
+|------|-------------|
+| `--hooks-path` | Install into the `core.hooksPath` directory when one is set (see below) |
+| `--share-notes` | Share links with remotes (see [Sharing links with a team](#sharing-links-with-a-team)). `--share-notes=false` turns sharing off; without the flag, `setup` leaves it as it is |
+| `--share-sessions` | Also share the sessions linked to pushed commits to beacon.sh during each push (see [Sharing sessions on push](#sharing-sessions-on-push)). Implies `--share-notes`; `--share-sessions=false`, `--share-notes=false` and `remove` turn it off |
+| `--share-visibility <level>` | With `--share-sessions`, the visibility of new traces: `direct` (default), `private` or `public` |
+| `--yes` | With `--share-visibility public`, set it up without asking |
+| `-C`, `--cwd <dir>` | Repository to operate on |
+| `--json` | Print what was installed as JSON |
+
+Set `BEACON_GIT_HOOKS=0` to skip the hooks for one command:
+
+```bash
+BEACON_GIT_HOOKS=0 git commit -m "..."
+```
+
+### Hook managers and `core.hooksPath`
+
+Tools such as husky and lefthook point `core.hooksPath` at a directory they own, often one tracked in the repository. `setup` refuses to write there by default and prints the line to add to that tool's `post-commit` hook instead:
+
+```bash
+beacon git hook post-commit || true
+```
+
+Pass `--hooks-path` to install into that directory anyway.
+
+## `beacon git status`
+
+Shows whether each hook is installed, reports an install that is broken (a hook calling a script that is gone, or the reverse), and says whether `notes.rewriteRef` is set. The `overruns` line counts this repository's hook runs that [ran out of time](#hook-runs-that-run-out-of-time) in the last seven days, how many of them were cut short, and the most recent. `--json` prints the same as JSON, with a top-level `installed` field and the counts under `budget_overruns`.
+
+## Sharing links with a team
+
+Links start out local. Nothing leaves the machine until you share them, and sharing is off unless you turn it on.
+
+```bash
+beacon git setup --share-notes
+```
+
+This does two things in the repository:
+
+- **Fetching.** Each remote gets a fetch refspec, `+refs/notes/beacon:refs/notes/beacon-remotes/<remote>`, so a plain `git fetch` or `git pull` brings teammates' links into a read-only copy. `beacon git notes` reads that copy alongside your own links. Your `refs/notes/beacon` is never overwritten by a fetch, so links you have not pushed yet are safe. A fetch or pull that names a refspec on the command line, such as `git pull origin main`, skips configured refspecs; run `beacon git notes fetch` to fetch links then.
+- **Pushing.** A `pre-push` hook shares your links whenever you `git push`. It fetches the remote's links, merges them with yours (every line of both is kept), and pushes only `refs/notes/beacon` to the same remote. It runs with `--no-verify`, so your other pre-push hooks are not run twice. It gives up after ten seconds and never fails your push: if sharing fails, it prints one line and your code is pushed as usual.
+
+This is the one Beacon hook that reaches the network, and only during a push you started, to the remote you are pushing to. `BEACON_GIT_HOOKS=0 git push` skips it for one push, and `beacon git setup --share-notes=false` turns it off.
+
+To share by hand instead, without the hook:
+
+```bash
+beacon git notes push            # the branch's remote, or origin
+beacon git notes fetch upstream  # read another remote's links
+```
+
+A note holds only `beacon:<harness>/<session-id>` lines, optionally followed by the session's share URL, so sharing a link shares that a session produced the commit (and, when the session was shared, where its trace is), not what happened in it. The session itself stays in the runtime log of the machine that ran it.
+
+## Share URLs in notes
+
+When a linked session has been shared with [`beacon share`](/cli/share), its note line carries the trace's link after the session:
+
+```text
+beacon:claude_code/5f0c1d2e-aaaa-4bbb-8ccc-000000000001 https://beacon.sh/s/k3x7q9m2a8c4d1e5f6g7h8j9
+```
+
+The post-commit hook and `beacon git link` take the URL from the `session.shared` event `beacon share` writes in the runtime log, so they still never touch the network. Only an `https` URL on `beacon.sh`, or on the Beacon service the CLI is configured for (`BEACON_AUTH_URL`, or the service you signed in to), is written or shown: a note can come from anyone who pushes to the remote, so a URL on any other host is ignored and the link is shown without it. `beacon git notes` prints the URL after the session, and `--json` includes it as `url`.
+
+## Sharing sessions on push
+
+```bash
+beacon git setup --share-sessions                         # new traces are direct (link only)
+beacon git setup --share-sessions --share-visibility private
+```
+
+With `--share-sessions`, the pre-push hook also shares the sessions linked to the commits being pushed (the one hook that uploads session content, and only because you opted in; it uses the same credential as `beacon share`, never copied anywhere) that have no share URL in their note yet, then writes their URLs into the notes before pushing `refs/notes/beacon`. A session already shared from this machine only gets its URL written. A session this machine does not have (a teammate's) is skipped. It is the same upload as [`beacon share`](/cli/share#what-is-uploaded), with the same redaction, and an existing trace keeps its visibility. Which commits are being pushed comes from the refs git hands the hook on stdin. Beacon's hook block copies them for Beacon and replays them to the rest of the repository's hook, so `git lfs pre-push` and similar steps still see them. Called through the `beacon git hook pre-push "$@" || true` line added to a hook manager or a hook in another language, Beacon leaves stdin alone and shares no sessions (it cannot tell which refs are being pushed); it still shares the commit links and prints a one-line note.
+
+- It runs only during a push you started, and reads at most 100 pushed commits and shares at most 10 sessions per push.
+- It uses your `beacon login` sign-in (with `traces:write`) or `BEACON_API_KEY`. Without either it shares nothing and prints nothing.
+- It shares within the hook's ten seconds, held to the clock: uploads get six seconds, after which the hook writes the URLs of the uploads that finished into the notes and pushes the notes ref with the time that is left (at least one and three seconds), leaving anything still running behind. It never fails the push; a failure prints one line.
+- `public` lists every session linked to a pushed commit in Discover, so `setup` asks first, and without a terminal needs `--yes`.
+- The choice is stored in the repository's own config (`beacon.shareSessions`, `beacon.shareVisibility`), so it applies to this clone only. `BEACON_GIT_HOOKS=0 git push` skips it for one push.
+
+A `pre-push` hook installed by an older Beacon does not pass git's list of pushed refs to Beacon; run `beacon git setup` again to refresh it.
+
+## `beacon git remove`
+
+Removes Beacon's scripts, its blocks in the hooks, its `notes.rewriteRef` value, and the fetch refspecs `--share-notes` added, leaving everything else as it was. A hook that held nothing but Beacon's block is deleted. Links already written stay in `refs/notes/beacon`.
+
+## `beacon git link`
+
+Links a commit (default `HEAD`) and writes the note.
+
+```bash
+beacon git link
+beacon git link 3f6aa6c --dry-run
+```
+
+```text title="Example output"
+commit 3f6aa6c04b78  agent change
+window 2026-09-27 15:33:23 .. 2026-09-27 17:34:23
+  linked          claude_code/sess-claude-e2e  3 of 3 file(s): keep.txt, src/app.go, stale.txt
+Wrote 1 link(s) to refs/notes/beacon.
+```
+
+Running `link` again adds only what is new. Links already on the commit, including a teammate's, are kept, as is any other text in the note.
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Show the links without writing the note |
+| `--min-lookback <duration>` | Always read at least this far before the commit (default `2h`) |
+| `--max-lookback <duration>` | Never read further than this before the commit (default `24h`) |
+| `--log-path <path>` | Runtime JSONL log to read (default the local runtime log) |
+| `-C`, `--cwd <dir>` | Repository to operate on |
+| `--json` | Print the result, with every candidate session and its matching files, as JSON |
+
+## `beacon git notes`
+
+Lists recent linked commits reachable from a revision (default `HEAD`).
+
+```bash
+beacon git notes --limit 50
+beacon git notes origin/main --json
+```
+
+| Flag | Description |
+|------|-------------|
+| `--limit <n>` | Number of commits to walk (default 20); commits without links are skipped. Links fetched from remotes are included |
+| `-C`, `--cwd <dir>` | Repository to operate on |
+| `--json` | Print commits and their links (with `url` when a link carries a share URL) as JSON |
+
+## Runtime log events
+
+Each new link is also recorded in the runtime log as a `session.commit_linked` event in the linked session's own timeline, so the dashboard, `beacon endpoint traces`, handoff briefs, rules and any forwarding destination see the commit alongside the work that produced it. `link` and the hook record an event only for a link they add: a dry run, or a commit already linked to the session, records nothing.
+
+```json title="Example event (abridged)"
+{
+  "event": { "action": "session.commit_linked", "category": "session", "fidelity": "inferred" },
+  "harness": { "name": "claude_code" },
+  "session": { "id": "sess-claude-e2e", "working_directory": "/work/my-repo" },
+  "repository": "/work/my-repo",
+  "branch": "main",
+  "vcs": {
+    "ref": { "head": { "revision": "3f6aa6c04b78…", "name": "main", "type": "branch" } },
+    "repository": { "url": { "full": "https://github.com/org/my-repo.git" } },
+    "attribution": { "method": "file_overlap", "changed_files": 3, "matched_files": 3 }
+  },
+  "message": "commit 3f6aa6c04b78 linked to this session: it wrote 3 of the 3 file(s) the commit changes"
+}
+```
+
+- `event.fidelity` is `inferred`: the link is Beacon's conclusion from file overlap, not something the runtime reported.
+- `vcs.ref.head.name` is the branch HEAD was on at commit time. It is empty for a detached HEAD, or for an older commit linked by hand, whose branch git cannot say.
+- `vcs.repository.url.full` is the URL of the remote the branch tracks, or `origin`, with any user name, token, or query string removed.
+- The event carries identifiers and counts only: no file paths, diff, or commit message.
+
+A rule can match on these fields, for example a commit to `main` that one session wrote in full:
+
+```yaml
+match: >
+  e.event.action == "session.commit_linked" &&
+  e.vcs.ref.head.name == "main" &&
+  e.vcs.attribution.matched_files == e.vcs.attribution.changed_files
+```
+
+## Hook runs that run out of time
+
+The hooks hold up a command a person is waiting on, so each gives up when its budget runs out: three seconds for post-commit and post-rewrite, ten for pre-push. Giving up is silent on the terminal, and a post-commit hook that gives up leaves the commit unlinked. So each run that runs out of time writes one `git.hook_budget_exceeded` event to the runtime log.
+
+```json title="Example event (abridged)"
+{
+  "event": { "action": "git.hook_budget_exceeded", "category": "system", "kind": "beacon_system", "fidelity": "observed" },
+  "severity": "low",
+  "harness": { "name": "beacon" },
+  "repository": "/work/my-repo",
+  "vcs": {
+    "hook": {
+      "name": "post-commit",
+      "phase": "attribute",
+      "budget_ms": 3000,
+      "elapsed_ms": 3290,
+      "phase_elapsed_ms": 3250,
+      "git_spawns": 14,
+      "cut_short": true
+    }
+  },
+  "message": "post-commit hook ran out of time in attribute: 3.3s of its 3s budget, 14 git process(es); its work was cut short"
+}
+```
+
+- `vcs.hook.phase` is the step the hook was in when its time ran out. Post-commit runs `open_repository`, `attribute` (reading the runtime log and writing the note) and `record_link_event`; post-rewrite runs `open_repository` and `normalize_notes`; pre-push runs `open_repository`, `share_sessions` (with `--share-sessions`) and `push_notes`.
+- `vcs.hook.elapsed_ms` is the whole run and `vcs.hook.phase_elapsed_ms` the part of it spent in that phase, so a slow earlier step shows as the difference. Pre-push holds its share phase to six of its ten seconds, so a share phase that runs out records an elapsed time under the budget.
+- `vcs.hook.git_spawns` is how many git processes the run started. Each costs a few milliseconds on macOS and Linux, and can cost far more on a Windows machine that scans every new process.
+- `vcs.hook.cut_short` is true when running out of time left work undone: a commit left unlinked, a link event, note or share URL left unrecorded, or the notes ref left unpushed. It is false for a run whose last step finished after the deadline, which is recorded as `info` rather than `low`.
+- `repository` is empty when the hook ran out before it could resolve the repository.
+
+`beacon git status` counts these events for the repository, and [`beacon endpoint doctor`](/cli/endpoint-doctor#git_hook_budget) for every repository. A commit left unlinked can be linked with `beacon git link <commit>`.
+
+## Note format
+
+Links live under `refs/notes/beacon`, one per line:
+
+```text
+beacon:<harness>/<session-id> [<share-url>]
+```
+
+`<harness>` is Beacon's canonical harness name (`claude_code`, `codex_cli`, `cursor`, …). A session id has no whitespace, no control or non-ASCII characters, and at most 256 characters. The first field after whitespace is the session's [share URL](#share-urls-in-notes) when it is an allowed `https` URL (at most 512 characters); anything else after whitespace is reserved for later fields and ignored. Lines that do not start with `beacon:` are ignored. When the same link appears with and without a URL (two people's notes merged), the line with the URL is kept.
+
+Beacon updates the note with a compare-and-swap on the notes ref, so two commits made at the same moment in two worktrees of one repository never lose each other's links.
+
+To see links in `git log`, including those fetched from remotes:
+
+```bash
+git log --notes=beacon --notes='beacon-remotes/*'
+```

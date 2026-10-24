@@ -1,0 +1,27 @@
+{
+  "task": "a1-20",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-20-fixed"
+  ],
+  "required_evidence": [
+    "a1-20-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "To fix the ingest worker count problem in the new environment, you should add a bounded backoff.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 1.698,
+  "prompt_tokens": 136,
+  "gen_tokens": 21
+}

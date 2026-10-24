@@ -1,0 +1,11 @@
+--- open/close no query ---
+P3B_CONN open_close_noquery n=2000 per_us=4.8
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.016s
+--- materialised perop vs shared, 16 clients ---
+P3B_CONN perop_query concurrency=16 p50=3564 p95=5996 p99=7683 n=21472
+P3B_CONN shared_pool concurrency=16 p50=67 p95=304 p99=5860 n=294569
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.411s
+--- materialised perop vs shared, 8 clients ---
+P3B_CONN perop_query concurrency=8 p50=1641 p95=3059 p99=4557 n=22491
+P3B_CONN shared_pool concurrency=8 p50=80 p95=177 p99=1933 n=282894
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	10.622s

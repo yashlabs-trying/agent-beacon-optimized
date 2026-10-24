@@ -1,0 +1,162 @@
+---
+title: "beacon endpoint inventory"
+description: "Show installed, configured, and observed Beacon endpoint inventory"
+---
+
+## Command overview
+
+`beacon endpoint inventory` shows Beacon endpoint inventory across configured harnesses, detected local runtimes, hook integrations, and observed runtime events.
+
+```bash title="Command syntax"
+beacon endpoint inventory
+```
+
+Use inventory when you need a fleet-friendly view of what Beacon is configured to monitor and what the endpoint has actually observed. By default, inventory focuses on configured, detected, or observed targets. Add `--all` to include every supported target, including runtimes and configuration files that are not detected on the host.
+
+`beacon inventory` is a top-level alias for `beacon endpoint inventory`.
+
+## Inventory data
+
+Inventory can include:
+
+- Endpoint config path, runtime log path, and configured OTLP harnesses
+- Detected supported runtimes and telemetry status, including MDM-managed launch-environment state for GitHub Copilot CLI and Factory Droid
+- Hook and managed-plugin integration status for Antigravity CLI, Claude Code, Cline, Cursor, Devin CLI, Devin Desktop, Factory Droid, Grok Build, Hermes Agent, Oh My Pi, OpenCode, Pi, and Qwen Code
+- Supported agent configuration files and MCP server configuration context where Beacon can inspect them locally, including Claude Code `~/.claude.json`, Cursor `mcp.json`, and fx `~/.fx/settings.json`, `~/.fx/mcp.json`, and a workspace `.mcp.json`
+- Local agent skill manifests discovered under supported skill roots, including symlinked Claude Code skill directories, reported as metadata and hashes by default (add `--contents` for redacted full bodies)
+- Recently observed Beacon runtime events when the runtime log exists
+- Admin-configured integration observations such as Claude Cowork and OpenClaw Gateway events
+
+Human-readable and JSON inventory use the same default filtering: configuration records, MCP server context, and skill manifests are shown when they are relevant to the local endpoint state. Use `--all` with `--json` when you need the complete supported inventory surface for fleet comparison or troubleshooting.
+
+Use the section filters when you only need one inventory surface:
+
+- `--mcp` shows MCP server inventory and the source config files that define MCP servers.
+- `--skills` shows local agent skill manifests.
+- `--hooks` shows hook integration status and hook config files.
+
+The section filters can be combined. For example, `--mcp --skills --json` prints only MCP and skill inventory buckets in the JSON output.
+
+## Capturing full definitions
+
+By default inventory is metadata- and hash-only: it reports paths, hashes, MCP transport, command basenames, argument counts, and safe environment key names, but never the raw file bodies.
+
+Add `--contents` when you need to see the **full definitions** of config, hook, and skill files:
+
+- Each config and hook file gains a `content` block with the raw file body.
+- Each skill manifest gains a `content` block with the `SKILL.md` body.
+- Each MCP server gains a full `definition` block (complete command, arguments, URL, and environment) instead of only the summarized metadata.
+
+Captured contents are always passed through local redaction and a size limit:
+
+- Values held under secret-looking keys (matching `TOKEN`, `SECRET`, `PASSWORD`, `KEY`, `AUTH`, or `CREDENTIAL`) are replaced with `***REDACTED***`. The `content.redacted_count` field reports how many values were redacted.
+- Bodies are truncated to a per-file byte cap (64 KiB by default) and flagged with `content.truncated`. The `content.bytes` field always reports the original file size.
+
+```bash title="Show full, redacted MCP definitions"
+beacon endpoint inventory --mcp --contents
+```
+
+Content capture is opt-in and offline; `--contents` only reads files inventory already inspects locally.
+
+## Inventory heartbeats
+
+A scheduled local job appends inventory telemetry to a separate `inventory_state.jsonl` file beside `runtime.jsonl`. It runs once when it is loaded (install, repair, reboot, package upgrade) and then every 6 hours, on every install in both modes: a LaunchAgent (`com.beacon.endpoint.inventory`) or LaunchDaemon on macOS, a `beacon-inventory.timer` under the user or system scope on Linux. Agent hooks no longer trigger inventory; an idle machine reports on the same schedule as a busy one.
+
+- `inventory.heartbeat` records that Beacon checked local agent configuration inventory, including counts and a snapshot digest. Every run writes one; it is the endpoint's liveness signal.
+- `inventory.snapshot` records the current metadata-only inventory. It is written only when the snapshot digest changed since the last run.
+
+A system-mode job runs as root and inventories the active console user's home. When nobody is logged in, or the console is held by a macOS service account such as `_mbsetupuser` at the login window, it still writes the heartbeat, with `user_scope.mode` set to `no_console_user`, and no snapshot. Runtime state files the runtime rewrites on every session (`~/.claude.json`) are reported with their hash but left out of the change digest, so `inventory.snapshot` is written when something inventory-relevant changed (a config, hook, skill, or MCP server), not on every Claude Code session. On a Mac with more than one console user the job keeps the last digest per home, so a switch between users is not reported as a change. The scheduled scan covers user-level configuration only; project-scoped files (`.cursor/mcp.json`, `.claude/settings.json` in a repository) are reported by `beacon endpoint inventory` run from that directory, not by the job.
+
+launchd and systemd start the job without your shell's environment, so a per-user `beacon endpoint install` or `repair` writes the variables that move a runtime's user directory into the job's definition, taking each value from the shell it runs in: `CODEX_HOME`, `HERMES_HOME` and `HERMES_DATA_DIR_SUFFIX`, `CLINE_DIR`, `GEMINI_CLI_HOME`, `CLAUDE_CONFIG_DIR`, `KIRO_HOME`, `KIMI_CODE_HOME`, `DSH_HOME`, `OH_PERSISTENCE_DIR`, `OPENCLAW_STATE_DIR`, `XDG_CONFIG_HOME`, `PI_CODING_AGENT_DIR`, `OMO_CODING_AGENT_DIR`, `SENPI_CODING_AGENT_DIR`, `PRIME_AGENT_CODING_AGENT_DIR`, `PI_CONFIG_DIR`, `OMP_PROFILE` and `PI_PROFILE`. A relative path is recorded as the absolute path it named at install time. If you change one of them later, run `beacon endpoint repair` from a shell that has the new value. A system-mode job records none of them, since the installer's environment is root's.
+
+By default, inventory snapshots include config file metadata, MCP server metadata, skill metadata, and hook config metadata across supported local runtimes. They do not include skill instruction bodies, MCP secret values, full environment values, full command arguments, or unrelated config content.
+
+Set `include_contents` to opt the snapshot telemetry into capturing full definitions, matching the `--contents` CLI behavior. When enabled, `inventory.snapshot` events carry redacted, size-limited config/hook/skill `content` blocks and full MCP server `definition` blocks. Secret-looking values are redacted and bodies are truncated to `max_content_bytes` (64 KiB by default). This setting is off by default so the snapshot contract stays metadata-only unless an operator explicitly enables it.
+
+The job is configured in the existing endpoint config file. Omit `runtimes` to scan all supported inventory runtimes, or set it when you intentionally want a narrower snapshot. `enabled: false` removes the job on the next install, repair, or package upgrade and stops the writer; a `ttl_seconds` key written by older versions is ignored.
+
+```json title="~/.beacon/endpoint/config.json"
+{
+  "inventory_heartbeat": {
+    "enabled": true,
+    "include_contents": false,
+    "max_content_bytes": 65536
+  }
+}
+```
+
+`beacon endpoint status` prints an `Inventory heartbeat:` line with the interval, whether the job is loaded, and when it last wrote; `--json` carries the same in `inventory_heartbeat`. The hidden `beacon endpoint inventory install-daemon [--user|--system]` command re-reconciles the job with the config and loads it, which also fires a heartbeat at once; the package postinstall runs it on every upgrade.
+
+For a manual smoke test, add a harmless test MCP server to `~/.cursor/mcp.json` or `~/.claude.json`, then run `beacon endpoint inventory heartbeat --scheduled` (or `sudo ... --system`). `inventory_state.jsonl` should gain an `inventory.heartbeat` event and, because the digest changed, an `inventory.snapshot` event with the new MCP server metadata under `raw.inventory.mcp_servers`. `runtime.jsonl` should remain limited to agent runtime activity. To watch the schedule itself, set `BEACON_INVENTORY_INTERVAL_SECONDS=60` before `install-daemon` and tail the file.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--user` | Use per-user endpoint paths. Enabled by default |
+| `--system` | Use system endpoint paths and launch daemon |
+| `--log-path <path>` | Runtime JSONL log path |
+| `--json` | Print inventory as JSON |
+| `--all` | Include all supported targets, not only configured, detected, or observed targets |
+| `--mcp` | Show only MCP server inventory and source configs |
+| `--skills` | Show only local agent skill inventory |
+| `--hooks` | Show only hook integration and hook config inventory |
+| `--contents` | Include redacted, size-limited config/hook/skill file contents and full MCP server definitions |
+
+## Examples
+
+Show endpoint inventory:
+
+```bash title="Show endpoint inventory"
+beacon endpoint inventory
+```
+
+Include all supported targets:
+
+```bash title="Include all supported targets"
+beacon endpoint inventory --all
+```
+
+Print machine-readable inventory:
+
+```bash title="Print machine-readable inventory"
+beacon endpoint inventory --json
+```
+
+Show only MCP server inventory:
+
+```bash title="Show MCP inventory"
+beacon endpoint inventory --mcp
+```
+
+Show only skill manifests and hook configuration:
+
+```bash title="Show skills and hooks"
+beacon endpoint inventory --skills --hooks --json
+```
+
+Inventory a system-mode endpoint:
+
+```bash title="Inventory a system-mode endpoint"
+sudo beacon endpoint inventory --system --all
+```
+
+Use the top-level alias:
+
+```bash title="Use the top-level alias"
+beacon inventory --json
+```
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Inventory Local Agent Runtimes" icon="clipboard-list" href="/guides/inventory">
+    Understand dashboard Inventory and common runtime coverage workflows.
+  </Card>
+  <Card title="Endpoint discover" icon="magnifying-glass" href="/cli/endpoint-discover">
+    Discover supported local agent harnesses and telemetry state.
+  </Card>
+  <Card title="Runtime hooks" icon="plug" href="/cli/hooks">
+    Install and inspect hook-based endpoint telemetry.
+  </Card>
+</Columns>

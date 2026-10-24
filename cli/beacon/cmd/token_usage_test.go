@@ -1,0 +1,334 @@
+package cmd
+
+import (
+	"bytes"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/testenv"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/tokens"
+)
+
+func TestTokenUsageCommandRegistered(t *testing.T) {
+	cmd, _, err := rootCmd.Find([]string{"token-usage"})
+	if err != nil {
+		t.Fatalf("Find token-usage returned error: %v", err)
+	}
+	if cmd == nil || cmd.Use != "token-usage" {
+		t.Fatalf("token-usage command not registered: %#v", cmd)
+	}
+	for _, flag := range []string{"log-path", "json", "since", "until", "session", "model", "harness", "repository", "run-id", "bucket", "top", "coverage"} {
+		if cmd.Flags().Lookup(flag) == nil {
+			t.Fatalf("token-usage command missing --%s flag", flag)
+		}
+	}
+}
+
+func writeTokensFixtureLog(t *testing.T) string {
+	t.Helper()
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	lines := []string{
+		`{"timestamp":"2026-06-11T09:59:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"session.context","category":"session"},"severity":"info","endpoint":{"hostname":"mac","os":"darwin"},"user":{"name":"alice","uid":"501"},"harness":{"name":"claude_code"},"session":{"id":"session-1"},"message":"Session context observed"}`,
+		`{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"hostname":"mac","os":"darwin"},"harness":{"name":"claude_code"},"session":{"id":"session-1"},"model":"claude-sonnet-4-5","gen_ai":{"usage":{"input_tokens":100}},"message":"claude_code.token.usage","raw":{"metric_name":"claude_code.token.usage","metric_temporality":"Delta"}}`,
+		`{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"hostname":"mac","os":"darwin"},"harness":{"name":"claude_code"},"session":{"id":"session-1"},"model":"claude-sonnet-4-5","gen_ai":{"usage":{"output_tokens":40}},"message":"claude_code.token.usage","raw":{"metric_name":"claude_code.token.usage","metric_temporality":"Delta"}}`,
+		`{"timestamp":"2026-06-11T10:05:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"cost.usage","category":"metric"},"severity":"info","endpoint":{"hostname":"mac","os":"darwin"},"harness":{"name":"claude_code"},"session":{"id":"session-1"},"model":"claude-sonnet-4-5","run":{"provider":"github_actions","run_id":"777"},"gen_ai":{"usage":{"cost_usd":0.5}},"message":"claude_code.cost.usage","raw":{"metric_name":"claude_code.cost.usage","metric_temporality":"Delta"}}`,
+	}
+	if err := os.WriteFile(logPath, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		t.Fatalf("write fixture log: %v", err)
+	}
+	return logPath
+}
+
+func runTokenUsageCommand(t *testing.T, args ...string) string {
+	t.Helper()
+	tokenUsageOpts = tokenUsageOptions{userMode: true}
+	if err := tokenUsageCmd.Flags().Parse(args); err != nil {
+		t.Fatalf("parse flags: %v", err)
+	}
+	var out bytes.Buffer
+	tokenUsageCmd.SetOut(&out)
+	defer tokenUsageCmd.SetOut(nil)
+	if err := runTokenUsage(tokenUsageCmd, nil); err != nil {
+		t.Fatalf("runTokenUsage returned error: %v", err)
+	}
+	return out.String()
+}
+
+func TestTokenUsageTextReport(t *testing.T) {
+	logPath := writeTokensFixtureLog(t)
+	output := runTokenUsageCommand(t, "--log-path", logPath)
+	for _, want := range []string{
+		"3 of 4 events carry usage",
+		"claude-sonnet-4-5",
+		"session-1",
+		"alice [501]",
+		"claude_code",
+		"github_actions/777",
+		"0.5000",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("text report missing %q:\n%s", want, output)
+		}
+	}
+}
+
+func TestTokenUsageJSONReport(t *testing.T) {
+	logPath := writeTokensFixtureLog(t)
+	output := runTokenUsageCommand(t, "--log-path", logPath, "--json", "--session", "session-1")
+	var report tokens.Report
+	if err := json.Unmarshal([]byte(output), &report); err != nil {
+		t.Fatalf("unmarshal JSON report: %v\n%s", err, output)
+	}
+	if report.Totals.InputTokens != 100 || report.Totals.OutputTokens != 40 || report.Totals.CostUSD != 0.5 {
+		t.Fatalf("totals = %#v", report.Totals)
+	}
+	if len(report.ByRun) != 1 || report.ByRun[0].Key != "github_actions/777" {
+		t.Fatalf("by_run = %#v", report.ByRun)
+	}
+	if len(report.ByUser) != 1 || report.ByUser[0].Key != "alice [501]" {
+		t.Fatalf("by_user = %#v", report.ByUser)
+	}
+	if report.SessionDetail == nil || report.SessionDetail.SessionID != "session-1" || len(report.SessionDetail.Steps) != 3 {
+		t.Fatalf("session detail = %#v", report.SessionDetail)
+	}
+}
+
+func TestTokenUsageTimeFilterKeepsEarlierUserContext(t *testing.T) {
+	logPath := writeTokensFixtureLog(t)
+	output := runTokenUsageCommand(t,
+		"--log-path", logPath,
+		"--json",
+		"--since", "2026-06-11T10:00:00Z",
+	)
+	var report tokens.Report
+	if err := json.Unmarshal([]byte(output), &report); err != nil {
+		t.Fatalf("unmarshal JSON report: %v\n%s", err, output)
+	}
+	if report.TotalEvents != 3 {
+		t.Fatalf("total events = %d, want only the three time-matched usage events", report.TotalEvents)
+	}
+	if len(report.ByUser) != 1 || report.ByUser[0].Key != "alice [501]" {
+		t.Fatalf("by_user = %#v, want context from before --since", report.ByUser)
+	}
+}
+
+func TestTokenUsageRunIDFilterAcceptsBareAndCompositeKeys(t *testing.T) {
+	logPath := writeTokensFixtureLog(t)
+	// The BY RUN rollup labels this run "github_actions/777"; both that
+	// composite key and the bare run id must select the run's usage.
+	for _, runID := range []string{"777", "github_actions/777"} {
+		output := runTokenUsageCommand(t, "--log-path", logPath, "--json", "--run-id", runID)
+		var report tokens.Report
+		if err := json.Unmarshal([]byte(output), &report); err != nil {
+			t.Fatalf("unmarshal JSON report for %q: %v\n%s", runID, err, output)
+		}
+		if len(report.ByRun) != 1 || report.ByRun[0].Key != "github_actions/777" {
+			t.Fatalf("--run-id %q by_run = %#v, want the github_actions/777 run", runID, report.ByRun)
+		}
+		if report.Totals.CostUSD != 0.5 {
+			t.Fatalf("--run-id %q totals = %#v, want the run's cost", runID, report.Totals)
+		}
+	}
+}
+
+func TestTokenUsageEmptyLogSucceeds(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	output := runTokenUsageCommand(t, "--log-path", logPath)
+	if !strings.Contains(output, "0 of 0 events carry usage") {
+		t.Fatalf("empty report = %q", output)
+	}
+}
+
+func TestTokenUsageCoverageReportsSilentAndNotInstrumentedRuntimes(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "runtime.jsonl")
+	lines := []string{
+		// Reported usage: covered.
+		`{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"hostname":"h"},"harness":{"name":"claude_code"},"model":"claude-opus-5","session":{"id":"s1"},"gen_ai":{"usage":{"input_tokens":1200,"output_tokens":340}},"message":"usage"}`,
+		// Ran but reported nothing, and Beacon is built to read usage from it: silent.
+		`{"timestamp":"2026-06-11T10:02:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"command.executed","category":"command"},"severity":"info","endpoint":{"hostname":"h"},"harness":{"name":"codex_cli"},"session":{"id":"s3"},"message":"ls"}`,
+		// Ran and cannot report usage at all: expected, not a fault.
+		`{"timestamp":"2026-06-11T10:01:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"command.executed","category":"command"},"severity":"info","endpoint":{"hostname":"h"},"harness":{"name":"cursor"},"session":{"id":"s2"},"message":"ls"}`,
+	}
+	if err := os.WriteFile(logPath, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatalf("write log: %v", err)
+	}
+
+	output := runTokenUsageCommand(t, "--log-path", logPath, "--coverage", "--json")
+	var report tokens.CoverageReport
+	if err := json.Unmarshal([]byte(output), &report); err != nil {
+		t.Fatalf("unmarshal coverage report: %v\n%s", err, output)
+	}
+
+	status := map[string]string{}
+	for _, runtime := range report.Runtimes {
+		status[runtime.Harness] = runtime.Status
+	}
+	if status["claude_code"] != tokens.CoverageCovered {
+		t.Errorf("claude_code = %q, want covered", status["claude_code"])
+	}
+	if status["codex_cli"] != tokens.CoverageSilent {
+		t.Errorf("codex_cli = %q, want silent", status["codex_cli"])
+	}
+	if status["cursor"] != tokens.CoverageNotInstrumented {
+		t.Errorf("cursor = %q, want not_instrumented -- Cursor cannot report usage", status["cursor"])
+	}
+	if report.Silent != 1 {
+		t.Errorf("silent = %d, want 1", report.Silent)
+	}
+}
+
+// A model or session filter selects usage-bearing events almost by definition, so applying one to
+// a coverage report would find every runtime covered and prove nothing. Coverage keeps only the
+// time window and the harness scope.
+func TestTokenUsageCoverageIgnoresFiltersThatWouldHideSilentRuntimes(t *testing.T) {
+	logPath := writeTokensFixtureLog(t)
+	unfiltered := runTokenUsageCommand(t, "--log-path", logPath, "--coverage", "--json")
+	filtered := runTokenUsageCommand(t, "--log-path", logPath, "--coverage", "--json", "--model", "claude-sonnet-4-5")
+	if unfiltered != filtered {
+		t.Fatalf("--model changed the coverage report:\nwithout:\n%s\nwith:\n%s", unfiltered, filtered)
+	}
+}
+
+// A shell profile is evidence of a shell, not of a runtime.
+//
+// The config scanner lists ~/.zshrc as one way to detect Copilot CLI and Factory, because that is
+// where their launch environment is configured -- but that file exists on nearly every machine
+// whether or not the product does. Counting it as an install put a permanent `inactive` row for
+// Copilot CLI on every endpoint with a shell, which is noise in the one report whose value
+// depends on every row meaning something.
+func TestTokenUsageCoverageDoesNotTreatAShellProfileAsAnInstall(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	t.Setenv("SHELL", "/bin/zsh")
+	// The only runtime evidence on this machine: a shell profile. No product configs at all.
+	if err := os.WriteFile(filepath.Join(home, ".zshrc"), []byte("export PATH=$PATH\n"), 0o600); err != nil {
+		t.Fatalf("write shell profile: %v", err)
+	}
+
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	line := `{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"hostname":"h"},"harness":{"name":"claude_code"},"model":"claude-opus-5","session":{"id":"s1"},"gen_ai":{"usage":{"input_tokens":10}},"message":"usage"}`
+	if err := os.WriteFile(logPath, []byte(line+"\n"), 0o600); err != nil {
+		t.Fatalf("write log: %v", err)
+	}
+
+	output := runTokenUsageCommand(t, "--log-path", logPath, "--coverage", "--json")
+	var report tokens.CoverageReport
+	if err := json.Unmarshal([]byte(output), &report); err != nil {
+		t.Fatalf("unmarshal coverage report: %v\n%s", err, output)
+	}
+	for _, runtime := range report.Runtimes {
+		if runtime.Installed && (runtime.Harness == "copilot_cli" || runtime.Harness == "factory") {
+			t.Errorf("%s reported as installed on the strength of a shell profile alone", runtime.Harness)
+		}
+	}
+}
+
+// A harness scope narrows the events, so it has to narrow the installed list with them. Without
+// that, every other installed runtime has no events in the filtered set and is reported inactive
+// -- which reads as "installed but unused this window" when the truth is only that the reader
+// asked about a different runtime.
+func TestTokenUsageCoverageHarnessScopeDoesNotStrandOtherRuntimes(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	lines := []string{
+		`{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"hostname":"h"},"harness":{"name":"claude_code"},"model":"claude-opus-5","session":{"id":"s1"},"gen_ai":{"usage":{"input_tokens":10}},"message":"usage"}`,
+		`{"timestamp":"2026-06-11T10:01:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"command.executed","category":"command"},"severity":"info","endpoint":{"hostname":"h"},"harness":{"name":"codex_cli"},"session":{"id":"s2"},"message":"ls"}`,
+	}
+	if err := os.WriteFile(logPath, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatalf("write log: %v", err)
+	}
+
+	// Hermetic: two runtimes installed, so scoping to one has something to strand. Reading the
+	// real HOME here would make the test pass or fail on what the machine happens to have.
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	for _, rel := range []string{".claude/settings.json", ".codex/config.toml"} {
+		path := filepath.Join(home, rel)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
+			t.Fatalf("write %s: %v", rel, err)
+		}
+	}
+
+	for _, alias := range []string{"claude_code", "claude"} {
+		t.Run("harness="+alias, func(t *testing.T) {
+			output := runTokenUsageCommand(t, "--log-path", logPath, "--coverage", "--json", "--harness", alias)
+			var report tokens.CoverageReport
+			if err := json.Unmarshal([]byte(output), &report); err != nil {
+				t.Fatalf("unmarshal coverage report: %v\n%s", err, output)
+			}
+			for _, runtime := range report.Runtimes {
+				if runtime.Harness != "claude_code" {
+					t.Errorf("scoping to %q still reported %q as %q", alias, runtime.Harness, runtime.Status)
+				}
+			}
+			if len(report.Runtimes) != 1 || report.Runtimes[0].Status != tokens.CoverageCovered {
+				t.Fatalf("want exactly the scoped runtime, covered; got %+v", report.Runtimes)
+			}
+		})
+	}
+}
+
+// An alias in --harness must select the same runtime on both sides of the join.
+//
+// The event reader compares the flag to harness.name with case-insensitive equality on the raw
+// string, while events carry the canonical name. So `--harness vscode` matches no event, every
+// VS Code event being named vscode_copilot. On its own that is a plain miss; combined with an
+// installed list that canonicalizes, it is worse -- the runtime stays in the report while its
+// events vanish, and a runtime that spent tokens is reported inactive.
+func TestTokenUsageCoverageHarnessScopeAcceptsAliases(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	line := `{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"hostname":"h"},"harness":{"name":"vscode_copilot"},"model":"gpt-4o","session":{"id":"s1"},"gen_ai":{"usage":{"input_tokens":42}},"message":"usage"}`
+	if err := os.WriteFile(logPath, []byte(line+"\n"), 0o600); err != nil {
+		t.Fatalf("write log: %v", err)
+	}
+
+	// "vscode" is the spelling the hook installer uses; the log carries "vscode_copilot".
+	output := runTokenUsageCommand(t, "--log-path", logPath, "--coverage", "--json", "--harness", "vscode")
+	var report tokens.CoverageReport
+	if err := json.Unmarshal([]byte(output), &report); err != nil {
+		t.Fatalf("unmarshal coverage report: %v\n%s", err, output)
+	}
+	if len(report.Runtimes) != 1 {
+		t.Fatalf("want one row for the aliased runtime, got %+v", report.Runtimes)
+	}
+	line0 := report.Runtimes[0]
+	if line0.Harness != "vscode_copilot" || line0.Status != tokens.CoverageCovered || line0.Tokens != 42 {
+		t.Fatalf("row = %+v, want vscode_copilot covered with 42 tokens", line0)
+	}
+}
+
+// Comparing two normalized names still needs a case-insensitive compare, which is not obvious.
+//
+// NormalizeHarnessName lowercases every runtime it recognizes, but its passthrough case returns
+// the name unchanged -- deliberately, so a new harness shows up in the log as itself rather than
+// as "unknown". So for a runtime Beacon has never heard of, two spellings normalize to two
+// differently-cased strings, and an == comparison drops the events while keeping the runtime in
+// the installed list: the inactive-despite-usage failure again, on exactly the runtimes nobody
+// has classified yet.
+func TestTokenUsageCoverageHarnessScopeIsCaseInsensitiveForUnknownRuntimes(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	// An unrecognized harness, so NormalizeHarnessName passes the spelling through untouched.
+	line := `{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"hostname":"h"},"harness":{"name":"NewAgent"},"model":"some-model","session":{"id":"s1"},"gen_ai":{"usage":{"input_tokens":7}},"message":"usage"}`
+	if err := os.WriteFile(logPath, []byte(line+"\n"), 0o600); err != nil {
+		t.Fatalf("write log: %v", err)
+	}
+
+	output := runTokenUsageCommand(t, "--log-path", logPath, "--coverage", "--json", "--harness", "newagent")
+	var report tokens.CoverageReport
+	if err := json.Unmarshal([]byte(output), &report); err != nil {
+		t.Fatalf("unmarshal coverage report: %v\n%s", err, output)
+	}
+	if len(report.Runtimes) != 1 || report.Runtimes[0].Status != tokens.CoverageCovered || report.Runtimes[0].Tokens != 7 {
+		t.Fatalf("report = %+v, want the unknown runtime matched case-insensitively and covered", report.Runtimes)
+	}
+}

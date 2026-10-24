@@ -1,0 +1,1667 @@
+---
+title: Agent Beacon CLI Changelog
+description: Latest updates and improvements to the Agent Beacon CLI
+---
+
+## Latest updates
+
+Stay up to date with the latest changes to the Agent Beacon CLI.
+
+---
+
+## Unreleased
+
+- **Dashboard output tokens count reasoning once** · The local dashboard's token view added reasoning tokens to output, but `gen_ai.usage.output_tokens` already includes them, so models that report reasoning had their output and total tokens overstated. Output and the total now count reasoning once, the split bar no longer shows reasoning as a separate segment, and a note below it gives the reasoning count included in output. `beacon token-usage` already counted it this way.
+
+---
+
+## October 2026
+
+- **Homebrew instructions refresh Homebrew first** · Every install and upgrade command in the docs, the release notes, and the update notice that `beacon`, `beacon version check` and `beacon endpoint update` print now starts with `brew update`. Without it, `brew tap` keeps whatever copy of `asymptote-labs/tap` the machine already has, so a Mac that had installed Beacon before got that older release again, and `brew upgrade beacon` reported no update for up to a day after a release. On an older Homebrew, `brew trust` also failed before anything could update Homebrew itself.
+- **Status and doctor recognize the hooks install writes** · Since v1.2.0, install writes hook commands with `--log` and `--config` flags in place of the `BEACON_ENDPOINT_MODE=1` prefix, but `beacon endpoint status`, `beacon endpoint doctor` and discovery still looked for the prefix. Every fresh install therefore reported Cursor, Antigravity CLI, Devin CLI, Devin Desktop and Hermes Agent as "hooks exist but endpoint hooks were not found", with telemetry disabled, though the hooks were correct and running, and inventory marked their hooks files as not Beacon-managed. They now use the same check install, repair and uninstall use, which accepts both spellings.
+
+### v1.3.44 · October 19, 2026
+
+- **Setup ends at the dashboard** · Confirming Beacon Cloud in the `beacon endpoint install` wizard used to end on some forty lines of file paths, connect details, an MCP table and per-runtime steps, and nothing pointed to the hosted dashboard. It now ends on four lines: the account, device and privacy mode; the session backfill; the dashboard URL; and where Beacon Cloud MCP was added. Beacon then opens the dashboard in your browser, except with `--no-browser`, over SSH, or on Linux without a display. The sign-in wait screen now also asks you to open the URL in the browser where you are signed in to beacon.sh, and cancelling the wizard says that nothing was installed and how to start again. `beacon endpoint connect` and `beacon mcp connect` print the same output as before. See [Onboarding](/cli/endpoint-onboarding#when-setup-finishes).
+- **Beacon Cloud shows new sessions within seconds** · The forwarder held runtime events for up to 60 seconds before sending a batch, so right after `beacon endpoint connect` the dashboard stayed empty for a minute and looked broken. It now sends a partial batch after 10 seconds, and paces runtime requests at one a second, the rate the ingest service allows each device, so a backfill or a backlog after an offline period goes out in full batches without being turned away. Install, repair and package upgrades rewrite a connected forwarder's config and restart it; what it has already read is kept. See [Beacon Cloud](/log-forwarding/asymptote).
+- **`beacon share` reaches beacon.sh's API** · Sharing sent its requests to `https://beacon.sh/v1/traces`, which the beacon.sh web host does not serve, so every share from a beacon.sh sign-in or key failed with "the trace does not exist on https://beacon.sh (HTTP 404)". A beacon.sh credential now shares through `https://api.beacon.sh`, and `BEACON_API_URL` names another API host. A 404 that is a web page rather than the API's own reply now stops the share with `<url> has no trace API (HTTP 404: endpoint not found)` instead of being read as a trace that does not exist yet. See [Where the requests go](/cli/share#where-the-requests-go).
+- **Sharing follows Metadata-only privacy** · On an endpoint that forwards to Beacon Cloud in Metadata-only mode, `beacon share`, `refresh`, `--follow` and the git pre-push hook uploaded the session's prompts, answers, command output and diffs anyway. They now leave out exactly what forwarding leaves out, including on a machine connected in system mode, whose enrollment only root can read, and share as Metadata-only when the mode cannot be read at all. They take no title from the session, whose title is usually its first prompt; `--title` still sets one. Event ids are unchanged, so re-sharing upserts the same events. See [Metadata-only endpoints](/cli/share#metadata-only-endpoints).
+- **Redaction catches Beacon's sign-in token and AWS secret keys beside their key id** · Redaction already removed `bcn_api_`, `bcn_device_`, `bcn_mcp_` and `bcn_enfdev_` keys. It now also removes the `beacon login` token (`bcn_cli_…`), MCP refresh tokens (`bcn_mcprt_…`) and the sign-in's `bcn_code_…`, `bcn_client_…` and `bcn_exchange_…` values, and the 40-character AWS secret key that follows an `AKIA…` or `ASIA…` key id, as in a credentials CSV. Both used to reach the log and Beacon Cloud unredacted. See [What is redacted](/security/retention-redaction#what-is-redacted).
+- **Backfilled Claude Code sessions keep their own times** · Claude Code writes some transcript records (the permission mode, the session title, the last prompt and similar) without a timestamp, and the first of them is often where a session starts. Session sync stamped those with the time of the sync, so every backfilled session appeared to run until Beacon was installed. They now take the session's earliest recorded time, or the transcript's modification time when no record has one. Events already written keep their old time.
+- **Backfilled Codex sessions are named after what you typed** · Codex records the environment it runs in, the repository's AGENTS.md and your configured instructions as user messages, and session sync recorded them as prompts. Every backfilled Codex session was then titled `<environment_context>` or `# AGENTS.md instructions for …`, and the dashboard grouped them all as recurring. Those messages are no longer prompts, using the block kinds newer Codex builds record and the text older ones open with.
+
+### v1.3.43 · October 19, 2026
+
+- **Built with Go 1.27.2** · Releases were built with Go 1.25.0, and `govulncheck` found 57 reachable standard-library vulnerabilities in `beacon`, `beacon-hooks` and `beacon-otelcol`, among them `html/template` cross-site scripting fixes and two `os.Root` escapes. The `os.Root` ones matter to Beacon because the system-mode session backfill uses it to stay inside the console user's home. Every binary is now built with Go 1.27.2, and the collector moves to `golang.org/x/net` v0.61.0.
+- **A root log writer never follows a link or opens a FIFO** · The system collector, the inventory job and the hook adapter opened the runtime log by path, and as root they would append to whatever a symlink or hard link planted in a writable log directory pointed at, change its mode, or hang on a FIFO. Running as root, they now refuse anything that is not a regular file with a single link, never follow a symlink, and set the log's mode on the open file.
+- **OTLP cannot state Beacon's own actions** · The collector took an event's action from the OTLP attributes it received. Because the receiver on `127.0.0.1:4318` does not check the Host header, a web page that DNS-rebinds to loopback could write a `session.share_requested` event, which Beacon Cloud reads as a request to publish a session. The collector now ignores `session.shared`, `session.share_requested`, `session.commit_linked` and `git.hook_budget_exceeded` when they arrive over OTLP, and infers the action as if none had been stated.
+- **Self-update installs only Beacon-signed packages, over https** · The macOS self-updater took the Apple team a package must be signed by from `update-manifest.json`, which is unsigned, matched it as a substring of the signature output, and skipped the check when the manifest named no team. Whoever could rewrite the manifest could have any notarized package installed as root. The team is now built into `beacon` (Asymptote Labs, `3A98D35XJR`) and must match the package's installer signer exactly, for self-update and the enterprise edition install alike. The manifest and the package must also be fetched over `https`, plain `http` only to a loopback mirror and never through a redirect, so a `managed.json` that names an `http://` update URL on another host stops updating until it is changed to `https`.
+- **The Jamf hook repair script no longer hands the console user root** · `jamf/claude/common/repair-hooks.sh` runs as root. It granted the console user permission to add and delete entries in `/var/log/beacon-agent`, which let them replace the runtime log with a link that the root collector then opened, and it ran `chown -R` on `~/.beacon` as root, which a planted hard link turned into ownership of a root-run binary. The directory grant is gone, and the script now removes every grant that adds or deletes entries there, including ones earlier runs gave a previous console user and the one the Jamf guide's snippet used to add. It creates and fixes up `~/.beacon` as the user, refuses a symlinked directory, and moves aside one the user does not own, also as the user, so a link planted at the new name can no longer send it into a root-only directory. The Jamf guide explains how to remove the old grant by hand.
+- **Memory skills work through Beacon Cloud MCP** · With `beacon-managed` connected, `beacon-memory-recall` searches Beacon Cloud memory and sessions, `beacon-memory-distill` reads forwarded sessions and files the drafts you confirm as candidates, and `beacon-memory-promote` renders approved memory as a skill and writes it only after you confirm. The traces-to-memory workflow then runs on sessions forwarded to Beacon Cloud without the local CLI or trace history. Local memory works as before. See [Cross-harness memory](/concepts/cross-harness-memory).
+- **Commit links ignore a wrapped `cd`** · After `command cd sub`, `builtin cd sub` or `ROOT=sub cd sub`, the git hooks still read relative paths from the starting directory, so a session could be linked to a commit that changed a file with the same name there. Those directory changes are now recognized like a bare `cd`. Hooks writing notes at the same time also no longer leave `refs/notes/beacon-tx/*` refs behind.
+- **The scheduled inventory job follows every moved runtime directory** · The job starts without your shell's environment, so a per-user install or repair records the variables that move a runtime's user directory into it. It recorded `CODEX_HOME`, `HERMES_HOME`, `CLINE_DIR`, `GEMINI_CLI_HOME` and `CLAUDE_CONFIG_DIR`, and now also `KIRO_HOME`, `KIMI_CODE_HOME`, `DSH_HOME`, `OH_PERSISTENCE_DIR`, `OPENCLAW_STATE_DIR`, `XDG_CONFIG_HOME` (Muse, and VS Code on Linux), `PI_CODING_AGENT_DIR`, `OMO_CODING_AGENT_DIR`, `SENPI_CODING_AGENT_DIR`, `PRIME_AGENT_CODING_AGENT_DIR`, and Oh My Pi's `PI_CONFIG_DIR`, `OMP_PROFILE` and `PI_PROFILE`. With one of these set only in your shell, the job used to inventory the default directory while the runtime read the moved one. See [Inventory heartbeats](/cli/endpoint-inventory#inventory-heartbeats).
+- **Pi extension follows `PI_CODING_AGENT_DIR`** · `beacon endpoint hooks install --harness pi`, `beacon endpoint discover` and inventory now use `$PI_CODING_AGENT_DIR/extensions/beacon.ts` when `PI_CODING_AGENT_DIR` is set, as Pi does, including a leading `~`. They previously always used `~/.pi/agent`, so with the variable set the extension went where Pi never loads it while discovery reported Pi as enabled, and live capture silently recorded nothing. Session status and sync already followed the variable; all of them now resolve the directory the same way.
+- **Release downloads can be verified end to end** · Every archive, Linux package, macOS `.pkg`, Windows `.msi` and the Linux `install.sh` on a release now has a GitHub build-provenance attestation, so `gh attestation verify <file> --repo asymptote-labs/agent-beacon` confirms it was built by this repository's release workflow, which a checksum published beside the file cannot prove. `checksums.txt` now also lists the `.pkg`, `.msi` and `install.sh`. The `.pkg.sha256` and `.msi.sha256` files work with `shasum -a 256 -c` and `sha256sum -c`: the first named the build machine's path and the second ended in a Windows line ending, so both checks reported the file missing. The Vector binary inside the packages is now checked against checksums committed to this repository, not against a checksum file from the same host the binary is downloaded from.
+
+### v1.3.42 · October 15, 2026
+
+- **The install wizard says what confirming Beacon Cloud sends** · Choosing Beacon Cloud now says your agent sessions are sent to your Beacon account and kept while the account is active, and that unless you opt out Asymptote uses them for research and AI training and may share de-identified data ([beacon.sh/privacy](https://beacon.sh/privacy)). The confirm screen names the signed-in account, Asymptote Labs, Inc. as the operator, the destination and the capture mode, and says how to turn off research and AI training (profile picture, then Settings), change the mode (`beacon endpoint connect --privacy-mode`), stop sending (`beacon endpoint disconnect`), or delete the data (privacy@asymptotelabs.ai). That screen is where forwarding is authorized. See [Onboarding](/cli/endpoint-onboarding).
+- **Live agent replies** · Claude Code, Codex CLI, Cursor, Factory Droid and Devin Desktop now record the agent's final reply as `agent.message` while the session is running. A reply used to reach the log only through a later session sync, and Devin Desktop has no sync to recover it from. Claude Code and Codex read `last_assistant_message` from the Stop hook; Codex installs a dedicated Stop hook, which Codex asks you to trust with `/hooks`. Cursor reads `afterAgentResponse`, Factory Droid reads the session transcript the Stop hook names (the newest visible assistant message only), and Devin Desktop reads Cascade's `post_cascade_response`. A later session sync still records the same reply again as a `poll` event.
+- **System inventory stays inside the console user's home** · The scheduled inventory job runs as root and reads the console user's config files and skill manifests. Those reads now stay inside that home, as the system session backfill already did: links that lead out of it, files the user does not own, and FIFOs, sockets and devices are skipped, and each file is read only up to 8 MiB. If the home cannot be confined, the job still writes the liveness heartbeat and skips the scan. User-mode inventory is unchanged.
+- **Hooks return sooner** · Every tool call waits on a `beacon-hooks` process. Redaction now skips text that cannot contain a secret, and duplicate detection skips log lines that cannot be the event being written. A post-tool hook with a large command output that took about a quarter of a second now finishes in under 10 ms. What is redacted, and which events are dropped as duplicates, is unchanged.
+- **Hermes Agent install, hooks and inventory follow `HERMES_HOME` and the active profile** · `beacon endpoint hooks install|uninstall|status --harness hermes`, `beacon endpoint discover`, inventory and the `beacon mcp connect` hint now use `config.yaml` in the directory Hermes uses: `HERMES_HOME` when set, otherwise `~/.hermes` plus `HERMES_DATA_DIR_SUFFIX` (`%LOCALAPPDATA%\hermes` on Windows). They previously always used `~/.hermes/config.yaml`, so with `HERMES_HOME` set Hermes never loaded Beacon's hooks. All of these, and Hermes session status, sync and handoff, also follow a sticky profile selected with `hermes profile use`, as Hermes does. A per-user install or repair also writes `HERMES_HOME` and `HERMES_DATA_DIR_SUFFIX` into the scheduled inventory job, as it does `CODEX_HOME`. An `active_profile` naming a profile Hermes cannot use is an error, as Hermes treats it. A profile chosen for one command with `hermes -p` is still not followed.
+- **Truncated event fields no longer end in `�`** · Long fields cut to their size limit, such as a tool's command, a message or a file path, were cut by byte, so text in Chinese, Japanese or Korean, emoji or other non-ASCII characters could end in a broken character that became `�` in the runtime log and every destination. The hook adapter, the collector and the CLI now cut on a character boundary, keeping the `...[truncated]` marker.
+- **Git hooks record when they run out of time** · The post-commit, post-rewrite and pre-push hooks give up quietly when their three- or ten-second budget runs out, and a post-commit hook that gives up leaves the commit unlinked. Each run that runs out of time now writes one `git.hook_budget_exceeded` event to the runtime log, naming the hook, the step it was in, the budget, the elapsed time, how many git processes it started and whether its work was cut short (`vcs.hook.*`). `beacon git status` shows an `overruns` line for the repository's last seven days, and `beacon endpoint doctor` adds a `git_hook_budget` check, a warning when a run was cut short. The budgets themselves are unchanged.
+- **Browser chat turns survive a collector outage** · The browser extension dropped a queued turn after six failed sends, so a collector that was down for more than about three minutes lost every turn captured during the outage. A turn is now kept until it is delivered, for up to 24 hours, or until the queue passes 2,000 turns or 6 MiB, dropping the oldest first. Turns are sent oldest first, and one the collector rejects is dropped so it cannot hold the rest back. See [Browser extension](/runtimes/browser-extension).
+
+### v1.3.41 · October 15, 2026
+
+- **`beacon endpoint enforcement enable` installs the enterprise edition** · On an Apple Silicon Mac connected to Beacon Cloud in system mode, where the console user has no user-mode Beacon running, `sudo beacon endpoint enforcement enable` downloads the enterprise package, checks its checksum, Apple signature and Gatekeeper assessment, installs it, and hands off to that binary's own `enable`. A package that does not report the enterprise edition is rolled back. This build contains no enforcement of its own, and a machine already on the enterprise edition is not installed again.
+- **Claude Code settings, sessions and inventory follow `CLAUDE_CONFIG_DIR`** · `beacon endpoint install`, `beacon endpoint hooks install --harness claude`, `beacon endpoint discover`, inventory, `beacon endpoint claude status` and `sync`, the session backfill and `beacon handoff` now use `$CLAUDE_CONFIG_DIR` when `CLAUDE_CONFIG_DIR` is set, as Claude Code does: `settings.json`, `.claude.json`, `skills` and `projects` all move with it. They previously always used `~/.claude` (and `~/.claude.json`), so with the variable set Claude Code never saw Beacon's OTLP settings or hooks, live capture silently recorded nothing, and session sync found no transcripts. A per-user install or repair also writes the resolved `CLAUDE_CONFIG_DIR` into the scheduled inventory job, as it does `CODEX_HOME`. Project-level `.claude/settings.json` is unchanged, and `--projects-dir` and `--claude-projects-dir` still override.
+- **Codex install, hooks and inventory follow `CODEX_HOME`** · `beacon endpoint install`, `beacon endpoint hooks install --harness codex`, `beacon endpoint discover` and inventory now read and write `$CODEX_HOME/config.toml` and `$CODEX_HOME/hooks.json` when `CODEX_HOME` is set, as Codex does. They previously always used `~/.codex`, so with `CODEX_HOME` set, Codex never saw the OTLP exporter or the SessionStart hook and live capture silently recorded nothing. A per-user install or repair also writes the resolved `CODEX_HOME` into the scheduled inventory job, which launchd and systemd start without your shell's environment. A `CODEX_HOME` that is not an existing directory is now an install error rather than a silent write to `~/.codex`. Project-level `.codex` files are unchanged.
+- **Cline plugin and sessions follow `CLINE_DIR`** · `beacon endpoint hooks install --harness cline`, `beacon endpoint discover`, inventory, `beacon endpoint cline status` and `sync`, and the session backfill now use `$CLINE_DIR` when `CLINE_DIR` is set, as Cline does. They previously always used `~/.cline`, so with `CLINE_DIR` set, the Beacon plugin went where Cline never loads it, live capture silently recorded nothing, and session sync found no sessions. A per-user install or repair also writes the resolved `CLINE_DIR` into the scheduled inventory job, as it does `CODEX_HOME`.
+- **Gemini CLI settings follow `GEMINI_CLI_HOME`** · `beacon endpoint install`, `beacon endpoint discover`, inventory and `beacon mcp connect` now read and write `$GEMINI_CLI_HOME/.gemini/settings.json` when `GEMINI_CLI_HOME` is set, as Gemini CLI does. They previously always used `~/.gemini/settings.json`, so with `GEMINI_CLI_HOME` set, Gemini never saw Beacon's OTLP settings and live capture silently recorded nothing. A per-user install or repair also writes the resolved `GEMINI_CLI_HOME` into the scheduled inventory job, as it does `CODEX_HOME`.
+- **Copilot CLI sessions follow `COPILOT_HOME`** · `beacon endpoint copilot status` and `sync`, the session backfill, `beacon handoff` and `beacon endpoint discover` now use `$COPILOT_HOME` when `COPILOT_HOME` is set, as Copilot CLI does. They previously always used `~/.copilot`, so with `COPILOT_HOME` set, session sync found no sessions. `--copilot-dir` still overrides.
+- **Concurrent hooks no longer clobber the per-session state file** · The hook adapter keeps a small `state.json` (session model, prompt-emitted flag, reprompt counts) that every hook process reads and rewrites. Two hooks running at once shared one temporary file, so one could fail with `rename ...: no such file or directory` and a surviving write could drop the other's change. Access is now serialized with a file lock and each write uses its own temporary file.
+- **Oversized session events no longer stall a sync** · An event still over the 64 KB limit after its raw payload was dropped, such as a tool call with many large edit hunks, made session sync fail at that line on every sweep, so nothing later in that session was recorded. The writer now drops the event's retained content and marks it truncated, as the hook and collector writers already did, keeping the tool name, call ID and file path.
+- **Cursor sync keeps prompts in compacted conversations** · In a Cursor conversation with a context summary, `beacon endpoint cursor sync` and the session backfill skipped the first new record on every sync that found new activity, often the next prompt, and recorded the compaction again each time. New records are now kept and each compaction is recorded once. A compaction already recorded by an older release is recorded one more time after upgrading.
+- **Jamf policy for Claude Code and Falcon LogScale** · A new guide covers a Jamf Pro policy that installs the macOS package, configures Claude Code hooks for the console user, and forwards the runtime log to CrowdStrike Falcon HEC. See [Claude with Jamf and CrowdStrike Falcon](/guides/jamf-falcon-mdm).
+
+### v1.3.40 · October 14, 2026
+
+- **Status shows customer forwarders and stops sending MDM installs to `connect`** · `beacon endpoint status` prints one line for each S3, GCS or Falcon LogScale forwarder the package helpers installed, such as `S3 forwarder: loaded=true running=true`, and `--json` adds `script_forwarders`. The `Beacon Cloud: not connected` line and its `beacon endpoint connect` hint are left out on a system install that was never connected and on any install with its own forwarder, where the line read as an unfinished step and named a command that needs a personal sign-in. A connected or partly connected endpoint still shows the line, and per-user installs keep the hint.
+- **OpenCode sessions found in OpenCode's data directory** · `beacon endpoint opencode status` and `sync`, `beacon handoff`, and the session backfill now read OpenCode's store from `$XDG_DATA_HOME/opencode` or `~/.local/share/opencode`, where OpenCode writes `opencode.db`, on every platform. They previously looked in `~/.config/opencode` (`%APPDATA%\opencode` on Windows), which holds only plugins and configuration, so they found no sessions unless `--data-dir` was passed. `OPENCODE_DB` is honored as OpenCode resolves it.
+- **Codex and Hermes Agent session stores follow `CODEX_HOME` and `HERMES_HOME`** · `beacon endpoint codex status` and `sync`, `beacon handoff` and `beacon mcp connect` use `CODEX_HOME` when it is set, as Codex does: the value is taken literally, without `~` or variable expansion, and must be an existing directory. Hermes Agent status, sync and handoff find `state.db` the way Hermes does, under `HERMES_HOME` (with a leading `~/` and `$VAR` references expanded) or under `~/.hermes` plus `HERMES_DATA_DIR_SUFFIX` (`%LOCALAPPDATA%\hermes` on Windows). Both previously read only `~/.codex` and `~/.hermes/state.db`. `--codex-dir`, `--db` and `--store-dir` still override, and Hermes profiles selected only with `hermes -p` or `hermes profile use` are not followed yet.
+- **Claude Code workspaces read from the transcript** · When `sessions-index.json` is missing or does not name a session's workspace, `beacon endpoint claude status`, Claude session sync and `beacon handoff` now use the `cwd` recorded in the transcript. They used to decode it from the project directory name, which turns every dash into a path separator, so `/work/agent-beacon` came out as `/work/agent/beacon`.
+- **Codex handoff briefs in transcript order** · `beacon handoff` ordered a Codex session's rollout files by modification time, so touching or restoring an older file could make an older request appear as the latest, followed by its older reply. Activity is now ordered by the transcript's own timestamps.
+- **`--around-event` with `--event-type`** · `beacon endpoint traces show --around-event N --event-type …` treated `N` as a position in the filtered list, so it returned the wrong window, or nothing near the end of a trace. `N` is now the original event number, `--before` and `--after` count matching events, and when event `N` is filtered out the window is centered where it would have been. The `beacon-memory-distill` skill no longer works around this.
+- **Trace browser fixes** · `beacon traces` measures text in terminal columns, so a title in Chinese, Japanese or Korean, or with emoji, no longer pushes the harness column off screen, long event summaries wrap instead of being clipped, and an emoji made of joined characters is never split. Ctrl+C now quits while you are typing a search; it used to be ignored until you left the search.
+- **Trace titles, rows and paging** · Trace titles, previews and search snippets are cut on character boundaries, so long CJK or emoji prompts no longer end in `�` in the dashboard, `beacon endpoint traces list` and the local history, which rebuilds its labels once. Plain-text `list`, `search` and `show` collapse line breaks and tabs in metadata so each result stays on one row; `--json` keeps the original text. A `--page` near the integer limit no longer panics `traces list`, and very large `--before` or `--after` values no longer return an empty window.
+- **Dashboard fixes** · When several events share a timestamp, a limited dashboard result keeps the newest ones; it compared line ids as strings and could keep line 9 while dropping lines 10 and 11. Changing the activity filter quickly no longer lets an older, slower response, or its error, replace the newer results.
+- **Write diffs end where the file ends** · Diffs the hooks build for Write and Edit events added a blank `+` line to every file ending in a newline and counted one line too many in each hunk. They now match the file, and a whole-file diff marks content without a final newline with `\ No newline at end of file`.
+- **OpenCode plugin fixes** · The plugin keeps streamed assistant text and reasoning that arrive after the last snapshot, which it dropped when a stream ended without a final snapshot. It releases the saved arguments of a failed tool call instead of holding them until the session is deleted, and a hook that throws while being disposed no longer stops the remaining hooks from being cleaned up.
+- **Invalid dates no longer drop plugin events** · The Cline, Pi, Oh My Pi, Prime Agent, Senpi and OpenClaw plugins dropped a whole hook event when it carried an invalid date. They now write that value as `null`, as `JSON.stringify` does, and keep the event.
+- **Backfill budget counts only what is written** · A replayed line that duplicate detection suppressed still spent the session backfill's byte budget, and with the budget full it could stop a collector early. Only lines actually written are counted now.
+- **OpenClaw OTLP checks look only at OTLP events** · `beacon endpoint integrations openclaw status` and `validate` counted any `openclaw_gateway` event as proof that gateway OTLP export works, so a working plugin or session sync hid a broken export, and with `--since` a fresh plugin event made an old OTLP event count as recent. They now consider only events received over OTLP.
+- **Git branch and remote through symlinked workspaces** · When the working directory is a symlink into a repository, the hooks now resolve it first, as Git does, so the branch and remote come from that repository and not from an enclosing one, such as a dotfiles repository in your home directory.
+- **Codex token counts with two series in one export** · For the legacy `codex.turn.token_usage` metric, the collector matched cached-token counts to input by timestamp only, so when one export held two series (after a model switch, for example) each input had the other series' cached tokens subtracted too. Beacon-managed Codex configs take token usage from traces, so only older or hand-edited configs send this metric.
+- **Pricing reports name only fallbacks that were used** · `beacon token-usage` reported `cache_write_at_input_rate` whenever an override priced one-hour cache writes but left out the five-minute rate, even when no five-minute writes were priced at the input rate. It now reports the fallback only when it was applied. Estimates are unchanged.
+- **`config.json` is replaced atomically** · Rewrites of the endpoint `config.json` truncated the file in place, so a command reading it at the same moment could see an empty or partial file and fall back to defaults. The file is now written to a temporary file and renamed into place. A symlinked `config.json` becomes a regular file.
+- **SQLite paths containing `#` or `%`** · The trace history and memory databases opened a different file when their path contained `#` or `%`, for example through `BEACON_HISTORY_DB` or a Windows account name, while status still showed the configured path. Every SQLite open now escapes the path. A database already created at the wrong path is not moved.
+
+### v1.3.39 · October 12, 2026
+
+- **SubQ as a memory evaluator** · `beacon memory evaluations run --evaluator subq` sends the same redacted trace projection and rubric questions to [SubQ's Decisions API](/cli/memory#subq) that Jev receives; Jev stays the default. The key comes from `--subq-api-key`, `SUBQ_API_KEY` or `BEACON_SUBQ_API_KEY`, the endpoint and model from `--subq-endpoint` and `--subq-model` (or `BEACON_SUBQ_ENDPOINT` and `BEACON_SUBQ_MODEL`), and `BEACON_EVALUATOR` sets the provider. `--jev-cost-per-trace` is renamed `--cost-per-trace`, and the old name still works. The `beacon-memory-distill` skill adds `--evaluator subq` when a SubQ key is the only one set.
+- **The GCS forwarder helper says why Vector rejected its config** · The macOS GCS `install-forwarder.sh` exited with code 78 and printed nothing when `vector validate` failed. It now prints Vector's message and says the installed forwarder was left unchanged. For `Invalid JWT Signature` it adds that a new service-account key can take up to a minute to start working, which is the usual cause when the key was created just before the install.
+
+### v1.3.38 · October 12, 2026
+
+- **Terraform modules for S3 and GCS forwarding** · `terraform/aws-s3` creates a new S3 bucket (public access blocked, TLS required, encrypted, versioned, with a lifecycle rule on the prefix) and the put-only `beacon-endpoint-writer` IAM user. `terraform/gcs` creates a new Cloud Storage bucket and a `beacon-endpoint-writer` service account that can only create objects under the prefix. Neither creates keys unless you ask, so no secret lands in Terraform state by default. See [AWS S3 with Terraform](/log-forwarding/aws-s3-terraform) and [Google Cloud Storage with Terraform](/log-forwarding/gcs-terraform); the Fleet, Jamf, Rippling and single-Mac rollout guides now include Terraform steps.
+
+### v1.3.37 · October 11, 2026
+
+- **Metadata-only forwarding strips the remaining content fields** · Retrieval queries and documents, tool definitions, evaluation explanations, agent descriptions, stop sequences, `approval.reason` and `policy.reason` were still forwarded in Metadata-only mode. They are now removed on the device before upload, and a test fails on any new event field that has not been classified as content or metadata.
+- **Forwarder config kept current on install, repair and upgrade** · The Beacon Cloud forwarder's `vector.toml` was written only by `beacon endpoint connect`, so a connected endpoint kept an older pack, including the old Metadata-only transform, until it reconnected, which rotates the device key. Install, repair and the Linux package upgrade now re-render it from the enrollment's ingest URL and privacy mode, validate it with the forwarder's Vector, and restart the forwarder only when the content changed and it is running; the macOS package does the same in postinstall. This never enrolls, never touches the device key and makes no network request. `beacon endpoint repair` used to stop forwarding, because its teardown deleted the forwarder config; it now leaves the forwarder in place. Homebrew and archive upgrades pick up changes on the next `beacon endpoint repair`. See [Keeping the forwarder config current](/cli/endpoint-connect#keeping-the-forwarder-config-current).
+- **System installs write user runtime config as that user** · Package postinstall, including the scheduled self-updater, ran native config repair as root, reading and writing `~/.claude/settings.json`, `~/.codex/config.toml` and `~/.gemini/settings.json` and changing their ownership through any symlink the user had planted, which a local user could use to gain root. On Linux and macOS, a child process running as the console user now does the writing, so a planted link reaches only files that user could already write.
+- **System backfill reads confined to the console user's home** · A system install, connect or upgrade runs the session backfill as root over the console user's session stores. Those reads now stay inside that home: links that lead out of it, files the user does not own, and FIFOs, sockets and devices are skipped and listed in the install report, and SQLite stores are read from a private copy. User-mode sync and backfill are not confined. Separately, a DeepSeek Harness session file that decompresses past 256 MiB is now refused in every mode. See [Session backfill](/cli/endpoint-install#session-backfill).
+- **Private user-mode runtime logs** · In user mode, `~/.beacon/endpoint/logs/runtime.jsonl`, its lock and rotated archives are now created 0600 in 0700 directories instead of 0666 and 0755, and a log an older release left world-writable is narrowed when a writer next opens it. `beacon endpoint doctor` accepts an owner-only user log and suggests `chmod 600`, not `666`, for one it cannot write. The system log under `/var/log/beacon-agent` is unchanged.
+- **launchd job logs moved out of `/tmp`** · Beacon's launchd jobs wrote stdout and stderr to fixed names in world-writable `/tmp`, where a local user could read root daemon output or plant a symlink for root to append through. System jobs now log to `/Library/Logs/Beacon/<label>.out` and `.err`, and user LaunchAgents to `~/Library/Logs/Beacon`. The package postinstall and repair move the collector, updater and inventory jobs; the Beacon Cloud forwarder moves on the next `beacon endpoint connect`, and the S3, GCS and Falcon forwarders when their install helper runs again.
+- **Windows system install permissions** · A Windows system install gave interactive users Modify on `%ProgramData%\Beacon\Endpoint\logs`, enough to replace it with a junction and redirect the collector's writes, and left `%ProgramData%\Beacon`, which holds the collector config and `hooks\beacon-hooks.exe`, with whatever permissions it already had. Install now resets `%ProgramData%\Beacon` to Administrators ownership with read-only access for users, and interactive users can read and write the files directly in `logs` but cannot delete them, change their permissions or modify the folder. `beacon endpoint doctor --system` reports the old grant as `acl_too_broad`, and `--fix` applies the new permissions. A hook or CLI writer that is not allowed to rotate the log now appends past the size limit instead of dropping the event, which also fixes lost events on Linux and macOS system installs.
+- **Hooks no longer approve tool calls for you** · Devin CLI's permission-request hook answered `approve` to every request, so Devin stopped asking about writes and shell commands, and Beacon logged approvals nobody gave. It now gives no decision and records `approval.requested`. The pre-tool hook likewise stops answering `allow` on Antigravity CLI (it prints nothing), Grok Build and runtimes configured by hand (they get `{}`), leaving each runtime's own permission settings in charge. Cursor keeps `{"permission":"allow"}`, which does not override Cursor's own allowlist or approval mode. Policy-provider denies are unchanged.
+- **Policy denies honored on Claude Code permission requests** · When a policy provider denied a call in Claude Code's or Qwen Code's permission-request hook, Beacon answered with the PreToolUse deny shape, which that hook ignores, so the prompt went ahead while the log recorded an enforced deny. That phase now returns the `decision.behavior: "deny"` object these runtimes read. It mattered most for tools outside Beacon's PreToolUse matcher, such as `NotebookEdit`.
+- **`beacon rules pull` hardened, and the baseline stays active** · `rules pull` requires `https://` (plain `http://` only for loopback), refuses redirects that leave https, caps the download size, tar entry count and rule size, and takes `--sha256 <hex>` to verify the download before anything is installed; without it, pull prints the digest. The embedded baseline rules now stay active beside the rule store, and a store rule replaces a baseline rule only by id, so installing one rule no longer turns the baseline off. `beacon scan --rules <dir>` still runs that directory alone. See [`beacon rules pull`](/cli/rules-pull).
+- **Bounded rule evaluation** · Each rule's CEL expression now runs under a cost limit, so a runaway expression fails with an error naming the rule instead of hanging `beacon scan` or the dashboard's findings view. Ordered correlation runs in linear time: `secret-read-then-external-mcp` took 32 seconds on 8,000 credential reads in one session and now takes about half a second.
+- **Lens frame hardened, and `beacon lenses add` asks first** · The lens frame removes WebRTC, refuses nested frames, `<link>` elements, speculation rules and `document.write`, and turns off DNS prefetching. That is best-effort hardening, and the docs now say so: an installed lens is code you trust with the trace data it is shown. `beacon lenses add` shows that warning and asks for confirmation, and without a terminal or in CI it refuses unless `--yes` is given. `beacon lenses lint` warns on the same constructs. See [Lenses](/concepts/lenses#what-the-sandbox-does-not-guarantee).
+- **Cursor `hooks.json` fields kept** · Install and uninstall rewrote Cursor's `hooks.json` with only the fields Beacon models, which dropped other top-level keys and hook fields such as `failClosed`, turning a blocking security hook fail-open, and rewrote prompt-type hooks as empty commands. Only Beacon's own entries change now. Keys inside each object are written in alphabetical order.
+- **Files Changed lens and Cursor tool results** · The Files Changed lens keeps deep directory rows inside the tree, breaks long paths at slashes, and no longer counts approvals as edits. The Cursor hook records a tool's result from `tool_output`, so a WebSearch keeps its output, and the chat view of a shared trace no longer merges a WebSearch into the Write that saves its output or shows the end of a turn as an empty tool.
+
+### v1.3.36 · October 11, 2026
+
+- **`beacon share`** · Publishes one local agent session to beacon.sh as a shared trace and prints its link. With no selector it shares the session it runs inside, or the most recent session in the current directory; `--session`, `--source-path` and `--cwd` pick another, `--list` shows the candidates, and `--print` shows exactly what would be uploaded without making a request. Every event is redacted and home and session paths are rewritten before upload. A new trace is `direct` (anyone with the link); `public` asks first and is refused without a terminal unless `--yes` is given. `beacon share refresh` uploads only the events the trace is missing, at the same URL. See [`beacon share`](/cli/share) and [Sharing sessions](/sharing/index).
+- **New `traces:write` sign-in scope** · `beacon login` now requests `traces:write`, which sharing needs. A sign-in from before this release gets an error asking you to run `beacon login` again. Headless machines can use a `bcn_api_` key from `--key` or `BEACON_API_KEY` instead.
+- **Share the session an agent is running in** · `beacon share --current`, the default, finds the session it runs inside. Claude Code's `SessionStart` hook exports `BEACON_SESSION_ID` and `BEACON_HARNESS` to the session's shell, and other runtimes fall back to a local record of the last session each hook saw per directory (`~/.beacon/endpoint/active-sessions.json`, identifiers and paths only). The new `beacon-trace-share` agent skill runs it when you ask your agent to share the session, keeps the default `direct` visibility and asks before `public`.
+- **Auto-share through Beacon Cloud** · `beacon share auto enable [--visibility] [--project <dir>]` publishes new sessions without running `beacon share` each time. Hooks never upload: they write one local `session.share_requested` event per session, and Beacon Cloud forwarding carries it to beacon.sh, which builds the trace. A repository's committed `.beacon/share.json` can turn auto-share off for everyone, but turns it on only for someone who enabled that project themselves, so a cloned repository cannot publish your sessions. `disable` without `--project` turns it off everywhere, and `status` shows which setting applies and why.
+- **Share links in git notes, and sharing on push** · A commit's `beacon:<harness>/<id>` note line can carry the session's share URL, accepted only for https URLs on beacon.sh or your configured Beacon host, and `beacon git notes` prints it. With `beacon git setup --share-sessions`, the pre-push hook shares the sessions linked to the pushed commits that have no URL yet, at most 10 per push and within the hook's 10-second budget, never failing the push, and writes their URLs into the notes. Run `beacon git setup` again in repositories set up by an older Beacon. See [Sharing sessions on push](/cli/git#sharing-sessions-on-push).
+- **`beacon share --follow`, and sharing from CI** · `--follow` keeps a trace current while the session runs, uploading only when its events change, until the session ends or you press Ctrl+C. The share docs add [GitHub Actions and GitLab CI examples](/cli/share#ci-examples) that use `BEACON_API_KEY`.
+- **Sharing state in local views** · The dashboard, the `beacon traces` browser and `beacon endpoint traces list` mark shared sessions, and mark them stale when the session has activity newer than its last share, with the `beacon share refresh …` command to copy. `traces list --state stale` lists only those, and the plain list adds a last column for shared traces. The dashboard does not share anything itself.
+- **OpenCode replies show their text in trace views** · OpenCode records the assistant's reply as `agent.response`, which trace views typed as a session event showing only its label. It is now an agent message with its retained text.
+- **Credentials redacted in more forms** · Redaction now catches labeled assignments such as `AWS_SECRET_ACCESS_KEY=…` and `{"api_key": "…"}`, Basic and Digest authorization headers, `--password` and `--token` flags, passwords in URLs, PEM and OpenSSH private keys, and recognizable tokens from Anthropic, OpenAI, AWS, GitHub, GitLab, Slack, Stripe, Google, npm, Hugging Face and Beacon, plus JWTs. Any string under a field named for a credential, such as `password` or `api_key`, is redacted as well, and redaction runs before truncation so a cut cannot leave part of a secret behind. This covers new events in the runtime log and everything forwarded or shared from them; existing log lines are not rewritten. See [What is redacted](/security/retention-redaction#what-is-redacted).
+
+### v1.3.35 · October 10, 2026
+
+- **Interactive update notices without startup delay** · Running bare `beacon` in
+  a terminal now shows a cached notice when a newer release is available, with the
+  right upgrade command for Homebrew and the signed system package or a release link
+  for other installs. Beacon never waits on this network check: a detached
+  `beacon version refresh` updates the cache at most once a day for a later run.
+  Scripts, pipes, redirects, other commands, CI and development builds skip the
+  notice, and `BEACON_UPDATE_CHECK=0` disables it.
+
+- **Session backfill on every install and connect** · The 30-day [session backfill](/cli/endpoint-connect#session-backfill) now runs for system, package and MDM installs and connects too, reading the active console user's session stores, and every `beacon endpoint connect` stages it again rather than only the first one, so history written while an endpoint was disconnected still reaches Beacon Cloud. Re-sent events keep their deterministic event id, which the dashboard collapses. `--no-backfill` and `BEACON_BACKFILL=0` still turn it off.
+- **Model-visible MCP tool descriptions on Claude Code** · With `--claude-capture-model-context`, the collector also keeps the name and description of each MCP tool a Claude Code request advertises, and records one `mcp.tool_listed` per tool per session, again only when its description changes. The `claude_api_body` processor sends each destination that same once-per-session list as `beacon.mcp.tools`, in place of the body. Install also raises Claude Code's inline content limit to 256 KB unless you set one, because MCP tools come last in a request body, and the local OTLP receiver accepts gRPC messages up to 32 MiB. Independently, `gen_ai.tool.description` now keeps up to 4 KB on every event rather than 2 KB, so a padded description cannot hide its instructions from `mcp-poisoned-tool-description`.
+- **Model-visible MCP tool descriptions on Oh My Pi** · The Oh My Pi extension reads the MCP tool routes from the same system prompt as the skill index and records one `mcp.tool_listed` per described tool, with the description the model was shown in `gen_ai.tool.description`. Each session sends a listing once and again only when it changes. `mcp-poisoned-tool-description` (now version 2) matches these listings as well as `mcp.tool_invoked`, so a poisoned description is flagged when the model sees it rather than only once the tool runs. Metadata-only managed forwarding removes `gen_ai.tool.description` and keeps the tool name.
+- **Opt-in capture of Claude Code model context** · `beacon endpoint install
+  --claude-capture-model-context` (and the same flag on `repair`) turns on Claude
+  Code's API-body logs, so Beacon can record context Claude Code gives the model
+  that no other event reports. The first is the page WebFetch hands its summarizer
+  model, recorded as a `WebFetch` tool result, which `indirect-injection-in-tool-result`
+  evaluates. Without the flag, install and repair remove an inline
+  `OTEL_LOG_RAW_API_BODIES` (`1` or `true`) from `~/.claude/settings.json`; `0`
+  and `file:<dir>` are left alone. A CI job opts in by setting
+  `OTEL_LOG_RAW_API_BODIES=1` in its environment.
+- **API bodies are filtered before every destination** · A new collector
+  processor, `claude_api_body`, runs ahead of every exporter, Splunk HEC included.
+  It drops every Claude Code API body, and with the opt-in keeps only the WebFetch
+  page text, redacted and capped at 2048 characters. If you had enabled raw bodies
+  yourself, they no longer appear in `raw.attributes.body` or reach your SIEM.
+  Install stops with an error if the collector binary it would use is too old to
+  have the processor.
+- **`ci exec` keeps your telemetry timing** · A value you set for
+  `OTEL_METRIC_EXPORT_INTERVAL`, `OTEL_BLRP_SCHEDULE_DELAY` or
+  `OTEL_BSP_SCHEDULE_DELAY` now reaches Claude Code. Before, `ci exec` replaced it
+  with its own default.
+- **Model-visible skill listings** · Claude transcript sync and the Oh My Pi extension capture only the skill index the model was shown, as a `session.context` event rather than an operator prompt. `gen_ai.system_instructions` holds one OpenTelemetry GenAI `text` part per skill, so each skill's description is limited on its own and none is cut off by the ones before it. A new `system_context` block says the event is a skill index and names each skill with the `skill_name_hash` the configuration inventory uses; it is metadata, so metadata-only forwarding keeps it while removing the text. Invoked skill bodies and unrelated system instructions remain outside this signal.
+- **New rule field `e.gen_ai.system_instructions_text`** · Threat rules can match the text of `gen_ai.system_instructions`, whether Beacon recorded it or an OTLP producer reported it. Like `e.gen_ai.tool.call.result_text`, it is derived by the engine from text parts only, redacted, capped at 4 KB per part, and empty when content was not retained. `e.system_context.kind` and `e.system_context.skills` select a skill index without matching its text.
+- **Pi-family tool results reach the rules** · Oh My Pi, Pi, Prime Agent and Senpi kept every tool result only under `raw`, which no rule can match. A file or skill the agent read, a web page fetched through Oh My Pi's `read`, and an MCP reply are now in `gen_ai.tool.call.result`, matched by `e.gen_ai.tool.call.result_text`, and `bash` output is in `command.output`. The scope is the one every runtime shares, which now also includes any result whose `tool.path` is an http or https URL. An Oh My Pi `skill://` read is recorded as a `file.read` of the `SKILL.md` it read, and media in an MCP reply is kept as its size and SHA-256.
+- **System instructions are always a list of parts** · The collector now writes an OTLP `gen_ai.system_instructions` that arrives as a plain string or a single part as a parts list, so the field has one shape on every event and a typed index such as the Elastic pack's maps it consistently.
+
+---
+
+## September 2026
+
+### v1.3.22 · September 23, 2026
+
+- **Vector ships with Beacon on Linux** · The `.deb` and `.rpm` install
+  [Vector](https://vector.dev) 0.56.0 at `/opt/beacon/bin/vector`, the Linux
+  archives carry it as `beacon-vector` beside `beacon`, and Homebrew on Linux
+  installs that same file. It is the static musl build, so it runs on minimal and
+  custom-built hosts, and it runs only when a destination needs it: Beacon
+  Managed, S3, GCS, CloudWatch, Sumo Logic, Rapid7, Falcon, or Sentinel. Beacon
+  finds it without PATH or `BEACON_VECTOR_BIN`.
+- **Vector is pinned to 0.56.0 everywhere** · Vector 0.57 stops expanding
+  `${VAR:-default}` in config files and 0.58 stops expanding `${VAR}`, which broke
+  most generated forwarding configs. The Homebrew `beacon-vector` keg on Apple
+  Silicon moves back from 0.58.0 to 0.56.0 on the next `brew upgrade`, matching the
+  macOS package and the Linux packages. CI now loads every generated config with
+  the bundled Vector, and a macOS release fails if its package has no Vector.
+- **Microsoft Sentinel without Azure Arc** · The Sentinel pack adds `vector.toml`
+  and `dcr-logs-ingestion-template.json`. The bundled Vector sends
+  `runtime.jsonl` to the Logs Ingestion API as an Entra app registration, through
+  the same transform into the same `BeaconRuntime_CL` table as the Azure Monitor
+  Agent path. The docs now say plainly that Azure Monitor Agent on a machine
+  outside Azure needs Azure Arc first, and give a systemd unit for the Vector
+  path.
+- **Sign-in says at once when it cannot finish** · On Linux with no display, or
+  over SSH, the install wizard goes straight to recovery and explains why
+  instead of waiting five minutes for a browser nobody can see. Finishing without
+  an account is the default; the sign-in URL comes with the `ssh -L` command for
+  its port. `beacon login` prints the same, and `dashboard --open` no longer fails
+  over SSH.
+- **Homebrew upgrades no longer strand services** · Vector and the collector
+  found beside a Homebrew-installed `beacon` now resolve to the `<prefix>/bin`
+  link rather than the versioned keg, so the forwarder and collector units keep
+  working after `brew upgrade`.
+- **Hook-only installs leave Claude Code and Codex alone** ·
+  `beacon endpoint install --harness omp` (or any selection with no OpenTelemetry
+  runtime) no longer writes OTLP settings into `~/.claude/settings.json` and
+  `~/.codex/config.toml`. Selections that name those runtimes are unchanged.
+- **RPM coverage** · The package smoke test now installs, upgrades, and removes
+  the `.rpm` on Rocky 9 in CI, alongside the `.deb` on Ubuntu, and checks that
+  `apt purge` removes config and logs.
+
+### v1.3.21 · September 23, 2026
+
+- **Browser events identify the browser that produced them** · The browser
+  extension now records `user_agent.name` and `user_agent.version` on every
+  event, using UA Client Hints with a user-agent fallback. Chromium, Chrome,
+  Edge, Brave, Opera, Opera GX, Vivaldi, Arc, and Firefox are distinguished
+  where the browser exposes enough information; the typed fields survive
+  metadata-only retention. The replay e2e now runs in Microsoft Edge as well as
+  Chromium.
+- **A beta Firefox browser-extension build** · `npm run build:firefox` produces
+  a Gecko-targeted build with a pinned add-on ID, Firefox-compatible background
+  and options declarations, Mozilla linting in CI, and a visible site-access
+  warning and grant flow when Firefox withholds MV3 host permissions. Permanent
+  installation still requires an AMO-signed XPI; the release workflow publishes
+  one only when its AMO credentials are configured.
+- **Safari packaging groundwork, not Safari support** · The extension has an
+  experimental Safari build target plus scripts for generating an Xcode app
+  wrapper, validating an MDM declaration, and running packaging checks. It has
+  not been tested in Safari, is not wired into a release, and is not shipped.
+- **User and system collectors can run together** · A collector's default
+  health-check port now moves with an overridden OTLP HTTP port, so a user-mode
+  collector on alternate OTLP ports does not collide with a system collector
+  still using `13133`. The resolved port is stored in endpoint configuration
+  and used by status, diagnostics, repair, and CI checks.
+- **Interrupted managed reconnects are no longer reported as healthy** · As soon
+  as enrollment returns a rotated device key, connect records a non-secret
+  pending marker. If storing the key, writing configuration, or starting the
+  forwarder then fails, status reports `connect_incomplete: true` and the retry
+  command instead of presenting the previous enrollment as connected. A failed
+  first connect also removes any partial forwarder.
+- **Large Claude Code backfills preserve the sweep they just wrote** ·
+  `beacon endpoint claude sync` stops before rotation would delete output from
+  the current sweep, leaves remaining session cursors pending, and reports
+  retained and rotated event counts. `--rotate-bytes` can temporarily enlarge
+  the sync's rotation window for a one-pass backfill.
+- **Existing Claude Code hooks survive Beacon edits verbatim** · Install, repair,
+  and uninstall now preserve non-Beacon `command`, `http`, `prompt`, and `agent`
+  hooks, including fields Beacon does not interpret such as URLs and headers.
+- **DeepSeek sandbox capture gaps are visible** · A hook that cannot write the
+  runtime log now warns on stderr without blocking the agent. Endpoint doctor
+  compares DeepSeek's native sessions with retained live-hook evidence and
+  reports `dsh_hook_capture` when sandboxing prevented live capture, while
+  directing operators to session sync for backfill.
+- **The supervised collector no longer signals an unrelated process** · In
+  containers and other hosts without a service manager, a pidfile that outlived
+  its collector could name a process the kernel had since given that pid, and
+  unload would send it SIGTERM. The pid now counts as the collector only when its
+  command line matches the program it was started as. The RPM uninstall docs now
+  say to run `beacon endpoint uninstall --system` before `dnf remove`, since RPM
+  has no purge.
+- **Trace and memory content fixes** · Trace views now use retained assistant
+  response or reasoning text as `content.text`, keeping the event label as the
+  summary. Jev/Noul candidates no longer store the question type as if it were
+  an evaluator-provided reason.
+- **Safer supervised service cleanup** · The no-init-system backend verifies
+  that a pidfile still names the collector it started before signaling it, so a
+  recycled process ID cannot cause Beacon to stop an unrelated process. Linux
+  removal guidance now also makes clear that RPM has no purge operation and
+  that a full removal runs `beacon endpoint uninstall --system` before
+  `dnf remove`.
+
+### v1.3.20 · September 22, 2026
+
+- **Endpoint install now discovers local runtimes by default** · With no
+  `--harness` flag, `beacon endpoint install` and `repair` detect the invoking
+  user's runtimes and configure every integration Beacon can safely install,
+  including supported OTLP settings, hooks, plugins, and extensions. An explicit
+  comma-separated list keeps exact-selection behavior, while `--harness all`
+  forces every installable integration.
+- **Manual and poll-only integrations are reported, not misconfigured** ·
+  Discovery explains the next step for GitHub Copilot CLI, Claude Cowork, fx,
+  and project-scoped OpenHands instead of treating those surfaces as install
+  failures. If no automatically installable runtime is found, Beacon still
+  installs the collector without changing runtime configuration.
+
+### v1.3.19 · September 21, 2026
+
+- **Onboarding happens in one screen that never disappears** · Signing in used to
+  quit the full-screen wizard, print to plain output, block for up to five minutes,
+  then start a second wizard that wiped what it had printed. It now runs inside the
+  same view, which shows the sign-in URL, a spinner and the time remaining. The URL
+  is printed before any browser is opened, so it works when none can be, and
+  <kbd>esc</kbd> during the wait returns to the sign-in screen instead of ending the
+  install. `beacon endpoint install --no-browser` starts in URL mode.
+- **Choosing Beacon Cloud connects the endpoint** · Confirming Beacon Cloud installs
+  Beacon and then enrolls the device and starts the forwarder, rather than printing
+  `beacon endpoint connect` for you to run. The confirm screen states that forwarding
+  starts and names what the selected privacy mode sends, so that screen is where
+  forwarding is authorized. An endpoint already enrolled is never re-enrolled, since
+  enrollment rotates its device key. A failed enrollment leaves a working local
+  install, prints the retry command, and re-offers the question next time.
+- **A sign-in that cannot finish no longer blocks the install** · Offline, without a
+  browser, or after the wait expires, the wizard offers to retry, to show the URL to
+  open yourself, or to finish setup without an account. Signing in stays the expected
+  path: that screen offers no alternative until an attempt has actually failed.
+- **Clearer, shorter onboarding copy** · The wizard explained itself twice and
+  repeated the same reassurance on three screens. The destination choice now
+  describes what each option gives you: Beacon Cloud as free, unlimited cloud-based
+  retention of every agent session with AI-powered search and analytics on Beacon's
+  hosted dashboard, Local as a dashboard for this machine where nothing leaves it,
+  each saying when to pick it. The managed disclosure is plain language.
+- **A failed install no longer marks the machine onboarded** · The onboarding record
+  was written before `lifecycle.Install` ran, so an install that then failed left a
+  profile saying setup was complete: the retry skipped the wizard silently and never
+  offered the destination again. It is now written only after the install succeeds.
+- **A redirected install no longer launches the wizard** · Terminal detection used a
+  character-device test, which `/dev/null` satisfies, so an install with stdin
+  redirected from `/dev/null` started the full-screen wizard against an input already
+  at end of file and failed with "onboarding cancelled". It now uses a real terminal
+  check, and `TERM=dumb` takes the same silent skip.
+- **The browser page after sign-in is a real page** · Signing in used to land on
+  unstyled markup. It now carries Beacon's mark and styling and says the one thing
+  that matters: return to your terminal, which is still waiting. Device approval gets
+  the same page. Everything is inline, since it is served from a loopback port with
+  no network guarantee behind it.
+- **Setup ends on what to do next** · A managed install closed on a wall of paths and
+  a sentence pairing the dashboard with a revocation link. It now says to run an
+  agent as usual and that its sessions appear on the dashboard within a minute.
+- **Printed dashboard links point somewhere that exists** · The dashboard is a single
+  page at `/dashboard` whose views are tabs, so deep links such as
+  `/dashboard/telemetry` and `/dashboard/endpoints` have no route behind them.
+  Connect, disconnect, `asymptote validate` and the cloud-agents guide named those
+  paths; all now point at the dashboard itself.
+- **`q` no longer quits the onboarding wizard** · It was bound to quit on every
+  screen, so one stray keystroke on a choice list ended the install. Cancel with
+  <kbd>esc</kbd>.
+- **Dashboard and MCP HTTP servers reject non-loopback Host headers** · Both bind to
+  loopback, which keeps other machines out but not a web page that DNS-rebinds its
+  own hostname to `127.0.0.1`; the browser then treats the local server as
+  same-origin and the page can read captured prompts and tool activity. Both now
+  answer 403 unless the Host header names localhost or a loopback IP.
+- **Long traces keep their tail in the learning projection** · Only the first 80
+  events were kept, so a long session was evaluated without its outcome, which is
+  usually where the fix, the passing test or the final decision lands. The opening
+  context and the tail are both kept, with an explicit marker for the omitted middle.
+- **DeepSeek Harness sessions with a format version are discovered** · DSH names a
+  record `session.v3.jsonl.zstd`, and discovery compared the filename for equality
+  against the unversioned names, so a store of versioned records yielded nothing and
+  reported that as success. Names are now matched by shape, with the version optional.
+- **Claude Code and Codex hooks install by default** · `beacon endpoint install` and
+  `beacon endpoint repair` now write each runtime's user-level hooks together with its
+  OpenTelemetry settings whenever the `claude` or `codex` harness is selected, which the
+  default harness list does. Their OTLP export has no session start or end, file reads or
+  diffs, or subagent lifecycle, so a default install previously recorded thinner sessions
+  for them than for every other supported runtime. Package installs already refreshed
+  these hooks for the console user; this brings Homebrew and tarball installs in line.
+  `beacon endpoint hooks uninstall --harness claude` removes them, and `--harness codex`
+  the Codex ones.
+- **Hook install failures no longer fail the install** · When `endpoint install` or
+  `endpoint repair` cannot write a runtime's hooks, it prints a warning and the
+  `beacon endpoint hooks install --harness …` command to retry, and still attempts every
+  other hook target. The collector, config, service, and OTLP settings are already in place
+  at that point, so the endpoint is installed rather than reported broken.
+
+### v1.3.18 · September 21, 2026
+
+- **Kimi Code telemetry** · Kimi Code (Moonshot AI) now has managed hook install,
+  status, uninstall, repair, discovery, inventory and dashboard coverage under the
+  `kimi_code` canonical name. Beacon registers thirteen of the runtime's twenty
+  lifecycle events in the `[[hooks]]` array of `$KIMI_CODE_HOME/config.toml`,
+  appending its block and leaving the rest of the file -- including the provider
+  API keys it holds -- byte for byte. Coverage includes sessions, prompts, tool
+  activity, failed tools, commands with output and exit code, file reads and edits
+  with diffs, MCP calls, subagents, context compaction, and real operator approval
+  decisions from the `PermissionRequest`/`PermissionResult` pair. Token usage is
+  not collected, because no Kimi Code hook payload carries one.
+- **Interactive local trace browser** · `beacon traces` opens a full-screen,
+  read-only browser over the local trace index, with trace search, event-type
+  filters, paging, and event detail. Redirected input or output falls back to a
+  bounded tab-separated list, while `beacon endpoint traces` remains the stable
+  JSON and scripting interface.
+- **Safer relayed memory project resolution** · Dashboard and MCP memory lookups
+  resolve relayed paths only against projects already stored in local memory,
+  choose the most-specific matching project, avoid filesystem and Git reads, and
+  fail closed when no known project matches.
+- **Account sign-in and safer first-run onboarding** · `beacon login`, `whoami`,
+  and `logout` add browser PKCE account authentication without enabling forwarding.
+  Interactive user installs now use a full-screen wizard that requires sign-in,
+  preselects Beacon Cloud, offers Standard or Metadata-only privacy, and records
+  intent without moving telemetry. System, package, MDM, CI, dry-run, and
+  redirected-input installs remain noninteractive and account-free.
+- **Beacon Cloud privacy modes** · Beacon Cloud forwarding can now use `standard` or
+  `metadata-only`. Metadata-only removes retained prompts, responses, reasoning,
+  tool arguments and results, command output, raw fields, diffs, inventory
+  content, and MCP definitions locally before buffering or upload. Connect now
+  validates the rendered Vector configuration before enrollment can rotate a
+  device key, and privacy-mode changes clear data buffered under the old mode.
+- **DeepSeek Harness session backfill** · `beacon endpoint dsh sync` and `status`
+  read committed native sessions from `$DSH_HOME/sessions`, adding assistant text
+  and reasoning, failed tools, persisted command/file/MCP detail, and token usage
+  that DeepSeek's live hook bridge does not expose. Backfilled events are marked
+  `harness.collection_method=poll` and do not synthesize approvals.
+- **GitHub Copilot CLI session backfill** · `beacon endpoint copilot sync` and
+  `status` read committed records under `~/.copilot/session-state`, complementing
+  live OTLP with assistant text, complete tool results, commands, file activity,
+  and persisted token usage. Poll events remain offline, deterministic, and
+  cannot approve, deny, or delay tools.
+
+
+### v1.3.17 · September 21, 2026
+
+- **Reviewed cross-harness memory** · Beacon now has an explicit local learning
+  workflow under `beacon memory`. Evaluations select local traces, optionally call
+  TypeSafe Jev's System One API with a bounded redacted projection, and persist
+  results in a local `memory.db` beside the endpoint log base directory. Reviewers
+  can list, inspect, approve, reject, or supersede memory candidates before any
+  project memory is created.
+- **Approved memory reuse through MCP and Agent Skills** · `beacon mcp serve` now
+  exposes approved-memory tools (`search_memory`, `get_memory`, and
+  `get_memory_context`) alongside the existing local activity tools. Approved
+  memory can also be previewed or installed as deterministic Agent Skills with
+  `beacon memory skills preview|install`, writing to `.agents/skills/<slug>/SKILL.md`
+  only through an explicit CLI action.
+- **Memory dashboard and docs** · The local dashboard adds a read-only Memory page
+  for evaluations, candidates, and approved memories. The cross-harness memory
+  concept and CLI reference document the Jev boundary, project scoping, MCP reuse,
+  and Agent Skill publishing.
+
+### v1.3.16 · September 20, 2026
+
+- **Session-centric local dashboard** · The dashboard root now groups local runtime
+  activity by agent session, showing prompt, risk, harness, model, repository,
+  duration, activity counts, and last-artifact summaries. Session detail pages add
+  timelines, severity and type filters, metadata summaries, raw JSON drawers, and
+  value inspectors while staying loopback-only and read-only.
+- **Dashboard navigation refresh** · Local investigation views now separate Agent
+  Activity Sessions, Agent Activity analytics, Findings, Detections, Token Usage,
+  Agent Inventory, and Memory so rollout validation and local triage no longer
+  depend on a flat event table.
+
+### v1.3.15 · September 19, 2026
+
+- **Local session-store sync across more runtimes** · Beacon can now backfill
+  committed local session history for Claude Code, Cline, Codex CLI, Cursor,
+  Factory Droid, Grok Build, Hermes Agent, OpenClaw Gateway, OpenCode, Pi, and
+  Prime Agent. The new `beacon endpoint <runtime> sync` and `status` commands
+  read each runtime's own on-disk records locally and mark those events
+  `harness.collection_method=poll`, so they are useful for history and scheduled
+  catch-up without pretending Beacon observed or controlled the action live.
+- **Trace search for local endpoint activity** · `beacon endpoint traces` adds a
+  local SQLite trace index over runtime JSONL, with `status`, `reindex`, `list`,
+  `search`, and `show` commands. The index keeps source-scoped trace keys and
+  event ordering stable so the CLI and dashboard answer the same trace-search
+  questions over mixed hook, OTLP, plugin, and poll events.
+- **DeepSeek Harness and Senpi telemetry** · DeepSeek Harness now has managed
+  hook installation, payload mapping, discovery, inventory, dashboard, and token
+  coverage under the `deepseek_harness` canonical name. Senpi, the standalone
+  OMO edition, now ships as its own managed Pi-family extension and runtime page
+  under the `omo_senpi` harness.
+- **Poll-path reliability fixes** · The new collectors were hardened around
+  partial tails, oversized records, failed emits, system-mode cursor paths,
+  compaction and rewrite detection, deduplication coordinates, and session-scoped
+  token accounting, so a bad record or rewritten store does not silently skip
+  later telemetry.
+
+### v1.3.14 · September 17, 2026
+
+- **OpenClaw Gateway endpoint telemetry** · Beacon now ships end-to-end OpenClaw
+  Gateway collection: a managed `openclaw-beacon` plugin, the `beacon-hooks
+  openclaw-event` adapter, discovery and install wiring, README runtime coverage,
+  and docs. The plugin path covers session lifecycle and resume, prompts, tool
+  lifecycle, commands with exit code and output, file reads/creates/edits with
+  diffs, `apply_patch` fan-out, MCP tools, compaction, subagents, agent messages,
+  and token usage including cache reads and writes. The existing OTLP integration
+  remains the gateway traces and metrics path; together they report the
+  `openclaw_gateway` harness.
+- **Prime Agent endpoint telemetry** · Prime Agent is now a first-class collected
+  runtime with a managed extension, installer, discovery, documentation, and hook
+  adapter support. Its persistent `ipython` kernel activity is recorded as
+  `command.executed` so file operations and shell work inside cells stay visible
+  to command-scoped rules, with token usage, reasoning, session lifecycle,
+  prompts, file diffs, and runtime status preserved under the `prime_agent`
+  harness.
+
+### v1.3.13 · September 16, 2026
+
+- **Codex Desktop is tracked separately from Codex CLI** · Codex Desktop's app-server now
+  normalizes to its own `codex_desktop` harness instead of merging with terminal Codex CLI
+  activity. Dashboards, token coverage, data inventory, and exported events can now distinguish
+  the desktop app from CLI sessions while preserving the same Codex OTLP token and tool telemetry
+  mapping.
+- **Scheduled inventory snapshots only on real change** · The first day of scheduled inventory
+  showed every run writing a "changed" snapshot on machines where nothing had changed, because
+  the digest hashed `~/.claude.json` whole and Claude Code rewrites that state file on every
+  session. That file's raw hash is now left out of the digest (it is still reported); the MCP
+  servers parsed from it keep their own hashes, so a real MCP change still snapshots. Two smaller
+  fixes from the same data: a macOS service account holding the console at the login window
+  (`_mbsetupuser`, home `/var/empty`) produced an empty snapshot and now counts as no console user
+  (heartbeat only), and the state file keeps the last digest per home so a machine with more than
+  one console user does not report a switch as a change.
+- **Install guidance matches the release artifacts** · The README now separates macOS Homebrew,
+  Linux `.deb`/`.rpm`, and Windows `.msi` install paths, calls out the default log locations for
+  each platform, and gives the supported runtime table a logo column with Codex CLI and Codex
+  Desktop split into separate rows.
+- **Homebrew keeps Beacon's Vector dependency private** · The generated Homebrew formula now makes
+  the `beacon-vector` dependency explicit in the macOS formula and keeps that helper out of `PATH`,
+  so Beacon's bundled forwarding dependency does not collide with a user's own Vector install.
+
+### v1.3.12 · September 15, 2026
+
+- **User-mode inventory job starts beside a system install** · On a Mac that also ran the
+  system-mode inventory daemon, the user-mode LaunchAgent pointed its stdout and stderr at the
+  same root-owned `/tmp` files and launchd refused to spawn it (`EX_CONFIG`). The user-mode job
+  now logs to per-user paths (`/tmp/com.beacon.endpoint.inventory.<uid>.out|err`).
+
+### v1.3.11 · September 15, 2026
+
+- **Inventory is a scheduled job now** · Endpoint inventory heartbeats used to fire only from
+  agent hooks, so a machine that ran no hook-instrumented agent (or an idle one) never reported,
+  and system installs needed user hooks to be able to write a root-owned log. `beacon endpoint
+  install` now writes a scheduled job in both modes, `com.beacon.endpoint.inventory` (LaunchAgent
+  or LaunchDaemon) on macOS and `beacon-inventory.timer` on Linux, that writes `inventory.heartbeat`
+  every 6 hours and once at load, and `inventory.snapshot` when the inventory changed. It is on by
+  default; the package postinstall reconciles it on every upgrade, so an existing system install
+  starts reporting inventory after its next self-update with no action. `inventory_heartbeat.enabled:
+  false` removes it; `ttl_seconds` is gone (old keys are ignored). Hooks no longer trigger inventory:
+  Codex's `UserPromptSubmit` inventory hook is dropped, hook commands no longer carry `--cli`, and
+  the hook binary keeps `--cli` and `inventory-heartbeat` as no-ops for hook files written by
+  older versions. `beacon endpoint status` gains an `Inventory heartbeat` line and `--json`
+  `inventory_heartbeat` object. A system-mode run inventories the console user's home; the
+  scheduled scan no longer includes project-scoped config, which `beacon endpoint inventory` still
+  reports.
+
+### v1.3.10 · September 12, 2026
+
+- **goose (Block) hook telemetry** · The hooks binary reads goose's plugin hook
+  payloads (`--platform goose`), covering session start and end, prompts, tool
+  lifecycle, command lines, and file creates and edits with diffs. goose spells
+  three envelope fields its own way (`event`, `working_dir`, `message`) and
+  reports a failed tool call as its own `PostToolUseFailure` event with a payload
+  otherwise identical to `PostToolUse`, so the event name is what decides whether
+  a write is recorded as landed. MCP tools are identified by goose's
+  `<extension>__<tool>` prefix not naming a built-in extension, since goose sends
+  no tool output and no `mcp_*` argument to give it away. goose classifies a
+  blocking hook's stdout, so `PreToolUse` and `Stop` answer with an explicit
+  `{"decision":"allow"}` — the `{}` other runtimes read as no opinion is a failed
+  hook here — and a policy-seam deny is returned as `{"decision":"block"}`,
+  goose's own spelling for it. Approval decisions and token usage are not on any
+  goose hook and are not synthesized. See [goose](/runtimes/goose).
+- **`goose` is a canonical harness name** · `codename-goose`, `block-goose`, and
+  the CLI and agent spellings all normalize to `goose`, so the hook path and
+  goose's own OpenTelemetry export land on one harness instead of splitting a
+  session in two. GooseAI spellings (`gooseai`, `goose-ai`, `goose.ai`) are
+  deliberately left unmapped and pass through as themselves — that is a different
+  company's inference service, not this runtime.
+- **Security** · Bumps `google.golang.org/grpc` to 1.83.2 in the collector
+  exporter and sandbox modules.
+
+### v1.3.9 · September 9, 2026
+
+- **Cloud agents can send telemetry to Beacon Cloud** · Claude Code cloud sandboxes had two upload targets, a GCS or S3 bucket you own. `BEACON_CLOUD_UPLOAD=asymptote` with `BEACON_CLOUD_INGEST_URL` and a `BEACON_CLOUD_DEVICE_KEY` minted for the environment now posts the sandbox log to managed ingest, the same endpoint the laptop forwarder uses, so cloud-agent sessions appear in the dashboard beside endpoint sessions. New lines are sent on every Stop, in batches under the ingest limits; a revoked key is reported, never retried past the offset. See [Claude Code Cloud Agents](/runtimes/claude-code-cloud-agents).
+
+### v1.3.8 · September 7, 2026
+
+- **Homebrew stops colliding with vectordotdev's Vector** · The tap mirrored Vector
+  as a formula named `vector`, which clashed with anyone who had tapped
+  `vectordotdev/brew` and broke `brew upgrade`. The mirror is renamed
+  `beacon-vector` and the Beacon formula depends on that, so a Beacon install no
+  longer fights an existing Vector install.
+
+### v1.3.7 · September 7, 2026
+
+- **Kiro (AWS) endpoint telemetry** · Beacon configures Kiro hook telemetry through
+  a Beacon-owned hook file in the directory Kiro scans, covering session start,
+  prompts, pre- and post-tool activity, commands with output, file reads and edits,
+  MCP tool calls, failed tools, and the agent's final response. One harness name
+  covers the Kiro IDE and CLI. A policy deny is honored through Kiro's exit-code-2
+  block contract. Install with `beacon endpoint install --harness kiro` or
+  `beacon endpoint hooks install --harness kiro`.
+
+### v1.3.6 · September 6, 2026
+
+- **OpenHands endpoint telemetry** · Beacon merges its hooks into OpenHands' own
+  `.openhands/hooks.json`, covering session start and end, prompts, pre- and
+  post-tool activity, commands with exit code and output, file reads and edits with
+  diffs, and MCP tool calls. Install with `beacon endpoint install --harness openhands`.
+- **Token spend coverage** · `beacon token-usage --coverage` and the dashboard token
+  view report which runtimes actually carry token usage and where it is missing.
+  Model names are canonicalized at write time keeping the provider, Claude context
+  windows in the utilization table are corrected, claude.ai cache token counts are
+  captured, and context-size events are recorded as their own field so they no
+  longer inflate usage counts or create zero-token rows.
+- **Grok Bot harness identity** · Adds the `grok_bot` harness so its telemetry is
+  named and classified correctly.
+- **Security** · Bumps `google.golang.org/grpc` to 1.83.1 for a heap-exhaustion
+  advisory (GHSA, DATA-frame fragmentation).
+
+### v1.3.5 · September 6, 2026
+
+- **Muse Code (Meta) endpoint telemetry** · Beacon configures Muse Code hook
+  telemetry through a Beacon-owned managed hooks file that Muse's settings point at,
+  covering session start, prompts, tool lifecycle, operator approval decisions,
+  subagent start and stop, context compaction, commands, and file activity. Install
+  with `beacon endpoint install --harness muse`.
+
+### v1.3.4 · September 5, 2026
+
+- Maintenance release. No functional changes; carries the v1.3.3 changelog.
+
+### v1.3.3 · September 4, 2026
+
+- **Homebrew installs Vector again** · `brew install asymptote-labs/tap/beacon` failed
+  with "No available formula with the name vector": Vector is not in homebrew-core and
+  Homebrew no longer taps third-party dependencies on its own. The tap now carries its
+  own `vector` formula, mirrored from Vector's release tarballs (0.58.0 on Apple
+  Silicon, 0.50.0 on Intel, the last x86_64 build Vector published), and the Beacon
+  formula depends on that. The minimum Vector version `connect` accepts drops from
+  0.56 to 0.50, validated against the forwarder template, so Intel Macs can connect.
+
+### v1.3.2 · September 4, 2026
+
+- **Re-connecting no longer loses the forwarder** · `beacon endpoint connect` on an
+  already-connected macOS endpoint stops the old Vector and starts a new one under
+  the same launchd label. launchd reports the stop before the old process has
+  exited (Vector drains in-flight requests for up to a minute), so the new
+  bootstrap could be swallowed and the status check saw the old pid as "running",
+  leaving no forwarder at all. The load now waits for the old job to disappear,
+  then confirms the new instance has a pid, and fails loudly otherwise.
+
+### v1.3.1 · September 4, 2026
+
+- **`beacon endpoint status --user` reports the user-mode connection** · On a
+  machine whose system collector holds the OTLP ports, status switches its
+  collector view to the system install; it also read the system install's
+  managed-ingest record, which is root-only, and printed "not connected
+  (permission denied)" for a connected user-mode endpoint. The managed-ingest
+  line now follows the install mode you asked about.
+
+### v1.3.0 · September 4, 2026
+
+- **Onboarding asks where telemetry should go** · The first-run prompt ends with
+  an arrow-key question: keep telemetry on this machine (default), forward it to
+  your own infrastructure (a SIEM, observability platform, or an S3/GCS bucket you
+  own, with a pointer to the log forwarding docs), or forward it to Beacon
+  Managed, which runs `beacon endpoint connect` after the install. Question titles
+  and the selected row use the Beacon purple. `beacon endpoint install --connect`
+  skips the question and connects, `BEACON_MANAGED_INGEST=0` hides the Beacon
+  answer, the answer stays local and is shown by `beacon endpoint onboarding`; the
+  Beacon answer is recorded only once the machine is connected. The Homebrew
+  formula now depends on `vector` so a Homebrew install can connect without a
+  second step.
+- **`beacon endpoint connect` and `disconnect`** · Connect an endpoint to
+  Beacon Cloud ingest from the CLI: it finds Vector (0.56+), opens the
+  dashboard's device approval page, receives a per-device key through a
+  loopback PKCE exchange, stores it in a `0600` secrets file, renders and
+  validates the forwarder config, and starts `com.beacon.endpoint.asymptote-forwarder`
+  (launchd) or `beacon-asymptote-forwarder.service` (systemd) in user or system
+  mode. `beacon endpoint status` gains an "Beacon Cloud ingest" line and a
+  `managed_ingest` JSON object with forwarder state and a live credential check;
+  `config.json` gains a non-secret `managed_ingest` block; uninstall removes the
+  forwarder and credentials. Re-running connect rotates the key in place.
+- **Beacon Cloud forwarding pack** · `beacon endpoint asymptote` generates a
+  Vector `http` forwarder that posts the runtime and inventory JSONL to
+  Beacon's ingest service with a per-device key read from a `0600` secrets
+  file, plus a credential smoke test and sample events. It is the first Beacon
+  destination that sends events to a Beacon-run service; forwarding is
+  opt-in per device, starts only after browser approval, and is revocable from
+  the dashboard. `beacon endpoint connect` (coming next) runs enrollment and the
+  forwarder as a service using the same template.
+- **Removed `beacon login` and `beacon ingest`** · Neither command was ever
+  connected to a server: `beacon ingest endpoint upload` had nothing to upload
+  to and `beacon login` saved credentials nothing consumed. `beacon endpoint
+  status` no longer prints an "Endpoint ingest" line and its JSON output drops
+  `managed_upload`; a `managed_upload` block in `config.json` is ignored.
+  Forwarding to Beacon returns as an explicit, revocable Vector destination
+  set up by `beacon endpoint connect` in an upcoming release.
+
+## August 2026
+
+### v1.2.7 · August 31, 2026
+
+- **Claude Cowork uses the shared Claude normalizer** · Cowork OTLP logs now
+  produce the same canonical prompt, assistant response, approval, command,
+  file, MCP, session, model, token, and runtime-reported cost fields as Claude
+  Code when Anthropic emits those attributes. Tool parameters are decoded into
+  structured command and MCP fields instead of remaining only in raw OTLP
+  attributes.
+- **Cowork provenance stays coherent** · Remote Cowork execution is marked
+  `origin=cloud` even when the task was started in Claude Desktop. The source's
+  Cowork user identifier replaces the local collector process identity without
+  mixing a cloud account with a local UID.
+- **Richer retained content** · User prompts and assistant responses are
+  promoted into the canonical GenAI message fields with content hashes and byte
+  counts, while the original OTLP attributes remain available under
+  `raw.attributes`.
+- **Local dashboard refresh** · The loopback dashboard has a clearer navigation
+  and investigation layout, richer runtime identity, session-state filtering,
+  and improved event detail views.
+- **Architecture and positioning updates** · The product overview and
+  architecture guides now describe Beacon around its capture, normalization,
+  storage, detection, and forwarding pipeline stages.
+
+### v1.2.5 · August 28, 2026
+
+- **Turn-level usage** · Beacon now configures Codex's local trace exporter and
+  retains only the completed turn span carrying thread, turn, model, and token
+  fields. The same canonical `gen_ai.usage` schema used by Claude Code records
+  uncached input, cache read, cache creation, output, and reasoning tokens.
+- **User and session rollups** · A metadata-only SessionStart hook records the
+  local OS user for each Codex session. The token report and dashboard join that
+  context by session ID and add a per-user breakdown.
+- **One live source** · Beacon-managed Codex configuration no longer enables the
+  anonymous token histogram alongside traces. Historical metric rows remain
+  readable, and post-cutover overlaps prefer the attributable turn span.
+- **Rollouts stay out of band** · Beacon does not continuously scan Codex
+  transcript files. Rollout JSONL remains a possible explicit recovery source,
+  not part of normal endpoint execution.
+
+### Browser extension · August 24, 2026
+
+- **Browser chat is a supported surface** · An optional Chrome MV3 extension
+  relays Claude.ai and ChatGPT conversations into the same local pipeline as
+  agent activity, normalized into the same schema. Its service worker posts OTLP
+  GenAI logs to the collector already listening on `127.0.0.1:4318`, so browser
+  chats land in `runtime.jsonl` beside agent activity and forward through the
+  same shippers. Build it from `browser-extension/` and load it unpacked in
+  Chrome.
+- **Narrow by construction** · The extension reads the chat streams on
+  `claude.ai`, `chatgpt.com`, and `chat.openai.com`, and nothing else. It has no
+  access to other tabs, browsing history, or page content elsewhere, and it never
+  writes files. Activity is attributed to the `claude_web` and `chatgpt_web`
+  harnesses, so browser chat stays distinguishable from CLI agents.
+- **Retention defaults to full** · Complete prompt and assistant response text is
+  retained locally. Browser chat telemetry without content has little
+  investigative value, so the default keeps it. Change it to `redacted` or
+  `metadata` in the extension's options page before enabling it on a machine
+  where the same browser profile is used for personal conversations. Retention is
+  enforced in the browser, so under `metadata` the text never leaves the page.
+- **Release path in place, not yet used** · An `ext-v*` tag publishes the unpacked
+  build as a zip with a `.sha256`, independent of the CLI's `v*` releases. No such
+  release has been cut yet, so building from source is currently the way to get
+  it. Chrome Web Store publication is not yet available.
+- **Documented boundaries updated** · The security overview, threat model, and FAQ
+  previously listed browser telemetry as out of scope. They now scope that
+  statement to general browser activity, which the extension still does not
+  collect.
+
+### Documentation · August 23, 2026
+
+- **One house style across the docs** · Rewrote the pages that had drifted into
+  design-note prose so each one leads with what to run and what it does. The
+  Qwen Code, Pi, Cline, OpenCode, and cloud-agent runtime pages, the macOS,
+  Linux, and Windows install pages, and the sandbox contributor guide are
+  shorter and read the same way as the rest.
+- **Consistent headings** · Section headings are sentence case throughout, with
+  product names left alone. Runtime pages now follow one section order, and the
+  cloud-agent pages use `Overview` then `How it works` instead of two sections
+  both called some form of overview.
+- **Simpler punctuation** · Removed em dashes across every page in favor of
+  plain sentences, colons, and lists.
+- **Navigation gaps closed** · The Common Issues page is reachable from the
+  sidebar, the local-scan and scan-gate pages are grouped under `beacon scan`,
+  and the local inventory guide is listed with the other guides. Four broken
+  in-page anchors now resolve.
+- **Corrected runtime facts** · The runtime support matrix reported Pi's managed
+  extension as unshipped; it now lists the telemetry Pi actually collects. The
+  matrix also links the Windows package alongside macOS and Linux, and the
+  endpoint path reference lists Pi's extension paths.
+
+### v1.2.3 · August 22, 2026
+
+- **Cline is a supported runtime** · `beacon endpoint hooks install --harness
+  cline` installs a Beacon-managed plugin at `~/.cline/plugins/beacon.ts` that
+  collects prompts, task lifecycle and errors, tool lifecycle and results,
+  commands with exit codes, file reads and edits with diffs, MCP activity, and
+  per-task token usage and cost. Cline is not one runtime: the same agent core
+  runs as a VS Code extension, a JetBrains plugin, and a CLI. One plugin
+  install covers every host on the machine, because Cline auto-discovers plugin
+  files rather than requiring a registry command. Cline's own OpenTelemetry
+  export and hosted prompt storage are neither configured nor required.
+- **Cline discovery that matches how Cline is installed** · Detection keys on the
+  `~/.cline` directory and treats a `cline` executable on `PATH` as a supporting
+  signal rather than the deciding one; a binary check alone would report "not
+  detected" for the IDE hosts, which are most installs. `beacon endpoint hooks
+  status --harness cline` reports installed only when the plugin references a
+  hook binary that is actually present, so a plugin left behind by a removed or
+  relocated install reads as not installed rather than as working telemetry.
+- **No synthesized approval decisions for Cline** · Cline's hook payloads carry
+  no approval state, so Beacon records none. Approval telemetry comes from the
+  runtime everywhere else; inferring Cline's would make `approval.*` mean
+  something different depending on which harness produced the event.
+- **A Cline task's outcome is read, not assumed** · The end-of-task hook recorded
+  every task as a success, so an aborted or failed task was indistinguishable
+  from a completed one in the runtime log. It now reports the run's actual
+  outcome.
+- **Cline in discovery, inventory, and the dashboard** · `beacon endpoint
+  discover`, agent inventory, and the local dashboard list Cline alongside the
+  other supported runtimes, and the runtime documentation covers its collection
+  path, status values, and telemetry coverage.
+
+---
+
+### v1.2.2 · August 21, 2026
+
+- **A package upgrade no longer leaves the old collector running** · Install
+  loaded the collector service instead of restarting it, which is a no-op on a
+  live service in every backend: `systemctl enable --now` does not restart an
+  active unit, launchd refuses an already-bootstrapped label, and the supervised
+  backend returns early on a live pid. That is correct for a first install and
+  wrong for every one after, because by then the install has rewritten the
+  collector config and a package upgrade has replaced the collector binary
+  underneath the running process. Installing over an older version left the
+  previous collector serving OTLP from a deleted inode, ignoring the new config,
+  with ports answering and status reporting healthy, until reboot. The same path
+  made `endpoint install --splunk-hec-endpoint ...` write a destination that
+  never took effect. Install now restarts a service it finds running. This was
+  not Linux-only; it affected the macOS `.pkg` upgrade path identically.
+- **`endpoint uninstall` can now fail** · Every step discarded its error and the
+  function had no return path but `nil`, so an unprivileged `uninstall --system`
+  reported that the service, config, and managed files were removed and exited 0
+  while the unit stayed enabled and the collector returned at the next reboot.
+  Uninstall now refuses without privileges up front, collects errors from every
+  step rather than stopping at the first, and removes rotated log archives.
+  Deleting only `runtime.jsonl` left up to 50 MB of retained prompt text and
+  command lines behind, invisibly, because the file an operator would check was
+  the one that had gone.
+- **Hook writes are no longer lost silently under a restrictive umask** · The log
+  directory's mode is masked by umask, so on a host with umask 027 or 077 it was
+  created `0750` or `0700` owned by root. The log inside is `0666` precisely so
+  hooks can append, but a process that cannot traverse the directory never
+  reaches the file, and every hook event failed with `EACCES` while the
+  root-owned collector stayed healthy. `endpoint doctor` could not see it either:
+  its writability check was satisfied by the owner's write bit, so a root-owned
+  `0600` log passed as OK. The check now asks whether a non-root process can
+  write the log and whether the directory can be entered at all.
+- **MCP detection works on the OpenTelemetry path** · The
+  `external-mcp-tool-call` and `secret-read-then-external-mcp` rules gate on
+  `mcp.server`, and on Claude Code, which reports through the collector rather
+  than through hooks, that field was always empty, so neither rule ever fired. A
+  poisoned MCP tool reading a credential and handing it off scanned as a
+  credential read with no exfiltration. The hook path already split
+  `mcp__<server>__<tool>` into `mcp.server` and `mcp.tool`; the collector path
+  now derives the same fields from the name when a runtime sends no structured
+  `mcp.*` attributes. It triggers only on that exact naming convention, so a
+  built-in tool is never promoted to an MCP call and runtimes that do send
+  structured attributes are unaffected.
+- **Stricter path-traversal rejection during self-update** · Archive extraction
+  rejected `..` path segments on a normalized copy of the entry name. That was
+  behaviorally sound but left the raw name unchecked as far as static analysis
+  was concerned; extraction now refuses any entry name containing `..` at all.
+  The absolute-path rejection and the containment check on the joined result are
+  unchanged.
+- **Linear delete-path matching in the OpenCode plugin** · The plugin's
+  delete-command pattern could backtrack polynomially on a command string
+  containing a separator followed by many newlines, and that string is whatever
+  the agent chose to run. Commands are now split on `&&`, `||`, `;`, and newlines
+  first, then matched once per segment with an anchored pattern. Same extracted
+  paths, plus a delete command with leading whitespace at the start of the string
+  now matches where it previously did not.
+- **Dependency security updates** · `golang.org/x/text` (CVE-2026-56852),
+  `golang.org/x/net` (CVE-2026-46600), and `golang.org/x/sys` (CVE-2026-39824)
+  across all five Go modules; `github.com/google/cel-go` to v0.30.0
+  (GHSA-gcjh-h69q-9w9g) for the threat-rules engine; `go.opentelemetry.io/otel`
+  to v1.44.0 and `google.golang.org/grpc` to v1.82.1 in the collector exporter;
+  and `nanoid` and `postcss` in the TypeScript SDK lockfile.
+- **Pi is discovered** · Beacon recognizes [Pi](https://pi.dev/), normalizes its
+  spellings onto the canonical `pi_cli` harness name, resolves the managed
+  extension path, and reports whether a Beacon-owned extension is in place. Pi
+  has no hooks configuration file and no OpenTelemetry support, so the
+  integration is extension-shaped, like the OpenCode and Cline plugins. This
+  release is discovery only: the managed extension is not shipped yet, so
+  `beacon endpoint hooks install --harness pi` is not available and no Pi hook
+  events are collected.
+- **`cline` pinned as a canonical harness name** · `harness.name` is a release
+  contract that dashboards, `beacon scan` rules, and forwarded SIEM queries group
+  by, and two independent paths write it. Every spelling Cline's three hosts can
+  report now resolves to `cline` before anything started producing those events,
+  so there was never a window where they landed under a name that later had to be
+  migrated.
+- **Linux deployment profile** · A one-page reference for reviewing Beacon before
+  deploying it: what it needs from the kernel, and what it costs to leave
+  running, with the command that verifies each claim. Its lead claim, statically
+  linked with no glibc version floor, is now enforced rather than assumed. A native
+  Linux build defaults cgo on, so the same `make` target produced a static binary
+  when cross-compiled from macOS and a dynamic one when built on Linux, a
+  difference invisible on the build host and fatal on a stripped or older one.
+  Both Makefiles and the release pre-hook are pinned, and CI rejects any Linux
+  binary carrying a `PT_INTERP` segment.
+- **Two more CI reference workflows** · A `binary-path` workflow for air-gapped or
+  self-hosted runners that must not download a Beacon release during the action
+  step, and a workflow that uploads completed runtime JSONL to S3 and GCS in the
+  same run.
+
+---
+
+### v1.2.1 · August 12, 2026
+
+- **Beacon configures the right person on directory-backed hosts** · On a machine
+  whose developer accounts come from OpenLDAP, SSSD, or Active Directory rather
+  than `/etc/passwd`, a system-mode install reported success, started a healthy
+  collector, and captured nothing, for every user on every machine. Beacon is
+  built without cgo, which is what makes its binaries statically linked with no
+  glibc version floor, and the same setting made Go's account lookup read
+  `/etc/passwd` directly without consulting NSS. Account resolution now falls back
+  to `getent`, so both the `SUDO_USER` and logind paths resolve a directory user.
+  Only system-mode installs were affected; a user-mode install configures your own
+  home directory and never looked anyone up by name.
+- **`beacon` is on `PATH` after a package install** · The `.deb` and `.rpm`
+  installed to `/opt/beacon/bin` and linked nothing, so every documented command,
+  including the one the package's own postinstall prints, failed with
+  `command not found`. Both packages now provide `/usr/bin/beacon` and
+  `/usr/bin/beacon-hooks`.
+- **One session, one harness name** · Hook events recorded the raw runtime name
+  while OpenTelemetry events recorded the canonical one, so a single Claude Code
+  session appeared as both `claude` and `claude_code`, splitting it for any query,
+  dashboard, or SIEM detection grouping by `harness.name`. Hook events now carry the
+  canonical name. If you have saved queries matching `claude`, `codex`, `vscode`, or
+  `antigravity` on hook-sourced events, update them to `claude_code`, `codex_cli`,
+  `vscode_copilot`, and `antigravity_cli`.
+- **VS Code Copilot Chat is no longer attributed to the Copilot CLI** ·
+  `vscode_copilot` normalized to `copilot_cli`, two different products, and the
+  canonical name was not stable when normalized a second time.
+- **`endpoint doctor` can see an endpoint that captures nobody** · A system install
+  runs as root, so every harness check inspected root's configuration, which the
+  install had just written correctly, while the actual operator had none. The new
+  `console_user_configured` check asks whether a real user's agent runtime points at
+  this collector, and fails loudly when it does not. Previously the only symptom was
+  a warning the documentation told you to ignore.
+- **Regression coverage for directory-backed hosts** · The sandbox suite gained a
+  lane whose account resolves through NSS but is absent from `/etc/passwd`, which is
+  the property every existing lane lacked; and the Linux package smoke test now
+  asserts `beacon` is reachable by name, which every check in it had assumed by
+  using an absolute path.
+
+---
+
+### v1.2.0 · August 11, 2026
+
+- **Beacon runs on Windows** · Endpoint parity with macOS and Linux: the collector
+  runs as a Windows service through the Service Control Manager, system- and
+  user-mode installs write per-platform paths, hooks capture through installed
+  runtime configuration, and uninstall removes the service while keeping the data it
+  promises to keep.
+- **Windows packaging and release artifacts** · Releases now publish a
+  `BeaconEndpointAgent-<version>-x64.msi` with its SHA-256, plus a
+  `beacon_<version>_windows_amd64.zip` archive. The MSI is unsigned, so its checksum
+  is its integrity check; the release job proves it works by installing it on a
+  runner before attaching it.
+- **Windows install documentation** · How to install the endpoint on Windows and how
+  to verify it afterwards.
+- **Verification that can actually fail** · The sandbox harness gained a Windows
+  guest lane, uninstall assertions that ask the operating system rather tha Beacon
+  whether a service is gone, and fixes to several checks that could not fail and so
+  read as coverage without providing any.
+
+---
+
+### v1.1.0 · August 7, 2026
+
+- **Beacon runs on Linux** · Full endpoint parity with macOS: systemd service
+  units, native `.deb` and `.rpm` packages, per-distribution install paths under
+  `/etc/beacon/endpoint`, and correct configuration of the installing user's
+  agent runtime rather than root's. Installing the package performs the endpoint
+  install, so there is no second manual step.
+- **Self-update from native Linux packages** · `beacon endpoint update --apply`
+  now applies updates through `dpkg` and `rpm`, picks an artifact the host can
+  actually install, and reconciles the endpoint after the package manager
+  finishes.
+- **One-time onboarding question** · The first `beacon endpoint install` run in a
+  terminal asks how you are using Beacon and for an email, and sends that once so
+  we can prioritize which agent runtimes to support next. It is asked once per
+  machine and never appears non-interactively: package postinstall scripts, MDM
+  deployments, `--system` installs, CI, `--dry-run`, and piped input all skip it.
+  Unattended installs can set `BEACON_ONBOARDING=0`, and fleet rollouts can supply
+  `BEACON_ONBOARDING_EMAIL` and `BEACON_ONBOARDING_USAGE` to record attribution
+  with no terminal. Nothing Beacon captures is ever sent: no prompts, file
+  contents, commands, or telemetry events.
+- **`beacon endpoint onboarding`** · Shows what was recorded, clears it with
+  `--reset`, or retries an undelivered signup with `--resend`. A failed submission
+  never fails an install; the answer is kept and resent on a later install or
+  repair.
+- **Linux install and deployment docs** · Install documentation is now organized
+  by operating system, and the harness support matrix no longer describes macOS
+  as the only deployment target.
+- **Linux correctness fixes** · Quoted paths in generated systemd `ExecStart`
+  lines, authoritative logind session state and seat reads, and a Linux test
+  suite that passes where systemd is PID 1.
+
+---
+
+### v1.0.6 · August 3, 2026
+
+- **Claude Code threat-rule coverage** · Claude OTLP tool results now decode
+  nested Bash commands and file paths into canonical `command.*` and `file.*`
+  fields, restoring risky-command, credential-access, sensitive-edit, and
+  context-exfiltration detection coverage.
+- **Accurate Claude event classification** · Bash, Read, Write, Edit, and
+  NotebookEdit results map to command or file actions; tool decisions map to
+  approval events; API, assistant, plugin, hook, skill, and other lifecycle
+  records no longer inflate tool activity; and MCP connection lifecycle maps
+  to `mcp.connection`.
+- **Claude OTLP regression fixtures** · Added captured Claude Code 2.1.220 and
+  Codex CLI 0.142.4 telemetry shapes plus full documented Claude event-taxonomy
+  coverage to protect command, file, approval, session, error, and status
+  normalization.
+- **Rippling MDM deployment guides** · Added GCS and S3 deployment walkthroughs
+  for distributing Beacon through Rippling to managed macOS endpoints.
+
+---
+
+## July 2026
+
+### v1.0.5 · July 24, 2026
+
+- **Browser chat harness identity** · The Beacon JSON exporter now preserves
+  Claude.ai and ChatGPT browser-extension telemetry as `claude_web` and
+  `chatgpt_web` instead of coercing it into another runtime harness.
+
+### v1.0.4 · July 20, 2026
+
+- **Full OpenCode agent traces** · Expanded the managed OpenCode plugin to
+  capture correlated prompt, assistant text/reasoning, model usage/cost, tool
+  invocation/result/failure, command, file, web/MCP, approval, and session
+  lifecycle telemetry.
+- **Accurate OpenCode file and approval events** · Empty or pathless
+  `session.diff` payloads no longer become file modifications, structured diffs
+  retain real agent paths, and rejected permission replies normalize to
+  `approval.denied`.
+- **Bounded fail-open plugin delivery** · OpenCode event delivery is ordered,
+  time-bounded, locally redacted/truncated, collision-safe during install, and
+  covered by Bun, Go, fixture, and macOS smoke tests.
+- **Cursor Cloud prompt telemetry** · Committed `beforeSubmitPrompt` project
+  hooks now retain observed follow-up prompts and immediately refresh the
+  per-run object-storage snapshot, including prompt-only turns after hooks
+  become active.
+- **Cursor Cloud S3 walkthrough** · Expanded the self-serve Cursor Cloud flow
+  with direct, SigV4-signed uploads to customer-managed S3, static Runtime
+  Secret credentials, regional egress requirements, and end-to-end prompt
+  verification.
+- **Repository environment reliability** · Updated the committed Cursor
+  environment to use the current schema, build and embed `beacon-hooks` before
+  the CLI, select a compatible Go toolchain, and report GCS or S3 startup state.
+- **Falcon CI forwarding workflow** · Added a reference GitHub Actions workflow
+  for forwarding Beacon CI telemetry directly to CrowdStrike Falcon LogScale
+  HEC while retaining the completed runtime log as a workflow artifact.
+
+### v1.0.3 · July 14, 2026
+
+- **Detailed Claude Code tool telemetry** · Endpoint-managed and CI Claude Code sessions now enable `OTEL_LOG_TOOL_DETAILS=1`, preserving Bash commands, file paths, URLs, search patterns, and MCP server/tool arguments in exported OpenTelemetry events.
+- **Upgrade-safe configuration refresh** · Signed macOS package updates repair the active user's Claude configuration with detailed tool logging enabled, while Jamf cleanup removes the managed setting with the rest of Beacon's Claude telemetry environment.
+
+### v1.0.2 · July 14, 2026
+
+- **GCS object encoding fix** · Managed endpoint GCS forwarding now writes uncompressed `.jsonl` objects without conflicting gzip content metadata, preventing HTTP readers such as ClickHouse from attempting to decompress the payload twice.
+
+### v1.0.1 · July 13, 2026
+
+- **Packaged GCS forwarding for managed Macs** · Added GCS Jamf helpers under `/opt/beacon/jamf/claude/gcs/` that run bundled Vector as `com.beacon.endpoint.gcs-forwarder` and forward runtime plus inventory JSONL below one root prefix.
+- **Explicit macOS GCS credential contract** · Documented externally delivered service-account JSON referenced by `GOOGLE_APPLICATION_CREDENTIALS`, Vector `0.56` authentication limits, write-only `roles/storage.objectCreator`, and separate reader identities for validation.
+- **Harness-neutral object storage guide** · Consolidated the Claude-specific single-Mac S3 and GCS walkthroughs and their provider IAM, credential, rotation, and validation steps into one system-mode guide for any configured harness.
+- **Self-update extraction hardening** · Archive extraction now rejects explicit `..` path segments with either slash style before applying its existing containment checks, strengthening protection against path traversal during endpoint updates.
+
+### v1.0.0 · July 12, 2026
+
+- **S3 partition-path signing fix** · Fixed AWS SigV4 canonical URI encoding for cloud-agent S3 object keys containing date partitions such as `date=2026-07-12`, preventing authentication failures when uploading partitioned runtime snapshots.
+
+### v0.0.99 · July 12, 2026
+
+- **Compressed cloud telemetry snapshots** · Claude Code and Cursor cloud uploads to GCS or S3 now write gzip-compressed NDJSON under `<prefix>/runtime/date=YYYY-MM-DD/<unix>-<provider>-<run_id>.jsonl.gz`.
+- **Stable per-run object paths** · Repeated snapshots from the same cloud-agent run reuse one object key, while provider, run, user, and repository attribution remain in the event data rather than the storage path.
+
+### v0.0.98 · July 12, 2026
+
+- **S3 export for Claude Code cloud agents** · Added S3 as an alternative to GCS for uploading cloud sandbox `runtime.jsonl`, selected explicitly with `BEACON_CLOUD_UPLOAD=s3` and configured through environment-based bucket, prefix, region, and AWS credentials.
+- **Cloud S3 setup command** · Added `beacon cloud s3 setup` with print, apply, and environment-output modes for creating a bucket, blocking public access, provisioning a dedicated IAM user, and granting prefix-scoped `s3:PutObject`.
+
+### v0.0.97 · July 10, 2026
+
+- **Collector dependency maintenance** · Updated the collector exporter's `golang.org/x/net` dependency from `0.48.0` to `0.55.0`.
+
+### v0.0.96 · July 10, 2026
+
+- **Shared runtime log permissions** · Runtime log and lock creation now consistently preserves the shared `0666` mode across hooks, CLI writers, the collector exporter, `doctor --fix`, Elastic setup, and Jamf repair, so root-side creation or rotation does not prevent user hooks from appending telemetry.
+
+### v0.0.95 · July 10, 2026
+
+- **Cursor telemetry docs polish** · Fixed punctuation and grammar in the Cursor telemetry support table so local and cloud hook coverage is easier to scan.
+
+### v0.0.94 · July 10, 2026
+
+- **Cursor agent reasoning telemetry** · Local Cursor hooks now capture completed `afterAgentThought` thinking blocks as `agent.reasoning` events, preserving the text in the OpenTelemetry GenAI `gen_ai.output.messages` reasoning-part shape when Cursor exposes visible thinking text.
+- **Hook inventory dashboard fixes** · Added a dedicated Hook Inventory dashboard page and fixed summary aggregation and poll-path row limits so inventory coverage is easier to inspect locally.
+
+### v0.0.93 · July 9, 2026
+
+- **Branch attribution without git execution** · Hook events can now fill `branch` from the local checkout by reading `.git/HEAD` directly when the runtime payload does not provide one, avoiding broken-worktree walks and keeping branch context paired with workspace fields.
+- **CI export reference workflows** · Added GitHub Actions examples for forwarding CI telemetry to Splunk HEC and uploading completed runtime JSONL to S3.
+- **S3 setup doc updates** · Clarified IAM user configuration and AWS S3 setup steps for customer-managed telemetry upload paths.
+
+### v0.0.92 · July 1, 2026
+
+- **Package install repair for active users** · macOS package installs now repair the active user's runtime configuration after package updates, helping user-context hooks keep pointing at the current packaged binaries.
+- **Codex hook docs alignment** · Updated Codex hook guidance after reverting the in-progress Codex session token attribution changes, preserving the current contract where Codex token usage has model, harness, repository, and run attribution but no per-session rollup.
+
+## June 2026
+
+### v0.0.91 · June 29, 2026
+
+- **Nested MCP inventory detection** · Agent inventory now discovers MCP server definitions nested inside Claude Code project records such as `~/.claude.json` `projects.*.mcpServers`, plus nested MCP blocks using the `mcpServers`, `mcp_servers`, or `mcp` naming patterns in supported harness config files.
+- **Hook refresh after package updates** · macOS package postinstall now refreshes Beacon-managed user hook payloads for the active console user on a best-effort basis, so self-updates replace stale copied `beacon-hooks` binaries without overwriting non-Beacon hook commands.
+- **Jamf inventory remediation guidance** · Jamf deployment docs now include optional endpoint self-update enablement commands and MDM-owned inventory log/state permission remediation steps for environments where user-level runtime hooks cannot write system-mode inventory files.
+
+### v0.0.90 · June 26, 2026
+
+- **Multiple daily updater windows** · The endpoint updater LaunchDaemon now checks during five local business-hour windows, at 9 AM, noon, 3 PM, 6 PM, and 9 PM, while still honoring update mode and jitter for fleet-friendly rollout.
+
+### v0.0.89 · June 26, 2026
+
+- **Rollback staging cleanup** · Successful update rollback now removes large staged package and rollback snapshots, leaving a small `last_failure.json` diagnostic instead of retaining a full old `/opt/beacon` tree. If rollback itself fails, recovery materials remain in place for manual repair.
+
+### v0.0.88 · June 26, 2026
+
+- **Vector forwarder preservation during self-update** · Package postinstall now restores pre-existing S3 and Falcon Vector forwarders with retry, running-state verification, and preserved `launchctl` diagnostics. A package update now fails loudly if a previously configured forwarder cannot be restored, avoiding silent log-forwarding outages.
+
+### v0.0.87 · June 26, 2026
+
+- **Updater reload waits for the running job** · Deferred updater LaunchDaemon reload now waits for the actual scheduled updater job to exit before reloading launchd, avoiding races with slow self-update health checks.
+
+### v0.0.86 · June 26, 2026
+
+- **Deferred updater reload after self-update** · Package postinstall schedules a safe updater LaunchDaemon reload after the active self-update exits, so new updater plist changes take effect without killing the in-flight update.
+
+### v0.0.85 · June 26, 2026
+
+- **Business-hours updater schedule** · The endpoint updater schedule moved from overnight to 2 PM local time so managed laptops are more likely to be awake for update checks.
+- **Successful update staging cleanup** · Healthy self-updates now clean staged download and rollback directories, leaving only the reusable update lock in the updater state directory.
+
+### v0.0.84 · June 26, 2026
+
+- **Updater daemon persistence after self-update** · Auto-update reconciliation now leaves the running updater LaunchDaemon in place when package postinstall is invoked by the updater itself, so `auto` mode remains loaded after a successful daemon-driven update.
+
+### v0.0.83 · June 26, 2026
+
+- **CLI launch banner** · Added the new Beacon CLI banner and routed root command output through the shared splash path for a more consistent command-line entrypoint.
+
+### v0.0.82 · June 25, 2026
+
+- **Launchd restart hardening for self-update** · Self-update now restarts the collector with `launchctl kickstart -k` and handles already-loaded launchd jobs idempotently, preventing valid package updates from rolling back when package postinstall has already restarted the collector.
+
+### v0.0.81 · June 25, 2026
+
+- **Apply-capable updater daemon lifecycle** · Apple Silicon system package installs can explicitly enable `auto` mode so the updater LaunchDaemon applies compatible signed package releases on its scheduled run, while `--check-only` remains available and updates stay off by default.
+- **Package lifecycle reconciliation** · macOS package installs preserve existing `auto_update` mode, reconcile the updater LaunchDaemon during postinstall, avoid killing the updater from preinstall, and remove the updater job during endpoint uninstall.
+
+### v0.0.80 · June 25, 2026
+
+- **Self-update verification on managed Macs** · Manual endpoint package apply no longer requires full Xcode just to run `stapler validate`. Beacon still requires the manifest checksum, Developer ID Installer signature, and Gatekeeper install assessment to pass, while treating unavailable `stapler` on Command Line Tools-only endpoints as a best-effort check so MDM-installed Macs can self-update.
+
+### v0.0.79 · June 25, 2026
+
+- **Full endpoint inventory heartbeats** · Inventory heartbeats now scan all supported local inventory candidates by default instead of only Cursor and Claude Code, while `inventory_heartbeat.runtimes` remains available for intentionally scoped deployments.
+- **Codex inventory heartbeat hooks** · Codex CLI can install optional heartbeat-only hooks that refresh `inventory_state.jsonl` without duplicating Codex runtime telemetry, which continues to flow through local OTLP logs and metrics.
+- **Expanded Codex inventory coverage** · Beacon now inventories Codex user and project `config.toml` plus `hooks.json` files so MCP and hook drift appears in endpoint inventory snapshots.
+
+### v0.0.78 · June 25, 2026
+
+- **Check-only endpoint update monitoring** · Apple Silicon package installs can opt into a local `launchd` job that checks the release manifest every 10 minutes and writes local-only update status events to `system.jsonl`. This phase does not download or apply packages.
+- **Manual endpoint package apply** · Apple Silicon package installs can explicitly run `sudo /opt/beacon/bin/beacon endpoint update --apply` to download the signed package from the release manifest, verify its checksum/signature/notarization/staple, install it with Apple's `installer`, health-check it, and roll back the `/opt/beacon` tree if the new install is unhealthy.
+
+### v0.0.77 · June 24, 2026
+
+- **Check-only self-update mode** · Added the first endpoint updater monitor for checking signed package releases without applying them, including local status telemetry and edge-case handling around update mode and configuration validation.
+
+### v0.0.76 · June 24, 2026
+
+- **Signed Apple Silicon endpoint package releases** · A pushed version tag now runs the release pipeline end-to-end: GoReleaser publishes CLI archives and updates Homebrew, then CI builds, signs, notarizes, staples, and uploads the Apple Silicon endpoint `.pkg`, `.sha256`, and `update-manifest.json` assets to GitHub Releases for direct MDM/manual download.
+- **Current bundled Vector in the macOS package** · The signed endpoint package includes `/opt/beacon/bin/vector` for Jamf/Fleet forwarder helpers and now targets Apple Silicon so Beacon can ship the current Vector macOS distribution rather than pinning all packages to an older dual-arch Vector release.
+- **Cursor and Claude session attribution fix** · Fixed a hook attribution edge case where Cursor-shaped hook payloads invoked through the default hook platform could be stamped as Claude, making a single Cursor session UUID appear under both Cursor and Claude in runtime logs and managed dashboards.
+
+### v0.0.75 · June 23, 2026
+
+- **Expanded threat detection pack** · Added 18 threat rules across agent control, approval abuse, credential access, context exfiltration, resource consumption, risky commands, sensitive edits, and source-control activity, with tighter matching and conformance fixtures.
+- **Richer MCP and inventory context** · Extended MCP event normalization and added opt-in, redacted full-content capture for endpoint inventory.
+
+### v0.0.74 · June 22, 2026
+
+- **External policy provider seam** · Added the optional, off-by-default hook policy-provider contract for customer-supplied allow/deny decisions while preserving Beacon's local visibility-first default.
+- **Permission-bypass detection** · Added the open `agent-permission-bypass-spawn` detection rule and aligned permission-request denials with pre-tool enforcement behavior.
+- **Shared rule loading** · Extracted local threat-rule store loading into the reusable `pkg/asymptoteobserve/rulestore` package.
+
+### v0.0.73 · June 21, 2026
+
+- **S3 token and cost analytics fields** · The S3 Vector forwarding template now preserves canonical `gen_ai.usage` and also emits top-level `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `reasoning_output_tokens`, and `cost_usd` fields so downstream warehouses can persist usage attribution reliably.
+- **Managed onboarding docs** · Added an onboarding page for managed ingest setup and clarified the S3 forwarding path for teams wiring Beacon endpoint telemetry into managed analytics.
+- **Observe contract conformance** · Added cross-language contract checks to keep Beacon event constants aligned between the Go schema package and the TypeScript SDK.
+
+### v0.0.72 · June 18, 2026
+
+- **Inventory state separated from runtime activity** · Inventory heartbeat and snapshot telemetry now write to `inventory_state.jsonl`, keeping agent runtime activity in `runtime.jsonl` while preserving customer-managed forwarding paths.
+- **Claude Code MCP and skill inventory fixes** · Beacon inventories Claude Code MCP servers from `~/.claude.json` and follows symlinked Claude skill directories, so shared skill stores such as `.agents/skills` appear in endpoint inventory.
+- **Jamf S3 runtime and inventory forwarding** · The Jamf S3 Vector flow now forwards runtime and inventory JSONL to distinct S3 prefixes, supports MDM-injected AWS provider settings, normalizes older `.../runtime` prefixes, and reads initial inventory snapshots reliably.
+
+### v0.0.71 · June 18, 2026
+
+- **Inventory heartbeat telemetry** · Beacon can now emit metadata-only inventory heartbeat events for local agent harnesses, hooks, MCP servers, and skills, making endpoint coverage drift easier to inspect from the runtime log without collecting skill contents.
+- **Dashboard hook coverage breakdowns** · The local inventory dashboard now shows hook status and coverage summaries by runtime so operators can quickly spot missing or stale telemetry setup.
+- **Expanded inventory CLI filters** · `beacon endpoint inventory` adds focused flags for showing harnesses, hooks, MCP servers, skills, and telemetry state independently during audits and support workflows.
+- **Managed S3 forwarder hardening** · Jamf Claude S3 deployment scripts and generated Vector configs now better preserve managed environment settings and make forwarder smoke testing clearer.
+
+### v0.0.70 · June 18, 2026
+
+- **Top-level token usage command** · `beacon token-usage` replaces the previous `beacon endpoint tokens` command path for local token, cost, model, session, run, harness, and repository attribution from Beacon runtime logs. Update scripts and runbooks that still call the old endpoint subcommand.
+- **Consistent token rollups across CLI and dashboard** · The CLI and local dashboard now share the same token aggregation helpers, read the full filtered runtime log in append order, and apply exact case-insensitive session filtering so cumulative metrics and per-session drilldowns stay aligned.
+- **CI run filtering improvements** · `--run-id` accepts either a bare run id or the composite `provider/run_id` key shown in the report, making copied CI runtime logs easier to inspect.
+- **Docs navigation cleanup** · The docs now separate Agent SDK integration pages from cloud-agent runtime pages and move CLI resources closer to install and upgrade guidance. Endpoint hook paths are presented in a runtime/global/project-local table for quicker deployment review.
+
+### v0.0.69 · June 17, 2026
+
+- **Persistent S3 forwarder credentials on macOS** · Fixed an issue where MDM-injected AWS provider-chain settings for the [S3 log forwarder](/guides/macos-object-storage-system#aws-s3) were lost across `launchd` restarts. Provider env vars now persist in a root-owned env file so the managed `com.beacon.endpoint.s3-forwarder` job keeps shipping events after reboots and policy refreshes.
+- **Credentials kept out of Vector config** · AWS provider settings stay in the root-owned env file rather than `s3-vector.toml`, so packaged Vector configs remain free of customer credentials. See the [Jamf Claude S3 deployment guide](/mdm/jamf/claude) for the supported MDM injection flow.
+- **Reorganized Jamf Claude deployment scripts** · Jamf-managed [Claude](/mdm/jamf/claude) deployments now use a structured `jamf/claude/{common,falcon,s3}/` script layout. Existing Jamf policies that reference the old flat `jamf/scripts/*` paths must be updated to point at the new locations.
+- **S3 forwarder for Claude on Jamf** · Added a Vector-based [S3 forwarding path](/mdm/jamf/claude) that tails `runtime.jsonl` and ships endpoint events to a customer-managed AWS S3 bucket as gzipped NDJSON, alongside the existing Falcon forwarder option.
+- **Falcon hook-only flows via Vector** · `beacon endpoint repair` no longer manages Falcon HEC settings directly. Falcon delivery now runs through the dedicated Vector forwarder, keeping hook repair and log forwarding cleanly separated.
+- **Optional macOS codesigning** · The macOS package build can codesign `beacon`, `beacon-otelcol`, and `vector` with a hardened runtime when `BEACON_APP_SIGN_IDENTITY` is set, simplifying notarized fleet rollouts.
+
+### v0.0.68 · June 16, 2026
+
+- **Agent skills inventory** · `beacon endpoint inventory` now discovers local agent skill manifests for Claude Code, Cursor, and `.agents/skills`, reporting names, paths, and content hashes for change detection. See the [Skills inventory guide](/inventory/skills).
+- **Skills in the local dashboard** · The Agent Inventory view in the local dashboard shows an Agent Skills table and summary card alongside agent harnesses and MCP servers, so operators can see installed skills at a glance.
+- **Metadata-only by design** · Skill discovery records hashes and file paths only. `SKILL.md` instruction bodies are never read or stored, consistent with Beacon's [data inventory](/security/data-inventory) posture.
+- **Optional inventory snapshot events** · Running inventory with `--write-event` appends metadata-only inventory heartbeat and snapshot events to `inventory_state.jsonl` so installed-skill state can be kept separate from runtime activity telemetry.
+
+### v0.0.67 · June 15, 2026
+
+- **Devin Cloud agent telemetry** · Added `beacon cloud devin pull` to capture autonomous [Devin Cloud agent](/runtimes/devin-cloud-agents) telemetry org-wide. Using a Devin organization service key, one central run pulls every user's cloud sessions from the Devin API, normalizes them into Beacon endpoint events (`provider=devin_cloud`), writes the runtime JSONL, and optionally uploads a per-session snapshot to a customer-managed GCS bucket. No per-user or per-sandbox setup is required.
+- **Live and scheduled capture** · `--watch` polls continuously for near-real-time capture; a single sweep (the default) suits cron and CI runners. Re-runs are idempotent, because events are deduplicated by Devin event id and unchanged sessions are skipped. `--full-resync` re-fetches and re-uploads every session for backfills.
+- **Per-user attribution** · Devin Cloud events carry the Devin session id as `run_id` and the Devin user id as `run.actor`, so org-wide telemetry stays attributable per end-user and forwards to any existing SIEM destination over the normalized runtime log. Telemetry is message-level (session lifecycle, prompts, agent messages, status, pull requests, and ACU usage); the Devin API does not expose per-tool or per-command events for autonomous sessions.
+
+### v0.0.66 · June 13, 2026
+
+- **Dashboard routing fixes** · Fixed local dashboard route handling so Log Search, Security Overview, Detections, Findings, and inventory views resolve reliably from the loopback dashboard.
+- **Dedicated dashboard inventory** · Split agent inventory into its own dashboard area so runtime coverage, MCP server context, and telemetry state are easier to inspect separately from the Security Overview.
+- **Threat-rule pack guidance** · Release notes now point operators at the versioned `threat-rules.tar.gz` asset for installing the full rule pack with `beacon rules pull`.
+
+### v0.0.65 · June 13, 2026
+
+- **Dashboard route reliability** · Continued dashboard routing fixes for the new detections, findings, and inventory screens.
+- **Rule-pack release asset guidance** · Kept the published release notes aligned with the versioned `threat-rules.tar.gz` rule-pack asset.
+
+### v0.0.64 · June 13, 2026
+
+- **Rule-pack archive cleanup** · Ignored macOS metadata files when installing packaged threat rules, so Finder-created archive entries do not appear as rule-pack content.
+- **Rule-pack release asset guidance** · Kept the full threat-rule pack available as the release-attached `threat-rules.tar.gz` archive.
+
+### v0.0.63 · June 13, 2026
+
+- **Comprehensive threat-rule pack** · Added the first full threat-rule pack, ported from BlastRadius-style detections, with coverage for risky agent behavior beyond the small built-in baseline.
+- **Additional rule coverage** · Added invisible-character and shell-escape detection rules from ATR review.
+- **External rule-pack distribution** · Ships the full threat-rule pack as a release asset instead of embedding it in the Beacon binary, so operators explicitly install it with `beacon rules pull`.
+
+### v0.0.62 · June 13, 2026
+
+- **Dashboard detections view** · Added a local dashboard Detections screen for browsing the active threat-rule set from the endpoint rule store or built-in baseline without using the CLI.
+- **Dashboard findings view** · Added a local dashboard Findings screen that runs the active rules over the configured runtime log on demand, with severity and session filtering for focused investigations.
+- **Read-only local investigation** · Dashboard detection and finding APIs mirror `beacon scan` behavior while staying offline, loopback-only, and read-only against local endpoint telemetry.
+- **Finding ordering and severity helpers** · Shared severity ranking, filtering, fail-threshold counting, and stable finding sorting between `beacon scan` and the dashboard.
+
+### v0.0.61 · June 13, 2026
+
+- **Local threat scanning** · Added `beacon scan` to run threat-detection rules over local endpoint telemetry without network access, with JSON output, session filtering, severity filtering, and CI-friendly `--fail-on` exit behavior.
+- **Threat rule management** · Added `beacon rules` for listing active rules, installing local `.rule.yaml` files, explicitly pulling rule packs, linting rules, and printing event fields available to CEL match expressions.
+- **Open YAML rule format** · Added a versioned threat-rule format with CEL expressions over Beacon endpoint events, single-event and session-correlated detections, severity/status metadata, and embedded conformance fixtures.
+- **Rule-pack hardening** · Hardened rule-pack extraction and install paths against archive path traversal while preserving nested rule-pack layouts.
+
+### v0.0.60 · June 13, 2026
+
+- **Codex token attribution** · `beacon endpoint tokens` and the dashboard token view now report Codex CLI token usage. `beacon endpoint install` configures the Codex metrics exporter, and the collector normalizes Codex's `codex.turn.token_usage` metric into the canonical `gen_ai.usage` representation alongside other runtimes.
+- **Disjoint Codex cache accounting** · Codex reports prompt tokens inclusive of the cached portion. Beacon subtracts cached input so `input_tokens` and `cache_read` stay disjoint and totals are not double-counted.
+- **Codex attribution limits** · Codex emits no cost signal and no conversation id on its usage metric, so `cost_usd` and per-session attribution are unavailable for Codex. Model, harness, repository, and run attribution are supported.
+
+### v0.0.59 · June 13, 2026
+
+- **Managed ingest commands** · Added `beacon ingest` commands for checking managed ingest status and uploading endpoint telemetry to configured Beacon Cloud destinations.
+- **Endpoint token reporting** · Added `beacon endpoint tokens` for local token, cost, model, session, run, harness, and repository attribution from Beacon runtime logs.
+- **Token attribution fixes** · Improved token usage normalization for Claude Code telemetry, cumulative metric batches, composite run IDs, and SDK session attributes.
+
+### v0.0.58 · June 13, 2026
+
+- **Token usage foundation** · Added token usage aggregation, dashboard token views, and trace identity fields so endpoint activity can report usage and cost consistently.
+- **Managed ingest support** · Added the endpoint ingest plumbing that lets authenticated Beacon clients upload endpoint telemetry to Beacon Cloud when configured.
+- **Telemetry schema updates** · Added trace identity, usage cost, and int64 token count fields while preserving local runtime log workflows.
+
+### v0.0.57 · June 11, 2026
+
+- **Beacon dashboard login** · Added `beacon login` so the Beacon CLI can authenticate with the Beacon dashboard through a browser-based flow.
+- **Credential replacement controls** · `beacon login --force` lets operators replace saved credentials when switching users or organizations.
+- **Dashboard URL configuration** · Login can target a custom dashboard URL with `--dashboard-url` or `BEACON_DASHBOARD_URL`, while endpoint telemetry remains local-only unless cloud features are explicitly used.
+
+### v0.0.56 · June 10, 2026
+
+- **Cursor Cloud committed hooks** · Cursor Cloud telemetry now expects project hooks to be committed in `.cursor/hooks.json` before the agent starts; `beacon cloud cursor print-hooks` is the supported way to generate that file.
+- **Binary-only Cursor setup** · `beacon cloud cursor print-setup` now installs Beacon binaries in the sandbox without mutating `.cursor/hooks.json`, and the removed `beacon cloud cursor install-hooks` command is no longer part of the cloud flow.
+- **Cursor cloud reliability** · Generated Cursor Cloud hooks avoid broad `preToolUse` matchers and rely on Cursor's supported project hook surfaces for file, shell, tool-failure, subagent, and compaction events.
+
+### v0.0.55 · June 10, 2026
+
+- **Cursor Cloud run IDs** · Cursor Cloud telemetry uses Cursor's `conversation_id` as the default `run.run_id` when `BEACON_RUN_ID` is not set, so GCS object paths line up with the Cursor cloud conversation.
+- **Lower-noise Cursor Cloud events** · Reduced duplicate read and shell telemetry where Cursor exposes both generic and specific hook surfaces.
+
+### v0.0.54 · June 10, 2026
+
+- **Cloud upload run IDs** · Cloud-agent GCS uploads now wait for a real provider run ID, such as Claude's `CLAUDE_CODE_REMOTE_SESSION_ID`, instead of creating fallback `manual-*` upload folders from early hook processes.
+- **Cleaner cloud traces** · Claude Code cloud sessions now keep GCS object paths and event metadata aligned under the provider session ID.
+
+### v0.0.53 · June 10, 2026
+
+- **Cursor configuration support** · Added Cursor cloud-agent configuration updates used by the generated cloud setup and hook workflows.
+- **Cursor hook safe mode** · Added safer Cursor hook behavior for cloud and project-hook telemetry setup.
+- **README support matrices** · Updated upstream README guidance with CI and cloud-agent support matrices and refreshed links.
+
+### v0.0.52 · June 10, 2026
+
+- **Cursor Cloud Agents** · Added Cursor cloud agent telemetry support through sandbox-local Beacon hooks and per-session GCS upload.
+- **Cursor cloud CLI helpers** · Added `beacon cloud cursor print-setup`, `beacon cloud cursor print-hooks`, and `beacon cloud cursor install-hooks` for generated setup scripts and project-level `.cursor/hooks.json` management.
+- **Cursor telemetry fixes** · Fixed duplicate Cursor shell command events, preserved cloud uploads after edit failures, and improved Cursor session and subagent metadata handling.
+
+### v0.0.51 · June 10, 2026
+
+- **Cloud agent telemetry preview** · Added `beacon cloud` helpers for Claude Code Cloud Agents, including generated cloud setup scripts and sandbox-local hook configuration.
+- **GCS upload for cloud sessions** · Claude Code cloud agent sessions can write Beacon `runtime.jsonl` in the cloud sandbox and upload one readable per-session object to customer-managed Google Cloud Storage.
+- **Standalone hook packaging** · Release archives and Homebrew installs now include `beacon-hooks` alongside `beacon` and `beacon-otelcol` so cloud sandboxes can install hook telemetry without extracting embedded binaries.
+
+### v0.0.50 · June 9, 2026
+
+- **CI session mode** · Added `beacon ci start` and `beacon ci finish` so Beacon can capture telemetry around multi-step CI workflows and third-party agent actions, not just a single child command.
+- **Codex CI telemetry** · Added Codex CI setup through a generated `CODEX_HOME`, enabling OpenAI Codex Action and other local Codex CI steps to export telemetry to Beacon's ephemeral collector.
+- **CI run normalization** · Promoted GitHub Actions run context to top-level `origin` and `run` fields in CI JSONL, including decoded PR, repository, workflow, and branch metadata.
+
+### v0.0.49 · June 8, 2026
+
+- **CrowdStrike Falcon Vector forwarding** · Added `beacon endpoint falcon` content-pack commands for forwarding Beacon `runtime.jsonl` events to CrowdStrike Falcon HEC with Vector.
+- **Hook-only Claude forwarding** · Added a managed macOS Vector forwarder for deployments where Claude Code events are written by user-level hooks instead of Beacon's local OTLP collector.
+- **Jamf deployment helpers** · Added packaged Jamf scripts and inventory checks to install, repair, and monitor the Falcon Vector forwarder while keeping HEC tokens in a root-owned env file.
+
+### v0.0.48 · June 8, 2026
+
+- **OpenTelemetry GenAI schema support** · Beacon now preserves standard `gen_ai` request, response, usage, tool, retrieval, evaluation, message, provider, workflow, and system-instruction metadata in endpoint events.
+- **Observe package rename** · Renamed the shared schema package from Beacon Trace to Beacon Observe while preserving the public Beacon event schema version.
+- **Content handling fixes** · Improved prompt detection for empty GenAI input messages and kept `content.retention` validation backward compatible while using `content.truncated` for truncation display where available.
+
+### v0.0.47 · June 8, 2026
+
+- **Content handling simplification** · Deprecated the legacy content-retention flag and removed stale `content_retention` references from dashboard, Sentinel, generated pack, and packaging paths.
+- **Telemetry sample upload** · Added sample upload coverage for Beacon telemetry handoff workflows.
+- **Release cleanup** · Removed obsolete retention plumbing from endpoint configuration, generated assets, and MDM inventory helpers so docs and package behavior match the current full-content-with-redaction posture.
+
+### v0.0.46 · June 7, 2026
+
+- **CI telemetry release polish** · Continued the Agent Beacon CI telemetry release line for Claude Code telemetry captured to Beacon JSONL, workflow artifacts, and customer-managed destinations.
+
+### v0.0.45 · June 7, 2026
+
+- **Agent Beacon CI Telemetry** · Published the CI telemetry release for capturing Claude Code activity to Beacon JSONL, GitHub Actions artifacts, and customer-managed export destinations.
+- **Action naming update** · Updated the GitHub Action presentation around Agent Beacon CI Telemetry.
+
+### v0.0.44 · June 7, 2026
+
+- **CI telemetry exports** · `beacon ci exec` can upload completed CI runtime JSONL to Amazon S3 or Google Cloud Storage with repeatable `--upload s3` and `--upload gcs` destinations.
+- **GitHub Actions artifact controls** · The Agent Beacon action now exposes `upload`, `upload-artifact`, and `artifact-name` inputs so teams can retain CI telemetry as workflow artifacts or hand it off through object storage.
+- **CI export reliability and safety** · CI uploads still run when `--require-telemetry=false` downgrades validation failures, child command exit codes remain authoritative, and common AWS and Google credential variables are stripped from the child agent process during observed runs.
+
+### v0.0.43 · June 5, 2026
+
+- **Doctor auto-remediation** · Added `beacon endpoint doctor --fix` and the top-level `beacon doctor --fix` alias so operators can apply safe fixes after health checks.
+- **Resilient collector repair** · Doctor fixes can recreate missing runtime logs and repair macOS collector service files with config validation, readiness checks, and rollback if service repair fails.
+- **Clearer health results** · Doctor now prints refreshed results after partial fixes, includes applied and skipped fix details in JSON output, and avoids suggesting automated fixes for unsafe permission or non-macOS service cases.
+
+### v0.0.42 · June 5, 2026
+
+- **AWS CloudWatch Logs forwarding support** · Added `beacon endpoint cloudwatch` commands for generating customer-managed CloudWatch Logs forwarding content over Beacon's local `runtime.jsonl`.
+- **CloudWatch content pack** · Added generated setup guidance, a Vector `aws_cloudwatch_logs` forwarding template, and sample events for JSON log events in a customer-managed CloudWatch Logs log group.
+- **CloudWatch validation guidance** · Added validation events with `destination.type=cloudwatch` and `destination.mode=aws_cloudwatch_logs`, plus AWS CLI and CloudWatch Logs Insights queries for confirming remote delivery without storing AWS credentials in Beacon endpoint configuration.
+
+### v0.0.41 · June 5, 2026
+
+- **Expanded endpoint inventory** · Beacon inventory now covers a broader set of endpoint configuration signals, including supported agent config files and MCP server configuration context where available.
+- **Inventory filtering fixes** · JSON inventory output now applies the same default filtering as human-readable output, so config and MCP server records are omitted unless they are relevant or `--all` is set.
+- **Managed-state detection fixes** · Improved Beacon-managed detection for Gemini CLI, VS Code OTLP, GitHub Copilot CLI, and Factory Droid so status and inventory output more accurately reflect customer-managed versus Beacon-managed configuration.
+
+### v0.0.40 · June 5, 2026
+
+- **Hermes Agent support** · Added Hermes Agent as a first-class hook harness with `beacon endpoint hooks install --harness hermes`, `status`, and `uninstall` support through Beacon-managed shell hooks.
+- **Hermes telemetry coverage** · Beacon now normalizes Hermes prompts, observed tool calls, command and file activity, approval request and response events, session lifecycle, and subagent stop metadata into local endpoint events.
+- **Hermes deployment controls** · Hermes hooks are installed in user-level `~/.hermes/config.yaml`, preserve existing settings and non-Beacon hooks, and document first-use hook consent options for non-interactive runs.
+- **CI PR context fix** · CI run metadata now assigns pull request fields only when the GitHub ref shape contains PR context, avoiding incorrect PR numbers on non-PR events.
+
+### v0.0.39 · June 4, 2026
+
+- **Devin Desktop support** · Added Devin Desktop coverage through Beacon's hook adapter using Cascade/Windsurf-compatible hook configuration alongside existing Devin CLI hooks.
+- **Runtime support organization** · Split agent harness documentation into coding agent harnesses and knowledge-worker agent harnesses so local coding agents and service or gateway integrations are easier to compare.
+- **Output destination organization** · Split forwarding destinations into SIEM, log aggregation, object storage, and local categories, with clearer links for Google Cloud Storage forwarding and customer-managed pipeline guidance.
+- **Release workflow polish** · Updated release automation and upstream documentation ordering for the latest Agent Beacon artifacts.
+
+### v0.0.38 · June 3, 2026
+
+- **Google Cloud Storage forwarding support** · Added `beacon endpoint gcs` commands for generating customer-managed GCS forwarding content over Beacon's local `runtime.jsonl`.
+- **GCS content pack** · Added generated setup guidance, a Vector `gcp_cloud_storage` forwarding template, one-shot `gcloud storage` or `gsutil` smoke-test script, and sample events for NDJSON objects with date-partitioned keys.
+- **Customer-managed Google Cloud controls** · Kept Google Cloud credentials, service accounts, workload identity, bucket IAM, lifecycle, retention, and encryption settings outside Beacon endpoint configuration.
+
+### v0.0.37 · June 3, 2026
+
+- **AWS S3 forwarding support** · Added `beacon endpoint s3` commands for generating customer-managed AWS S3 forwarding content over Beacon's local `runtime.jsonl`.
+- **S3 content pack** · Added generated setup guidance, a Vector `aws_s3` forwarding template, one-shot AWS CLI smoke-test script, and sample events for gzip-compressed NDJSON objects with date-partitioned keys.
+- **Community links** · Surfaced the Agent Beacon Discord community link in upstream project documentation.
+
+### v0.0.36 · June 1, 2026
+
+- **Release artifact validation** · Added release checks that build and validate the bundled `beacon-otelcol` collector alongside the CLI.
+- **Cross-platform release confidence** · Release validation now covers macOS and Linux archives for `amd64` and `arm64`, confirms each archive contains both `beacon` and `beacon-otelcol`, and smoke-runs the Linux archive.
+- **Project documentation polish** · Added upstream README star growth visibility and release automation cleanup.
+
+### v0.0.35 · June 1, 2026
+
+- **Release update checks** · `beacon version check` now checks the latest published Beacon release and prints Homebrew or manual download guidance when an update is available.
+- **Claude CI telemetry** · Added `beacon ci exec` and `beacon ci validate` for ephemeral Claude Code telemetry collection in CI without installing a persistent endpoint service or modifying user harness configuration.
+- **CI validation reliability** · CI validation now scopes malformed-line checks to the active session window and tightens collector shutdown handling so job artifacts are easier to validate.
+- **CLI usage polish** · Root command usage now routes through the Beacon banner output.
+
+## May 2026
+
+### v0.0.34 · May 29, 2026
+
+- **Endpoint repair reliability** · `beacon endpoint repair` now stops the existing collector before reinstalling so unhealthy services can free their ports and complete repair cleanly.
+- **Rollback preservation** · If endpoint reinstall fails during repair, Beacon restores the previous endpoint configuration instead of leaving partial rollback state behind.
+- **macOS package bootstrap fix** · The package postinstall now handles transient `launchctl bootstrap` failures under `set -e` by checking whether the service is already registered before failing the package install.
+
+### v0.0.33 · May 28, 2026
+
+- **Claude Code hook support** · Added optional Claude Code hook telemetry through `beacon endpoint hooks install --harness claude`, complementing the existing local OTLP setup.
+- **Claude hook coverage** · Beacon now records Claude Code session, prompt, pre-tool, post-tool, failed-tool, stop, subagent, permission-request, and session-end events where Claude exposes hook payloads.
+- **Settings-safe hook management** · Claude Code hook install and uninstall preserve existing Claude settings and non-Beacon hooks while replacing older Beacon-managed Claude hook entries.
+
+### v0.0.32 · May 27, 2026
+
+- **Microsoft Sentinel support** · Added `beacon endpoint sentinel` commands for forwarding Beacon's local `runtime.jsonl` into Microsoft Sentinel through Azure Monitor Agent custom log collection.
+- **Sentinel content pack** · Added generated `table-schema.json`, `dcr-template.json`, `dcr-transform.kql`, starter hunting queries, detection examples, and sample events for the `BeaconRuntime_CL` table.
+- **DCR template reliability** · Fixed Sentinel validation messaging, escaped log paths and KQL correctly in the DCR template JSON, and removed duplicate transform rendering in the generated pack.
+
+### v0.0.31 · May 27, 2026
+
+- **VS Code Copilot telemetry** · Added VS Code Copilot Chat support through local OpenTelemetry export to Beacon's endpoint collector with normalized `vscode_copilot` prompt, model, session, and tool events.
+- **Low-noise VS Code normalization** · Beacon filters noisy VS Code Copilot chat spans, embeddings, repeated session-start logs, turn summaries, and low-level metrics by default while preserving useful prompt and tool activity.
+- **Optional VS Code hooks** · Added preview VS Code hook installation for teams that want extra lifecycle and cross-agent detail when `Chat: Use Hooks` is enabled by their organization.
+
+### v0.0.30 · May 26, 2026
+
+- **Antigravity prompt reliability** · Fixed Antigravity pre-tool handling so `prompt.submitted` is emitted after readable transcript text exists instead of being suppressed when the first pre-tool hook fires before the transcript file is written.
+- **Hook release packaging** · Restored the embedded `beacon-hooks` binary in release artifacts so Antigravity hook telemetry remains available after install or upgrade.
+
+### v0.0.29 · May 26, 2026
+
+- **Antigravity CLI hook support** · Added Antigravity CLI endpoint telemetry through Beacon's hook adapter with user-level hooks in `~/.gemini/config/hooks.json` and project-level hooks in `./.agents/hooks.json`.
+- **Antigravity event coverage** · Beacon now records Antigravity prompt, pre-tool, post-tool, invocation, stop, command, file edit, and diff telemetry where Antigravity exposes hook payloads.
+- **Antigravity telemetry fixes** · Fixed duplicate prompt telemetry in metadata mode, failed edit handling, quoted path parsing, and `edit_file` diff extraction.
+
+### v0.0.28 · May 26, 2026
+
+- **Wazuh dashboard helper** · Added `apply-dashboard-default-columns.sh` to the generated Wazuh content pack so local Wazuh Dashboard validation can show Beacon event action, prompt text, harness, model, repository, command, file, and session fields by default.
+- **Wazuh pack coverage** · Updated Wazuh content-pack tests so generated packs include the dashboard helper and avoid unmapped Wazuh display fields.
+
+### v0.0.27 · May 25, 2026
+
+- **CrowdStrike Falcon LogScale HEC forwarding** · Added optional Falcon LogScale HEC forwarding from Beacon's bundled collector while preserving the local `runtime.jsonl` audit log.
+- **Falcon endpoint flags** · Added install and repair flags for Falcon HEC endpoint, ingest token, repository, source, parser, TLS verification, and custom CA configuration.
+- **Collector packaging fix** · Fixed the Falcon collector exporter module path in the collector builder so release builds include the new Falcon HEC exporter.
+
+### v0.0.26 · May 25, 2026
+
+- **Vector forwarding templates** · Added generated `vector.toml` templates to the Sumo Logic and Rapid7 content packs so teams can run Vector as a customer-managed host agent for Beacon JSONL forwarding.
+- **Sumo Logic Vector path** · The Sumo template tails `runtime.jsonl`, parses each Beacon JSON line, and forwards newline-delimited JSON to a Sumo HTTP Logs & Metrics Source with source category, fields, and optional auth-header token settings supplied through Vector.
+- **Rapid7 Vector path** · The Rapid7 template tails the same local runtime log, preserves one Beacon event per line, and posts newline-delimited JSON to the Rapid7 InsightIDR Custom Logs webhook while keeping the webhook URL outside Beacon endpoint configuration.
+
+### v0.0.25 · May 24, 2026
+
+- **Rapid7 InsightIDR endpoint integration** · Added `beacon endpoint rapid7` commands for forwarding Beacon's local `runtime.jsonl` into Rapid7 InsightIDR Custom Logs through a webhook event source.
+- **Rapid7 content pack** · Added generated setup guidance, a one-shot NDJSON upload smoke-test script, and sample events for managed endpoint deployments.
+- **Validation workflow** · Added `beacon endpoint rapid7 validate` so teams can write a known-good Beacon event and verify Rapid7 Log Search ingestion with the expected validation query and fields.
+
+### v0.0.24 · May 24, 2026
+
+- **GitHub Copilot CLI support** · Added Copilot CLI discovery, status reporting, and OTLP span normalization for prompt, session, tool, and approval-like activity when Copilot exports to Beacon's local HTTP collector.
+- **MDM-managed Copilot telemetry** · Beacon now validates Copilot CLI telemetry from `COPILOT_OTEL_ENABLED=true` and a localhost OTLP endpoint while making clear that Copilot launch-environment configuration stays under MDM or customer policy control.
+- **Quieter operational metrics** · Copilot CLI and OpenClaw operational metrics are filtered from endpoint JSONL by default, with `--include-runtime-metrics` available when teams need low-level metrics for troubleshooting.
+
+### v0.0.23 · May 23, 2026
+
+- **Local MCP server** · Added `beacon mcp serve` and `beacon mcp doctor` so MCP clients can search, summarize, and retrieve compact local Beacon activity from `runtime.jsonl` over stdio or loopback HTTP JSON-RPC.
+- **Activity filter fixes** · `list_activity_filters` now scans the full matching activity window for accurate facets, and HTTP MCP activity queries preserve command context.
+- **Security and contribution docs** · Added upstream `SECURITY.md` and `CONTRIBUTING.md` guidance covering Beacon's local-only posture, disclosure process, validation commands, and contribution expectations.
+
+### v0.0.22 · May 23, 2026
+
+- **Bounded runtime logs** · Beacon now rotates the active `runtime.jsonl` file at 10 MiB and keeps five numbered local archives, preserving the stable handoff path for dashboards and external shippers.
+- **Safer concurrent writes** · Runtime log writers now use a lock file during append and rotation so hook, CLI, and collector writes stay serialized.
+- **Dashboard archive lookup fix** · Fixed local dashboard event detail lookup for records stored in rotated archives, including cases where older archive numbers have already been pruned.
+
+### v0.0.21 · May 22, 2026
+
+- **Endpoint health checks** · Fixed `beacon endpoint doctor` and `beacon doctor` so failed health checks return a failing exit code for scripts and MDM validation.
+- **Inventory accuracy** · Fixed endpoint inventory config scoping, restored `--all` output for all supported targets, and corrected the `droid` hook alias lookup for Factory Droid inventory.
+- **Diagnostics reliability** · Fixed `beacon endpoint test-event` writable-log checks, `beacon endpoint discover --all`, and diagnostics bundle output so missing logs still produce empty summaries without leaking the last raw event.
+
+### v0.0.20 · May 22, 2026
+
+- **Sumo Logic endpoint integration** · Added `beacon endpoint sumo` commands for forwarding Beacon's local `runtime.jsonl` into a Sumo Logic Hosted Collector HTTP Logs & Metrics Source.
+- **Sumo Logic content pack** · Added generated setup guidance, a one-shot upload smoke-test script, and sample events for managed endpoint deployments.
+- **Sumo smoke-test fix** · Removed an unused argument from the Sumo upload smoke-test template.
+
+### v0.0.19 · May 21, 2026
+
+- **Grok Build hook support** · Added Grok Build endpoint telemetry through Beacon's hook adapter with user-level and project-level managed hook files.
+- **Grok event coverage** · Beacon now records Grok session, prompt, pre-tool, post-tool, stop, and session-end activity, including command and file-operation context where Grok exposes it.
+- **Grok failure severity fix** · Grok post-tool failures now normalize to `tool.failed` with high severity instead of being logged as successful info-level tool events.
+
+### v0.0.18 · May 20, 2026
+
+- **Datadog endpoint integration** · Added `beacon endpoint datadog` commands for Datadog Agent custom log collection over Beacon's local `runtime.jsonl`.
+- **Datadog content pack** · Added generated Datadog Agent `conf.yaml`, setup guidance, and sample events for managed endpoint deployments.
+- **Datadog validation event** · Added `beacon endpoint datadog validate` so teams can write a known-good Beacon event and verify Log Explorer ingestion with `service:beacon-endpoint-agent`.
+
+### v0.0.17 · May 20, 2026
+
+- **OpenClaw Gateway support** · Added OpenClaw Gateway endpoint integration commands for printing OTLP/HTTP configuration, checking status, and validating observed events.
+- **Gateway telemetry guidance** · Documented OpenClaw's Gateway-configured diagnostics export path alongside other supported runtime surfaces.
+
+### v0.0.16 · May 20, 2026
+
+- **Quieter Codex telemetry** · Beacon now keeps Codex endpoint timelines focused on semantic session, prompt, approval, and tool-result events while suppressing high-volume Codex startup, turn, transport, metric, and duplicate trace records by default.
+- **Codex span troubleshooting opt-in** · Added `--include-codex-spans` for `beacon endpoint install` and `beacon endpoint repair` when teams need raw Codex OTLP spans for debugging.
+- **Metadata retention fix** · Codex prompt text is no longer copied into the event `message` field when `--content-retention metadata` is configured.
+- **Elastic prompt visibility** · The generated Kibana saved search now includes `beacon.prompt.text`, so prompt content is visible in Elastic when retention allows it.
+
+### v0.0.15 · May 20, 2026
+
+- **Devin hook support** · Added Devin hook installation, status, uninstall, discovery, and normalization through the `devin` hook harness.
+- **Devin hook paths** · Beacon can manage user-level Devin hooks in `~/.config/devin/config.json` or project-level hooks in `./.devin/hooks.v1.json` while preserving unrelated settings and non-Beacon hooks.
+- **Devin event coverage** · Devin hooks cover session start, prompt submission, pre-tool and post-tool activity, permission requests, stop events, session-end events, approvals, and file telemetry where payloads are available.
+- **Dependency maintenance** · Updated OpenTelemetry dependencies and removed an unreachable pre-tool observation branch.
+
+### v0.0.14 · May 19, 2026
+
+- **Gemini CLI support** · Added opt-in Gemini CLI local OpenTelemetry configuration through the `gemini` endpoint harness.
+- **Gemini discovery and status** · `beacon endpoint discover` and `beacon endpoint status` now report Gemini CLI telemetry state from `~/.gemini/settings.json`.
+- **Gemini event normalization** · Beacon normalizes Gemini CLI prompts, tool calls, MCP tool activity, file operations, and approval-related events into the endpoint event schema.
+- **Deployment guidance** · MDM deployments can include Gemini CLI by adding `gemini` to the endpoint harness list, for example `claude,codex,gemini`.
+
+### v0.0.13 · May 18, 2026
+
+- **Collector startup fix** · Beacon now omits the `include_runtime_metrics` collector-exporter option unless explicitly enabled, so the bundled `beacon-otelcol` starts cleanly after Homebrew installs and upgrades.
+- **Apple Silicon hook fix** · Release builds now serialize target packaging around the embedded `beacon-hooks` adapter, preventing arm64 Homebrew releases from embedding an amd64 hook binary.
+- **Elastic validation polish** · Updated Elastic content-pack assets and docs to use ingested `beacon.*` fields and the `Beacon Endpoint Events` Kibana data view name.
+- **Release validation runbook** · Added an end-to-end Beacon release validation runbook for Homebrew install, endpoint setup, runtime telemetry, and local Elastic ingestion checks.
+
+### v0.0.12 · May 18, 2026
+
+- **Hook binary validation** · Beacon now validates that the embedded `beacon-hooks` binary matches the host architecture before installing Cursor, Factory, or OpenCode hooks.
+- **Clearer hook failures** · Hook installation now fails early with an actionable architecture error instead of writing a hook configuration that points at an unusable binary.
+- **README support overview** · Expanded the upstream Beacon README with supported agent harnesses, SIEM/output destinations, MDM deployment paths, architecture notes, dashboard guidance, and quickstart links.
+- **Release guidance** · Added maintainer release instructions for tag-based GoReleaser deployments and pre-release test gates.
+
+### v0.0.11 · May 18, 2026
+
+- **Elastic content pack** · Added `beacon endpoint elastic install-pack` to generate Filebeat, standalone Elastic Agent, Elasticsearch template, ingest pipeline, ILM, Kibana, and sample event assets for Beacon endpoint events.
+- **Local Elastic validation** · Added `beacon endpoint elastic up` and `beacon endpoint elastic down` for a loopback-only macOS development stack with Elasticsearch, Kibana, and Filebeat.
+- **Elastic CLI config** · Added `beacon endpoint elastic print-config` for quickly printing Filebeat configuration that tails Beacon's local `runtime.jsonl`.
+- **SIEM forwarding docs** · Documented local, Elastic Cloud, and self-managed Elastic setup while keeping Elastic hosts and credentials outside Beacon endpoint configuration.
+
+### v0.0.10 · May 18, 2026
+
+- **OpenCode plugin support** · Added OpenCode discovery and hook/plugin support through `beacon endpoint discover` and `beacon endpoint hooks`.
+- **Managed OpenCode plugin** · Beacon now installs an owned local OpenCode plugin at `~/.config/opencode/plugins/beacon.ts` or `./.opencode/plugins/beacon.ts`, forwarding supported chat, session, command, permission, diff, and error events through Beacon's local hook adapter.
+- **Local retention and normalization** · OpenCode hook payloads use the same local normalization, redaction, retention, and JSONL output path as other Beacon endpoint events.
+- **Release polish** · Updated upstream README links and OpenCode casing in release documentation.
+
+### v0.0.9 · May 18, 2026
+
+- **Endpoint dashboard visibility** · Improved the local dashboard and runtime visibility with the latest main-branch investigation updates.
+- **Claude Code prompt content** · Enabled Claude Code prompt content export when endpoint retention is set to `full` or `redacted`.
+- **Runtime metric filtering** · Filtered noisy generic process and runtime OTLP metrics from Beacon JSONL by default, with `--include-runtime-metrics` available when those low-level metrics are needed.
+- **Collector release build** · Fixed collector release builds by pinning generated collector log modules consistently.
+
+### v0.0.8 · May 18, 2026
+
+- **Dashboard views** · Refactored the local dashboard into separate **Log Search** and **Security Overview** views for investigation and posture review.
+- **Model-aware investigation** · Added model filtering and model summary data so teams can search and summarize local activity by agent model.
+- **Dashboard usability** · Improved dashboard layout, including clearer investigation columns, quick filters, top harnesses, top models, top repositories, and MCP server summaries.
+- **Documentation references** · Streamlined the upstream README and added clearer links into the Agent Beacon CLI docs.
+- **Dependency maintenance** · Updated the bundled collector exporter dependency on `google.golang.org/grpc`.
+
+### v0.0.7 · May 16, 2026
+
+- **Factory Droid telemetry** · Added Factory Droid discovery, OTLP endpoint validation, and local telemetry collection support.
+- **Factory hooks** · Added Factory hook install, status, and uninstall support for prompt, session, tool, file, stop, and session-end telemetry.
+- **Hook preservation** · Improved Factory hook management so install and uninstall preserve non-Beacon hooks in mixed Factory settings groups and handle `hooks: null` safely.
+- **Metric normalization** · Fixed metric event naming after category inference so metric events can fall back to the message field when needed.
+
+### v0.0.6 · May 15, 2026
+
+- **Splunk HEC exporter** · Added optional Splunk HEC forwarding from the bundled collector while preserving Beacon's local JSONL audit log.
+- **Endpoint forwarding flags** · Added install and repair flags for Splunk HEC endpoint, token, index, source, sourcetype, and TLS configuration.
+- **MDM forwarding support** · Added Jamf and Fleet package support, scripts, and inventory signals for Splunk HEC forwarding state.
+
+### v0.0.5 · May 15, 2026
+
+- **Factory Droid support** · Added Factory Droid discovery and OTLP validation, with guidance for managing `OTEL_TELEMETRY_ENDPOINT` through Droid's launch environment.
+- **Factory hooks** · Added Beacon endpoint hooks for Factory prompt, session, write/edit/create tool, stop, and session-end telemetry.
+- **Agent harness integrations** · Added an agent harness support matrix covering collection paths, hook support, MDM support, telemetry coverage, and local JSONL/dashboard output.
+- **Splunk HEC forwarding** · Documented optional Splunk HEC collector forwarding while preserving the local Beacon JSONL audit log.
+
+### v0.0.4 · May 14, 2026
+
+- **Cursor hook reliability** · Fixed Cursor hook handling so prompt submission and hook-emitted events are captured more consistently.
+- **Prompt events** · Improved prompt event normalization so local timelines better reflect what users asked supported agents to do.
+- **Release artifacts** · Published macOS and Linux archives for `amd64` and `arm64`, plus SHA-256 checksums for release verification.
+
+### v0.0.3 · May 14, 2026
+
+- **Codex discovery** · Fixed Codex CLI detection so `beacon endpoint discover` and `beacon endpoint status` report Codex telemetry state more accurately.
+- **Release packaging** · Packaged target-specific `beacon-otelcol` collector binaries with each platform archive.
+- **Hook distribution** · Cleaned up release packaging for embedded hook assets and Homebrew distribution.
+
+### v0.0.2 · May 14, 2026
+
+- **Release artifacts** · Beacon now publishes platform archives for macOS and Linux on `amd64` and `arm64`, plus SHA-256 checksums for release verification.
+- **Default local install** · Endpoint commands now use per-user paths by default, with `--system` reserved for root-managed package and MDM deployments.
+- **Runtime log visibility** · Status output and the local dashboard now surface warnings when a system collector may be writing OTLP events to a different runtime log than the selected user-mode view.
+- **Jamf-ready packaging** · macOS packaging now includes system-mode install and uninstall helpers for Jamf, Kandji, or generic MDM command runners.
+
+### Codex
+
+- **Telemetry defaults** · Beacon now writes structured Codex OTEL exporter configuration for logs, traces, and metrics while setting `log_user_prompt = false`.
+- **Noisy trace filtering** · Beacon filters noisy internal Codex transport traces so endpoint timelines focus on meaningful Codex activity instead of HTTP/2 framing and flow-control churn.
+
+### Beacon endpoint
+
+- **Endpoint telemetry** · Beacon now configures local agent harness telemetry and writes normalized endpoint events to local JSONL logs.
+- **Runtime discovery** · Beacon discovers supported local agent harnesses, including Claude Code, Codex CLI, Cursor, and Claude Cowork.
+- **Local dashboard** · Inspect Beacon runtime logs from a local-only endpoint dashboard.
+
+### Wazuh
+
+- **Wazuh content pack** · Generate localfile configuration, rules, and validation content for Beacon endpoint events.
+- **Validation event** · Write a Beacon validation event to confirm Wazuh ingestion paths are configured correctly.
+
+### Hooks
+
+- **Cursor hooks** · Install, inspect, and remove Beacon endpoint hooks for supported harnesses.
+
+### v0.0.1 · May 13, 2026
+
+- **Endpoint telemetry** · Introduced the open-source Beacon Endpoint Agent for local agent harness telemetry.
+- **Collector exporter** · Added the `beaconjson` OpenTelemetry Collector exporter for normalized Beacon endpoint JSONL.
+- **Runtime integrations** · Added support for Claude Code, Codex CLI, Cursor hooks, and Claude Cowork telemetry validation.
+- **Local dashboard** · Added a loopback-only dashboard for inspecting local runtime inventory, event timelines, filters, and event details.
+- **Wazuh output** · Added Wazuh localfile configuration, rules, sample content, and validation events for Beacon endpoint logs.
+- **Release distribution** · Established Homebrew and manual archive distribution for macOS and Linux.

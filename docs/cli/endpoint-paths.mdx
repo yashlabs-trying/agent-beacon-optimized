@@ -1,0 +1,78 @@
+---
+title: "Endpoint Paths and Ports"
+description: "Review Beacon user-mode and system-mode paths, ports, and hook locations"
+---
+
+## File locations
+
+Beacon manages different paths depending on whether you install in user mode or system mode. The active runtime log stays at `runtime.jsonl` and rotates at 10 MiB, retaining five numbered local archives by default.
+
+| Item | User mode | System mode (macOS) | System mode (Linux) | System mode (Windows) |
+|------|-----------|---------------------|---------------------|-----------------------|
+| Config | `~/.beacon/endpoint/config.json` | `/Library/Application Support/Beacon/Endpoint/config.json` | `/etc/beacon/endpoint/config.json` | `%ProgramData%\Beacon\Endpoint\config.json` |
+| Base directory | `~/.beacon/endpoint` | `/Library/Application Support/Beacon/Endpoint` | `/etc/beacon/endpoint` | `%ProgramData%\Beacon\Endpoint` |
+| Runtime log | `~/.beacon/endpoint/logs/runtime.jsonl` | `/var/log/beacon-agent/runtime.jsonl` | `/var/log/beacon-agent/runtime.jsonl` | `%ProgramData%\Beacon\Endpoint\logs\runtime.jsonl` |
+| Staged Beacon Cloud session backfill (written by each connect) | `~/.beacon/endpoint/logs/cloud-backfill.jsonl` | `/var/log/beacon-agent/cloud-backfill.jsonl` | `/var/log/beacon-agent/cloud-backfill.jsonl` | `%ProgramData%\Beacon\Endpoint\logs\cloud-backfill.jsonl` |
+| Rotated runtime archives | `~/.beacon/endpoint/logs/runtime.jsonl.1` through `.5` | `/var/log/beacon-agent/runtime.jsonl.1` through `.5` | `/var/log/beacon-agent/runtime.jsonl.1` through `.5` | `%ProgramData%\Beacon\Endpoint\logs\runtime.jsonl.1` through `.5` |
+| Threat rule store | `~/.beacon/endpoint/rules` | `/Library/Application Support/Beacon/Endpoint/rules` | `/etc/beacon/endpoint/rules` | `%ProgramData%\Beacon\Endpoint\rules` |
+| Collector config | `~/.beacon/endpoint/otelcol.yaml` | `/Library/Application Support/Beacon/Endpoint/otelcol.yaml` | `/etc/beacon/endpoint/otelcol.yaml` | `%ProgramData%\Beacon\Endpoint\otelcol.yaml` |
+| Managed-ingest state (`beacon endpoint connect`) | `~/.beacon/endpoint/asymptote/` (`enrollment.json`, `install-id`, `vector-secrets.json`, `vector.toml`, `vector-data/`) | `/Library/Application Support/Beacon/Endpoint/asymptote/` | `/etc/beacon/endpoint/asymptote/` | Not yet supported |
+| Installed binaries | None | `/opt/beacon/bin` | `/opt/beacon/bin` | `%ProgramFiles%\Beacon\bin` |
+| OTLP gRPC | `127.0.0.1:4317` | `127.0.0.1:4317` | `127.0.0.1:4317` | `127.0.0.1:4317` |
+| OTLP HTTP | `127.0.0.1:4318` | `127.0.0.1:4318` | `127.0.0.1:4318` | `127.0.0.1:4318` |
+| Collector health check | `127.0.0.1:13133` | `127.0.0.1:13133` | `127.0.0.1:13133` | `127.0.0.1:13133` |
+
+These are the default ports. `--otlp-grpc-port`, `--otlp-http-port`, and `--health-port` change them per install. When `--otlp-http-port` changes and no `--health-port` is given, the health-check port moves by the same amount, so a user-mode collector on alternate ports can run beside the system one. The ports in use are recorded under `collector` in `config.json`.
+
+On Windows the system log directory sits under the base directory rather than in a separate location, because there is no `/var/log` equivalent. `%ProgramData%` and `%ProgramFiles%` are read from the environment rather than hardcoded, so a relocated or localized install is found rather than missed.
+
+## Service definitions
+
+The collector runs under whichever service manager the host provides. On Linux, Beacon picks it by looking at what is actually running as PID 1, not at which tools are installed, so a container with `systemctl` on `PATH` but no systemd still gets the supervised fallback.
+
+| Platform | Service manager | System mode | User mode |
+|---|---|---|---|
+| macOS | launchd | `/Library/LaunchDaemons/com.beacon.endpoint.collector.plist` | `~/Library/LaunchAgents/com.beacon.endpoint.collector.user.plist` |
+| Linux | systemd | `/etc/systemd/system/beacon-collector.service` | `~/.config/systemd/user/beacon-collector.service` |
+| Windows | Service Control Manager | `BeaconCollector` service, defined at `HKLM\SYSTEM\CurrentControlSet\Services\BeaconCollector` | Supervised, because Windows has no per-user service manager |
+| Containers, no init | supervised | `/etc/beacon/endpoint/collector.pid` | `~/.beacon/endpoint/collector.pid` |
+
+The Beacon forwarder started by `beacon endpoint connect` is a second, resident service that runs Vector: `/Library/LaunchDaemons/com.beacon.endpoint.asymptote-forwarder.plist` or `~/Library/LaunchAgents/com.beacon.endpoint.asymptote-forwarder.plist` on macOS, `/etc/systemd/system/beacon-asymptote-forwarder.service` or `~/.config/systemd/user/beacon-asymptote-forwarder.service` on Linux. It is not offered in supervised mode, because nothing would restart it; run the [Beacon pack](/cli/asymptote) under your own supervisor there.
+
+The scheduled inventory job is a third, one-shot unit that `beacon endpoint install` writes in both modes and the package postinstall reconciles on every upgrade: `/Library/LaunchDaemons/com.beacon.endpoint.inventory.plist` or `~/Library/LaunchAgents/com.beacon.endpoint.inventory.plist` on macOS, `beacon-inventory.timer` plus `beacon-inventory.service` under `/etc/systemd/system` or `~/.config/systemd/user` on Linux. It writes `inventory_state.jsonl` and its `inventory-state.json` state file beside the runtime log. Like the forwarder it is not offered in supervised mode; run `beacon endpoint inventory heartbeat --scheduled` from your own scheduler there.
+
+On macOS, when `~/Library/LaunchAgents` is on a volume other than the startup volume, such as a home directory on an external disk, launchd refuses to bootstrap plists from it. Beacon then bootstraps each user LaunchAgent for the current login session from a copy staged in `$TMPDIR/beacon-launchd-<uid>`, falling back to `/private/tmp/beacon-launchd-<uid>`. The canonical plist stays in `~/Library/LaunchAgents`; automatic loading after logout or restart is not guaranteed for this layout. See [Home directory on an external volume](/platforms/macos#home-directory-on-an-external-volume).
+
+Windows has no unit file to point at: the service definition lives in the registry, so that is what `beacon endpoint status` reports where the other platforms report a path. And there is no counterpart to `systemctl --user` or launchd's per-user domain, so a Windows user-mode install always gets the supervised collector. See [Windows install](/platforms/windows#user-mode-install).
+
+A supervised collector is a plain background process tracked by a pidfile. It works, but nothing restarts it if it exits or when the machine reboots. `beacon endpoint status` says so explicitly rather than reporting the same health as a real service.
+
+Hooks, plugins, and extensions install an embedded `beacon-hooks` adapter under the Beacon endpoint base directory.
+
+Hook and plugin configuration is written to:
+
+| Runtime | Global config path | Project-local config path |
+|---|---|---|
+| Antigravity CLI | `~/.gemini/config/hooks.json` | `./.agents/hooks.json` |
+| Claude Code | `~/.claude/settings.json` (`$CLAUDE_CONFIG_DIR/settings.json` when set) | `./.claude/settings.json` |
+| Cline | `~/.cline/plugins/beacon.ts` | `./.cline/plugins/beacon.ts` |
+| Cursor | `~/.cursor/hooks.json` | `./.cursor/hooks.json` |
+| Devin CLI | `~/.config/devin/config.json` | `./.devin/hooks.v1.json` |
+| Devin Desktop | `~/.codeium/windsurf/hooks.json` | `./.windsurf/hooks.json` |
+| Factory | `~/.factory/settings.json` | `./.factory/settings.json` |
+| Grok Build | `~/.grok/hooks/beacon-endpoint.json` | `./.grok/hooks/beacon-endpoint.json` |
+| Hermes Agent | `$HERMES_HOME/config.yaml` or the active profile's (default `~/.hermes/config.yaml`) | Not supported |
+| OpenCode | `~/.config/opencode/plugins/beacon.ts` | `./.opencode/plugins/beacon.ts` |
+| Pi | `$PI_CODING_AGENT_DIR/extensions/beacon.ts` (default `~/.pi/agent/extensions/beacon.ts`) | `./.pi/extensions/beacon.ts` |
+| Qwen Code | `~/.qwen/settings.json` | `./.qwen/settings.json` |
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Endpoint telemetry" icon="satellite-dish" href="/deployment/open-source#configure-endpoint-telemetry">
+    Configure the local endpoint agent and harnesses.
+  </Card>
+  <Card title="beacon endpoint" icon="terminal" href="/cli/endpoint">
+    Review endpoint command behavior and common paths.
+  </Card>
+</Columns>

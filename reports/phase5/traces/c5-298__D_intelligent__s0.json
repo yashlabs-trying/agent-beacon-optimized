@@ -1,0 +1,28 @@
+{
+  "task": "c5-298",
+  "suite": "C",
+  "category": "C5_cross_project",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c5-298-alpha",
+    "c5-298-beta"
+  ],
+  "required_evidence": [
+    "c5-298-alpha"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Project Alpha's reports rate limit is 26.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.92,
+  "prompt_tokens": 132,
+  "gen_tokens": 12
+}

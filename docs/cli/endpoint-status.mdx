@@ -1,0 +1,84 @@
+---
+title: "beacon endpoint status"
+description: "Inspect local Beacon endpoint health, diagnostics, and runtime log state"
+---
+
+## Command overview
+
+`beacon endpoint status` reports the current local endpoint configuration, collector status, service state, discovered harnesses, diagnostics, destination status, and the last observed Beacon event.
+
+The service state names the backend it found: `launchd` on macOS, `systemd` on Linux, or `supervised` where there is no init system to register with. A supervised collector is reported as such rather than as a healthy service, because nothing restarts it.
+
+```bash title="Command syntax"
+beacon endpoint status
+```
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--user` | Use per-user endpoint paths. Enabled by default |
+| `--system` | Use system endpoint paths and launch daemon |
+| `--log-path <path>` | Runtime JSONL log path |
+| `--json` | Print status as JSON |
+
+## Examples
+
+Show endpoint status with the default per-user paths:
+
+```bash title="Show endpoint status with the default per-user paths"
+beacon endpoint status
+```
+
+Print machine-readable status:
+
+```bash title="Print machine-readable status"
+beacon endpoint status --json
+```
+
+Check a custom runtime log path:
+
+```bash title="Check a custom runtime log path"
+beacon endpoint status --log-path /path/to/runtime.jsonl
+```
+
+Check system-mode status for a root-managed deployment:
+
+```bash title="Check system-mode status for a root-managed deployment"
+sudo beacon endpoint status --system
+```
+
+## Output
+
+Status includes:
+
+- Agent Beacon CLI version
+- Config path and runtime log path
+- Runtime-log source warnings if a system collector may be writing OTLP events to a different log
+- Collector health and configured OTLP ports
+- Service status, and which service manager it came from
+- Discovered agent harnesses, including Beacon-managed or customer-managed telemetry state for Gemini CLI, VS Code Copilot, GitHub Copilot CLI, and Factory Droid when present
+- Endpoint diagnostics
+- Destination configuration in JSON output, including Splunk HEC or Falcon LogScale HEC endpoint, index, source, and sourcetype when configured
+- Last Beacon event in the runtime log, when present
+- Beacon Cloud: whether this endpoint is connected (a connect that failed after the server issued the device key is reported as not connected, with `connect_incomplete: true` and the retry command), organization and device id, active privacy mode, forwarder service state, whether the device key is still accepted (`valid`, `revoked`, or `unknown` when offline), and disk-buffer size. In `--json` this is the `managed_ingest` object; account and device keys are never included. The line reports the connection for the install mode you asked about (`--user` or `--system`), even when the collector view switches to the system install because it holds the OTLP ports.
+- Inventory heartbeat: whether the scheduled inventory job is enabled and loaded, its interval, and when it last wrote. In `--json` this is the `inventory_heartbeat` object (`enabled`, `scheduled`, `interval`, `job`, `last_emitted_at`, `log_path`), reported for the requested install mode like managed ingest.
+
+When Splunk HEC is configured, `--json` includes a `destinations.splunk_hec` object with `configured: true` and the non-secret destination settings. When Falcon LogScale HEC is configured, `--json` includes `destinations.falcon_hec` with the same non-secret fields. HEC tokens are not printed. File-based destinations such as Wazuh, Elastic, Datadog, Sumo Logic, Rapid7, Microsoft Sentinel, and AWS S3 validate against the configured runtime log path and their generated shipper configuration.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Endpoint install" icon="download" href="/cli/endpoint-install">
+    Configure the local collector and supported runtime telemetry.
+  </Card>
+  <Card title="Endpoint doctor" icon="stethoscope" href="/cli/endpoint-doctor">
+    Run local health checks with pass/fail exit behavior.
+  </Card>
+  <Card title="Endpoint inventory" icon="clipboard-list" href="/cli/endpoint-inventory">
+    Show configured, detected, and observed endpoint inventory.
+  </Card>
+  <Card title="Endpoint dashboard" icon="chart-line" href="/cli/dashboard">
+    Inspect Beacon runtime logs in a local dashboard.
+  </Card>
+</Columns>

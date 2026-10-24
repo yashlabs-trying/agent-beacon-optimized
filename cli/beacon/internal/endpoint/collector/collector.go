@@ -1,0 +1,379 @@
+package collector
+
+import (
+	"fmt"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/brewpath"
+	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
+)
+
+const (
+	BinaryName         = "beacon-otelcol"
+	PackagedBinaryPath = "/opt/beacon/bin/beacon-otelcol"
+)
+
+var (
+	lookPath                        = exec.LookPath
+	currentExecutable               = os.Executable
+	discoverDefaultBinaryCandidates = defaultBinaryCandidates
+)
+
+type Status struct {
+	BinaryPath  string `json:"binary_path,omitempty"`
+	ConfigPath  string `json:"config_path,omitempty"`
+	GRPCPort    int    `json:"grpc_port"`
+	HTTPPort    int    `json:"http_port"`
+	HealthPort  int    `json:"health_port"`
+	GRPCReady   bool   `json:"grpc_ready"`
+	HTTPReady   bool   `json:"http_ready"`
+	HealthReady bool   `json:"health_ready"`
+	Message     string `json:"message,omitempty"`
+}
+
+func ResolveBinary(configured string) (string, error) {
+	if configured != "" {
+		if err := validateExecutable(configured); err != nil {
+			return "", fmt.Errorf("collector binary %q is not usable: %w", configured, err)
+		}
+		return configured, nil
+	}
+	if path := DiscoverBinary(""); path != "" {
+		return path, nil
+	}
+	return "", fmt.Errorf("Beacon installation is missing the endpoint collector (%s); reinstall Beacon so %s is installed beside the beacon CLI, or pass --collector /path/to/%s for development and custom deployments", BinaryName, BinaryName, BinaryName)
+}
+
+func DiscoverBinary(configured string) string {
+	if configured != "" {
+		if err := validateExecutable(configured); err == nil {
+			return configured
+		}
+	}
+	if path, err := lookPath(BinaryName); err == nil && validateExecutable(path) == nil {
+		return path
+	}
+	for _, path := range discoverDefaultBinaryCandidates() {
+		if err := validateExecutable(path); err == nil {
+			return path
+		}
+	}
+	return ""
+}
+
+// defaultBinaryCandidates lists where to look for the collector when it is not on PATH.
+//
+// A sibling of the running CLI comes first, because that is what an extracted release archive looks
+// like: beacon and beacon-otelcol next to each other in whatever directory the user unpacked them
+// into. The machine-wide install location follows, for a package install.
+//
+// Both are asked for by their on-disk name rather than by BinaryName. Those differ on Windows -- the
+// file is beacon-otelcol.exe, while BinaryName is what exec.LookPath is given so PATHEXT can resolve
+// it -- and using the PATH spelling for a direct stat meant an extracted archive reported no
+// collector at all.
+func defaultBinaryCandidates() []string {
+	paths := packagedBinaryPaths()
+	// A Homebrew CLI runs from its versioned keg, and the collector path found here goes into
+	// the service unit, so it is mapped to the <prefix>/bin link that survives `brew upgrade`.
+	// PATH usually finds that link first, but not under sudo, whose secure_path leaves out the
+	// Linuxbrew prefix.
+	if executable, err := currentExecutable(); err == nil {
+		sibling := brewpath.Stable(filepath.Join(filepath.Dir(executable), binaryFileName()))
+		paths = append([]string{sibling}, paths...)
+	}
+	return paths
+}
+
+func validateExecutable(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		return fmt.Errorf("is a directory")
+	}
+	if !isExecutableMode(info) {
+		return fmt.Errorf("is not executable")
+	}
+	return nil
+}
+
+func WriteConfig(cfg endpointconfig.Config) error {
+	endpointconfig.NormalizeDestinations(&cfg)
+	if err := endpointconfig.ValidateDestinations(cfg.Destinations); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(cfg.Collector.ConfigPath), 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(cfg.Collector.SpoolPath), 0755); err != nil {
+		return err
+	}
+	perm := os.FileMode(0644)
+	if endpointconfig.HasSecretDestinations(cfg) {
+		perm = 0600
+	}
+	if err := os.WriteFile(cfg.Collector.ConfigPath, []byte(ConfigYAML(cfg)), perm); err != nil {
+		return err
+	}
+	if endpointconfig.HasSecretDestinations(cfg) {
+		return os.Chmod(cfg.Collector.ConfigPath, perm)
+	}
+	return nil
+}
+
+func ConfigYAML(cfg endpointconfig.Config) string {
+	endpointconfig.NormalizeDestinations(&cfg)
+	exporterNames := []string{"beaconjson"}
+	splunkExporter := splunkHECYAML(cfg)
+	if splunkExporter != "" {
+		exporterNames = append(exporterNames, "splunk_hec")
+	}
+	falconExporter := falconHECYAML(cfg)
+	if falconExporter != "" {
+		exporterNames = append(exporterNames, "falcon_hec")
+	}
+	exporters := "[" + strings.Join(exporterNames, ", ") + "]"
+	runtimeMetricsYAML := ""
+	if cfg.Collector.IncludeRuntimeMetrics {
+		runtimeMetricsYAML = "    include_runtime_metrics: true\n"
+	}
+	codexSpansYAML := ""
+	if cfg.Collector.IncludeCodexSpans {
+		codexSpansYAML = "    include_codex_spans: true\n"
+	}
+	// The processor and the exporters each decide from their own config whether to keep anything
+	// from a Claude Code API body, so the opt-in is written to all of them.
+	modelContextYAML := ""
+	// Claude Code batches its log records into one gRPC export, and with raw API bodies on each
+	// model request adds a request and a response body of up to the content limit install sets.
+	// The receiver's 4 MiB default rejects a whole export over it, and with it every prompt and
+	// tool event in the batch. The receiver applies the limit before claude_api_body runs.
+	grpcLimitYAML := ""
+	if cfg.ClaudeCaptureModelContext {
+		modelContextYAML = "    capture_model_context: true\n"
+		grpcLimitYAML = "        max_recv_msg_size_mib: 32\n"
+	}
+	return fmt.Sprintf(`receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 127.0.0.1:%d
+%s      http:
+        endpoint: 127.0.0.1:%d
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 128
+  batch:
+    timeout: 5s
+    send_batch_size: 128
+  claude_api_body:
+%s
+exporters:
+  beaconjson:
+    path: %q
+    max_event_bytes: 65536
+    rotate_bytes: 10485760
+    rotate_archives: 5
+    redact_secrets: true
+%s
+extensions:
+  health_check:
+    endpoint: 127.0.0.1:%d
+
+service:
+  telemetry:
+    metrics:
+      level: none
+  extensions: [health_check]
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, claude_api_body, batch]
+      exporters: %s
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: %s
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: %s
+`, cfg.Collector.GRPCPort, grpcLimitYAML, cfg.Collector.HTTPPort, modelContextYAML, cfg.LogPath, runtimeMetricsYAML+codexSpansYAML+modelContextYAML+splunkExporter+falconExporter, endpointconfig.HealthCheckPort(cfg.Collector), exporters, exporters, exporters)
+}
+
+func splunkHECYAML(cfg endpointconfig.Config) string {
+	if cfg.Destinations == nil || cfg.Destinations.SplunkHEC == nil || !cfg.Destinations.SplunkHEC.Enabled {
+		return ""
+	}
+	splunk := cfg.Destinations.SplunkHEC
+	var b strings.Builder
+	fmt.Fprintf(&b, "  splunk_hec:\n")
+	fmt.Fprintf(&b, "    token: %q\n", splunk.Token)
+	fmt.Fprintf(&b, "    endpoint: %q\n", splunk.Endpoint)
+	if splunk.Source != "" {
+		fmt.Fprintf(&b, "    source: %q\n", splunk.Source)
+	}
+	if splunk.Sourcetype != "" {
+		fmt.Fprintf(&b, "    sourcetype: %q\n", splunk.Sourcetype)
+	}
+	if splunk.Index != "" {
+		fmt.Fprintf(&b, "    index: %q\n", splunk.Index)
+	}
+	if splunk.InsecureSkipVerify || splunk.CAFile != "" {
+		fmt.Fprintf(&b, "    tls:\n")
+		if splunk.InsecureSkipVerify {
+			fmt.Fprintf(&b, "      insecure_skip_verify: true\n")
+		}
+		if splunk.CAFile != "" {
+			fmt.Fprintf(&b, "      ca_file: %q\n", splunk.CAFile)
+		}
+	}
+	return b.String()
+}
+
+func falconHECYAML(cfg endpointconfig.Config) string {
+	if cfg.Destinations == nil || cfg.Destinations.FalconHEC == nil || !cfg.Destinations.FalconHEC.Enabled {
+		return ""
+	}
+	falcon := cfg.Destinations.FalconHEC
+	var b strings.Builder
+	fmt.Fprintf(&b, "  falcon_hec:\n")
+	fmt.Fprintf(&b, "    token: %q\n", falcon.Token)
+	fmt.Fprintf(&b, "    endpoint: %q\n", falcon.Endpoint)
+	if cfg.Collector.IncludeRuntimeMetrics {
+		fmt.Fprintf(&b, "    include_runtime_metrics: true\n")
+	}
+	if cfg.Collector.IncludeCodexSpans {
+		fmt.Fprintf(&b, "    include_codex_spans: true\n")
+	}
+	if cfg.ClaudeCaptureModelContext {
+		fmt.Fprintf(&b, "    capture_model_context: true\n")
+	}
+	if falcon.Source != "" {
+		fmt.Fprintf(&b, "    source: %q\n", falcon.Source)
+	}
+	if falcon.Sourcetype != "" {
+		fmt.Fprintf(&b, "    sourcetype: %q\n", falcon.Sourcetype)
+	}
+	if falcon.Index != "" {
+		fmt.Fprintf(&b, "    index: %q\n", falcon.Index)
+	}
+	if falcon.InsecureSkipVerify {
+		fmt.Fprintf(&b, "    insecure_skip_verify: true\n")
+	}
+	if falcon.CAFile != "" {
+		fmt.Fprintf(&b, "    ca_file: %q\n", falcon.CAFile)
+	}
+	return b.String()
+}
+
+func CheckStatus(cfg endpointconfig.Config) Status {
+	binary := DiscoverBinary(cfg.Collector.BinaryPath)
+	healthPort := endpointconfig.HealthCheckPort(cfg.Collector)
+	status := Status{
+		BinaryPath:  binary,
+		ConfigPath:  cfg.Collector.ConfigPath,
+		GRPCPort:    cfg.Collector.GRPCPort,
+		HTTPPort:    cfg.Collector.HTTPPort,
+		HealthPort:  healthPort,
+		GRPCReady:   portOpen(cfg.Collector.GRPCPort),
+		HTTPReady:   portOpen(cfg.Collector.HTTPPort),
+		HealthReady: healthReady(healthPort),
+	}
+	if binary == "" {
+		status.Message = "OpenTelemetry Collector binary was not found on PATH"
+	} else if !status.GRPCReady && !status.HTTPReady {
+		status.Message = "Collector ports are not listening"
+	} else if !status.HealthReady {
+		status.Message = fmt.Sprintf("Collector health check on 127.0.0.1:%d is not ready", healthPort)
+	}
+	return status
+}
+
+func WaitUntilReady(cfg endpointconfig.Config, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for {
+		status := CheckStatus(cfg)
+		if status.GRPCReady && status.HTTPReady && status.HealthReady {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			if status.Message != "" {
+				return fmt.Errorf("%s", status.Message)
+			}
+			return fmt.Errorf("collector did not become ready before timeout")
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+}
+
+// WaitForPortsAvailable waits for every port the collector will bind -- the two OTLP receivers
+// and the health_check extension -- to be free, and names the ones that stay taken.
+//
+// The health port is checked with the others because it fails the collector just as surely: a
+// second collector whose OTLP ports were free but whose health port was held by the first used to
+// pass this wait, exit on start, and be reported as "Collector ports are not listening" (#447).
+func WaitForPortsAvailable(grpcPort, httpPort, healthPort int, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for {
+		grpcAvailable := PortAvailable(grpcPort)
+		httpAvailable := PortAvailable(httpPort)
+		healthAvailable := PortAvailable(healthPort)
+		if grpcAvailable && httpAvailable && healthAvailable {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			var busy []string
+			switch {
+			case !grpcAvailable && !httpAvailable:
+				busy = append(busy, fmt.Sprintf("OTLP gRPC port %d and HTTP port %d are already in use", grpcPort, httpPort))
+			case !grpcAvailable:
+				busy = append(busy, fmt.Sprintf("OTLP gRPC port %d is already in use", grpcPort))
+			case !httpAvailable:
+				busy = append(busy, fmt.Sprintf("OTLP HTTP port %d is already in use", httpPort))
+			}
+			if !healthAvailable {
+				busy = append(busy, fmt.Sprintf("collector health-check port %d is already in use (another Beacon collector, such as a system-mode install, may hold it; choose another with --health-port)", healthPort))
+			}
+			return fmt.Errorf("%s", strings.Join(busy, "; "))
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+}
+
+func PortAvailable(port int) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return false
+	}
+	_ = ln.Close()
+	return true
+}
+
+func portOpen(port int) bool {
+	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
+func healthReady(port int) bool {
+	client := http.Client{Timeout: 500 * time.Millisecond}
+	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/", port))
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode >= 200 && resp.StatusCode < 300
+}

@@ -1,0 +1,27 @@
+{
+  "task": "b2-131",
+  "suite": "B",
+  "category": "B2_ambiguity",
+  "difficulty": "hard",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "b2-131-default"
+  ],
+  "required_evidence": [
+    "b2-131-default"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The gateway service deploys to 'qa' when no target is specified.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 2.036,
+  "prompt_tokens": 127,
+  "gen_tokens": 16
+}

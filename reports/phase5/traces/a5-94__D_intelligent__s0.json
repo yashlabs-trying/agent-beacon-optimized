@@ -1,0 +1,33 @@
+{
+  "task": "a5-94",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-94-gold",
+    "a5-94-n0",
+    "a5-94-n1",
+    "a5-94-n2",
+    "a5-94-n5",
+    "a5-94-n4",
+    "a5-94-n3"
+  ],
+  "required_evidence": [
+    "a5-94-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The checkout buffer size is 58 KB.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.689,
+  "prompt_tokens": 210,
+  "gen_tokens": 11
+}

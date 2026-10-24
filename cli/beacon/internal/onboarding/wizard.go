@@ -1,0 +1,927 @@
+package onboarding
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"strings"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/managedprivacy"
+)
+
+var ErrWizardCancelled = errors.New("onboarding cancelled")
+
+// signInBrowserHint follows the sign-in URL once a browser has been opened for it.
+const signInBrowserHint = "Open it in the browser where you are signed in to beacon.sh. If a different browser opened, copy the URL there."
+
+// Account is what a completed sign-in tells the wizard.
+//
+// It carries no token. This package draws a terminal and holds no credential, and
+// the sign-in itself is injected precisely so that stays true.
+type Account struct {
+	Email string
+}
+
+// SignInPrompt is what the user needs in order to finish signing in elsewhere.
+type SignInPrompt struct {
+	URL        string
+	WillOpen   bool
+	BrowserErr error
+	// SSHForward is the port forward that lets a browser on another computer finish this
+	// sign-in, shown next to a URL the user opens themselves.
+	SSHForward string
+}
+
+// Reporter is how a sign-in in progress tells the wizard what is happening. It is
+// called from the goroutine running the sign-in; the wizard funnels every call onto
+// its own event channel.
+type Reporter interface {
+	Prompt(SignInPrompt)
+}
+
+// SignInRequest is how the wizard asks for this particular attempt. It exists so a
+// retry can change its mind about the browser: the recovery screen lets a user who
+// has no usable browser switch to opening the URL themselves.
+type SignInRequest struct {
+	NoBrowser bool
+}
+
+// SignInFunc signs in without the wizard leaving the screen. It runs off the UI
+// goroutine and must return when ctx is cancelled. An error moves the wizard to its
+// recovery screen; it never fails the install by itself.
+type SignInFunc func(ctx context.Context, req SignInRequest, r Reporter) (Account, error)
+
+type WizardOptions struct {
+	SignedIn          bool
+	Email             string
+	OfferManaged      bool
+	DestinationOnly   bool
+	PresetDestination string
+	PresetPrivacyMode string
+	// OfferAgentTools adds the agent tools screen before confirm. The Beacon agent skills are
+	// offered whichever destination is chosen; Beacon Cloud MCP only with Beacon Cloud. Every
+	// offered tool starts selected: turning one off is the person's choice to make.
+	OfferAgentTools bool
+	// BackfillDays is how far back the install reads agent sessions from their local session
+	// stores, and a first connect uploads them; zero when the backfill is off. The confirm screen
+	// names it, because it is part of what confirming Beacon Cloud sends.
+	BackfillDays int
+
+	// SignIn signs in in place. When nil the wizard keeps its original contract:
+	// it exits with NeedLogin and the caller signs in and runs it again.
+	SignIn SignInFunc
+	// NoBrowser presents the URL to open rather than claiming one will open.
+	NoBrowser bool
+	// NoDisplay is why no browser can be opened on this machine, or nil when one can. When set,
+	// and NoBrowser is not, the wizard does not start a sign-in that cannot finish: it goes
+	// straight to recovery and says why.
+	NoDisplay error
+	// Now is injectable so elapsed time renders deterministically in tests.
+	Now func() time.Time
+	// SignInTimeout is rendered as a countdown. The real deadline lives in SignIn.
+	SignInTimeout time.Duration
+}
+
+type WizardResult struct {
+	NeedLogin   bool
+	Completed   bool
+	Destination string
+	PrivacyMode string
+
+	// SignedInEmail is set when the in-wizard sign-in succeeded, so the caller can
+	// record who completed setup without inspecting the session again.
+	SignedInEmail string
+	// WithoutAccount is true when the user finished setup without an account after
+	// a sign-in failure. Destination is then always local: managed forwarding has
+	// nothing to authorize it.
+	WithoutAccount bool
+
+	// ConnectCloudMCP and InstallSkills are the agent tools the person kept selected. Both are
+	// false when the screen was not offered, and ConnectCloudMCP is false unless the
+	// destination is Beacon Cloud.
+	ConnectCloudMCP bool
+	InstallSkills   bool
+}
+
+type wizardScreen int
+
+const (
+	welcomeScreen wizardScreen = iota
+	signInScreen
+	signInWaitScreen
+	signInFailedScreen
+	destinationScreen
+	managedDisclosureScreen
+	privacyScreen
+	agentToolsScreen
+	confirmScreen
+)
+
+// Agent tools the wizard can offer.
+const (
+	agentToolCloudMCP = iota
+	agentToolSkills
+)
+
+type wizardModel struct {
+	options  WizardOptions
+	result   WizardResult
+	screen   wizardScreen
+	selected int
+	width    int
+	height   int
+
+	// events carries everything a background sign-in reports. It is buffered so a
+	// reporter never blocks on a UI that has stopped reading.
+	events chan tea.Msg
+	// cancelSignIn stops the sign-in in flight, on esc or on quit.
+	cancelSignIn context.CancelFunc
+	prompt       SignInPrompt
+	signInErr    error
+	// attempt counts sign-in attempts, so a report from an abandoned one can be
+	// told apart from the current one's.
+	attempt int
+	// noDisplay is set while recovery is showing because no browser can be opened here,
+	// rather than because an attempt failed.
+	noDisplay bool
+	startedAt time.Time
+	now       time.Time
+	frame     int
+}
+
+// spinnerFrames animate the wait. Braille is what every terminal capable of the
+// alternate screen this wizard already requires can draw.
+var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+
+type tickMsg time.Time
+
+// Sign-in events carry the attempt that produced them.
+//
+// Cancelling an attempt does not unschedule its goroutine: a sign-in abandoned
+// with esc still reports, eventually, with context.Canceled. If the user has
+// already started a retry by then, that stale report would otherwise be applied to
+// the new attempt and shown as its failure.
+type signInPromptMsg struct {
+	attempt int
+	prompt  SignInPrompt
+}
+
+type signInDoneMsg struct {
+	attempt int
+	account Account
+	err     error
+}
+
+type chanReporter struct {
+	events  chan<- tea.Msg
+	attempt int
+}
+
+func (r chanReporter) Prompt(p SignInPrompt) {
+	select {
+	case r.events <- signInPromptMsg{attempt: r.attempt, prompt: p}:
+	default:
+	}
+}
+
+func waitForEvent(events <-chan tea.Msg) tea.Cmd {
+	return func() tea.Msg { return <-events }
+}
+
+func tickCmd() tea.Cmd {
+	return tea.Tick(120*time.Millisecond, func(t time.Time) tea.Msg { return tickMsg(t) })
+}
+
+func (m wizardModel) clock() time.Time {
+	if m.options.Now != nil {
+		return m.options.Now()
+	}
+	return time.Now()
+}
+
+var (
+	wizardAccent = lipgloss.NewStyle().Foreground(lipgloss.Color("99")).Bold(true)
+	wizardDim    = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	wizardChoice = lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Background(lipgloss.Color("237")).Bold(true)
+	wizardWarn   = lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+)
+
+func newWizardModel(options WizardOptions) wizardModel {
+	screen := welcomeScreen
+	result := WizardResult{
+		Destination:     options.PresetDestination,
+		PrivacyMode:     options.PresetPrivacyMode,
+		ConnectCloudMCP: options.OfferAgentTools,
+		InstallSkills:   options.OfferAgentTools,
+	}
+	needSignIn := false
+	if options.DestinationOnly {
+		switch {
+		case !options.SignedIn:
+			needSignIn = true
+		case options.PresetDestination == DestinationAsymptote:
+			screen = managedDisclosureScreen
+		case options.PresetDestination != "":
+			screen = beforeConfirm(options)
+		default:
+			screen = destinationScreen
+		}
+	}
+	model := wizardModel{options: options, result: result, screen: screen}
+	if needSignIn {
+		model.needSignIn()
+	}
+	return model
+}
+
+// needSignIn moves to the sign-in screen, or, when there is no display to open a browser on,
+// straight to recovery.
+//
+// A sign-in finishes by redirecting a browser back to this machine. With no display, or over SSH,
+// the browser Beacon opens is one nobody sees, and the attempt used to sit on the wait screen for
+// five minutes before anything said so. The missing display is the failure, so it is reported as
+// one, before any attempt starts.
+func (m *wizardModel) needSignIn() {
+	if m.options.NoDisplay != nil && !m.options.NoBrowser {
+		m.signInErr = m.options.NoDisplay
+		m.noDisplay = true
+		m.selected = 0
+		m.screen = signInFailedScreen
+		return
+	}
+	m.screen = signInScreen
+}
+
+func RunWizard(in io.Reader, out io.Writer, options WizardOptions) (WizardResult, error) {
+	model := newWizardModel(options)
+	model.events = make(chan tea.Msg, 8)
+	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithInput(in), tea.WithOutput(out))
+	final, err := program.Run()
+	if err != nil {
+		return WizardResult{}, err
+	}
+	result := final.(wizardModel).result
+	if !result.NeedLogin && !result.Completed {
+		return WizardResult{}, ErrWizardCancelled
+	}
+	return result, nil
+}
+
+func (m wizardModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m wizardModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := message.(type) {
+	case tea.WindowSizeMsg:
+		m.width, m.height = msg.Width, msg.Height
+	case tickMsg:
+		// Only the waiting screen animates, and only it keeps the ticker alive.
+		if m.screen != signInWaitScreen {
+			return m, nil
+		}
+		m.now = time.Time(msg)
+		m.frame++
+		return m, tickCmd()
+	case signInPromptMsg:
+		// Re-arm either way: exactly one reader stays live for the whole program,
+		// so ignoring a stale event must not leave the channel unread.
+		if msg.attempt == m.attempt {
+			m.prompt = msg.prompt
+		}
+		return m, waitForEvent(m.events)
+	case signInDoneMsg:
+		return m.signInFinished(msg)
+	case tea.KeyMsg:
+		switch msg.String() {
+		// esc and ctrl+c cancel; "q" deliberately does not. It used to, on every
+		// screen, so a user typing q at the destination list killed the install --
+		// and no screen could ever take free text while a bare letter meant quit.
+		case "ctrl+c":
+			return m.cancelAndQuit()
+		case "esc":
+			// Abandoning a browser sign-in returns to the sign-in screen rather than
+			// ending the install: the browser may simply not have opened.
+			if m.screen == signInWaitScreen {
+				m.stopSignIn()
+				m.needSignIn()
+				return m, nil
+			}
+			return m.cancelAndQuit()
+		case "up", "k":
+			if n := m.choiceCount(); m.isPicker() && n > 0 {
+				m.selected = (m.selected - 1 + n) % n
+			}
+		case "down", "j":
+			if n := m.choiceCount(); m.isPicker() && n > 0 {
+				m.selected = (m.selected + 1) % n
+			}
+		case " ", "space", "x":
+			if m.screen == agentToolsScreen {
+				m.toggleAgentTool()
+			}
+		case "enter":
+			return m.advance()
+		}
+	}
+	return m, nil
+}
+
+func (m wizardModel) isPicker() bool {
+	return m.screen == destinationScreen || m.screen == privacyScreen || m.screen == signInFailedScreen || m.screen == agentToolsScreen
+}
+
+// agentTools are the rows of the agent tools screen, in order.
+func (m wizardModel) agentTools() []int {
+	if m.result.Destination == DestinationAsymptote {
+		return []int{agentToolCloudMCP, agentToolSkills}
+	}
+	return []int{agentToolSkills}
+}
+
+func (m *wizardModel) toggleAgentTool() {
+	tools := m.agentTools()
+	if m.selected < 0 || m.selected >= len(tools) {
+		return
+	}
+	switch tools[m.selected] {
+	case agentToolCloudMCP:
+		m.result.ConnectCloudMCP = !m.result.ConnectCloudMCP
+	case agentToolSkills:
+		m.result.InstallSkills = !m.result.InstallSkills
+	}
+}
+
+func (m *wizardModel) stopSignIn() {
+	if m.cancelSignIn != nil {
+		m.cancelSignIn()
+		m.cancelSignIn = nil
+	}
+}
+
+func (m wizardModel) cancelAndQuit() (tea.Model, tea.Cmd) {
+	m.stopSignIn()
+	return m, tea.Quit
+}
+
+// startSignIn runs the injected sign-in off the UI goroutine and shows the waiting
+// screen. Waiting begins immediately: the URL is reported by the sign-in itself
+// once its callback server is listening, never gated on the user pressing anything.
+func (m wizardModel) startSignIn() (tea.Model, tea.Cmd) {
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancelSignIn = cancel
+	m.signInErr = nil
+	m.noDisplay = false
+	m.prompt = SignInPrompt{}
+	m.startedAt = m.clock()
+	m.now = m.startedAt
+	m.frame = 0
+	m.screen = signInWaitScreen
+
+	// The first attempt arms the single channel reader. Every handler re-arms it,
+	// so retries must not arm a second one: two readers would split the stream and
+	// each would need its own re-arm bookkeeping.
+	first := m.attempt == 0
+	m.attempt++
+	attempt := m.attempt
+
+	events, signIn := m.events, m.options.SignIn
+	req := SignInRequest{NoBrowser: m.options.NoBrowser}
+	go func() {
+		account, err := signIn(ctx, req, chanReporter{events: events, attempt: attempt})
+		events <- signInDoneMsg{attempt: attempt, account: account, err: err}
+	}()
+	if first {
+		return m, tea.Batch(waitForEvent(m.events), tickCmd())
+	}
+	return m, tickCmd()
+}
+
+func (m wizardModel) signInFinished(msg signInDoneMsg) (tea.Model, tea.Cmd) {
+	// An abandoned attempt reporting late says nothing about the current one, and
+	// must not cancel it or be shown as its outcome.
+	if msg.attempt != m.attempt {
+		return m, waitForEvent(m.events)
+	}
+	m.stopSignIn()
+	if msg.err != nil {
+		// A cancel the user asked for has already moved the screen; do not overwrite
+		// it with a failure they did not cause.
+		if m.screen != signInWaitScreen {
+			return m, waitForEvent(m.events)
+		}
+		m.signInErr = msg.err
+		m.selected = 0
+		m.screen = signInFailedScreen
+		return m, waitForEvent(m.events)
+	}
+	m.options.SignedIn = true
+	m.options.Email = msg.account.Email
+	m.result.SignedInEmail = msg.account.Email
+	m.selected = 0
+	m.screen = m.afterSignIn()
+	return m, waitForEvent(m.events)
+}
+
+// afterSignIn is where the wizard resumes once an account exists.
+func (m wizardModel) afterSignIn() wizardScreen {
+	switch {
+	case m.options.PresetDestination == DestinationAsymptote:
+		return managedDisclosureScreen
+	case m.options.PresetDestination != "":
+		return beforeConfirm(m.options)
+	default:
+		return destinationScreen
+	}
+}
+
+// beforeConfirm is the screen that precedes confirm: the agent tools when they are offered.
+func beforeConfirm(options WizardOptions) wizardScreen {
+	if options.OfferAgentTools {
+		return agentToolsScreen
+	}
+	return confirmScreen
+}
+
+// toConfirm moves to the screen before confirm, with the cursor on its first row.
+func (m *wizardModel) toConfirm() {
+	m.selected = 0
+	m.screen = beforeConfirm(m.options)
+}
+
+func (m wizardModel) advance() (tea.Model, tea.Cmd) {
+	switch m.screen {
+	case welcomeScreen:
+		switch {
+		case !m.options.SignedIn:
+			m.needSignIn()
+		case m.options.PresetDestination == DestinationAsymptote:
+			m.screen = managedDisclosureScreen
+		case m.options.PresetDestination != "":
+			m.toConfirm()
+		default:
+			m.screen = destinationScreen
+		}
+	case signInScreen:
+		if m.options.SignIn != nil {
+			return m.startSignIn()
+		}
+		// No sign-in was injected: keep the original contract, where the caller
+		// signs in and runs the wizard again.
+		m.result.NeedLogin = true
+		return m, tea.Quit
+	case signInWaitScreen:
+		// Enter does nothing while the browser has the floor.
+		return m, nil
+	case signInFailedScreen:
+		return m.recover()
+	case destinationScreen:
+		m.result.Destination = m.destinations()[m.selected]
+		if m.result.Destination == DestinationAsymptote {
+			m.screen = managedDisclosureScreen
+		} else {
+			m.toConfirm()
+		}
+	case managedDisclosureScreen:
+		m.selected = privacyIndex(m.result.PrivacyMode)
+		m.screen = privacyScreen
+	case privacyScreen:
+		m.result.PrivacyMode = managedprivacy.Modes[m.selected]
+		m.toConfirm()
+	case agentToolsScreen:
+		m.screen = confirmScreen
+	case confirmScreen:
+		if m.result.Destination != DestinationAsymptote {
+			m.result.ConnectCloudMCP = false
+		}
+		m.result.Completed = true
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m wizardModel) destinations() []string {
+	if m.options.OfferManaged {
+		return []string{DestinationAsymptote, DestinationLocal}
+	}
+	return []string{DestinationLocal}
+}
+
+func (m wizardModel) choiceCount() int {
+	switch m.screen {
+	case privacyScreen:
+		return len(managedprivacy.Modes)
+	case signInFailedScreen:
+		return len(m.recoveryChoices())
+	case agentToolsScreen:
+		return len(m.agentTools())
+	default:
+		return len(m.destinations())
+	}
+}
+
+// recoveryChoice is one way out of a sign-in that did not finish.
+type recoveryChoice struct {
+	id     string
+	label  string
+	detail string
+}
+
+// recoveryChoices exist only here, after an attempt has actually failed.
+//
+// Signing in is the expected path, so the sign-in screen offers nothing else; a
+// visible "skip" there would read as a suggestion. But a machine that is offline,
+// has no browser, or cannot receive the loopback redirect still has to be able to
+// finish, or a local-first tool becomes uninstallable without tribal knowledge of
+// an environment variable.
+func (m wizardModel) recoveryChoices() []recoveryChoice {
+	local := recoveryChoice{
+		id:     "local",
+		label:  "Finish setup without an account",
+		detail: "Install Beacon with telemetry kept on this machine. Connect later with `beacon endpoint connect`.",
+	}
+	cancel := recoveryChoice{id: "cancel", label: "Cancel setup", detail: "Stop without installing."}
+	if m.noDisplay {
+		// No retry: trying again cannot find a display. Finishing locally comes first because
+		// it is the choice that works from here.
+		return []recoveryChoice{
+			local,
+			{
+				id:     "manual",
+				label:  "Show the sign-in URL",
+				detail: "Open it in a browser on this machine, or on your own computer after forwarding the port it names over SSH.",
+			},
+			cancel,
+		}
+	}
+	choices := []recoveryChoice{
+		{id: "retry", label: "Try signing in again", detail: "Open beacon.sh and wait for the browser again."},
+	}
+	if m.prompt.WillOpen || m.prompt.BrowserErr != nil {
+		choices = append(choices, recoveryChoice{
+			id:     "manual",
+			label:  "Show the URL instead of opening a browser",
+			detail: "Open the address yourself, in a browser on this machine.",
+		})
+	}
+	return append(choices, local, cancel)
+}
+
+func (m wizardModel) recover() (tea.Model, tea.Cmd) {
+	choices := m.recoveryChoices()
+	if m.selected < 0 || m.selected >= len(choices) {
+		return m, nil
+	}
+	switch choices[m.selected].id {
+	case "retry":
+		return m.startSignIn()
+	case "manual":
+		m.options.NoBrowser = true
+		return m.startSignIn()
+	case "local":
+		m.result.WithoutAccount = true
+		m.result.Destination = DestinationLocal
+		m.result.PrivacyMode = ""
+		// Drop any leftover identity. Email is populated from whatever session was
+		// on disk, including an expired one that cannot be used, so leaving it set
+		// would show an account on the confirm screen next to "not signed in".
+		m.options.Email = ""
+		m.options.SignedIn = false
+		m.toConfirm()
+		return m, nil
+	default:
+		return m, tea.Quit
+	}
+}
+
+func (m wizardModel) View() string {
+	width := m.width
+	if width <= 0 {
+		width = 80
+	}
+	contentWidth := min(76, max(30, width-8))
+	var title, body, raw string
+	switch m.screen {
+	case welcomeScreen:
+		title = "Welcome to Beacon"
+		body = "Interactive setup: sign in, choose where this machine's telemetry goes, and install."
+		if m.options.SignedIn {
+			body += "\n\n" + wizardDim.Render("Signed in as "+m.options.Email)
+		}
+	case signInScreen:
+		title = "Sign in to continue"
+		// --no-browser means no browser will be opened, so promising one here sends
+		// an SSH or headless user looking for a window that never appears.
+		if m.options.NoBrowser {
+			body = "Beacon will show a beacon.sh URL for you to open."
+		} else {
+			body = "Beacon will open beacon.sh in your browser."
+		}
+	case signInWaitScreen:
+		title = "Waiting for you to finish signing in"
+		switch {
+		case m.prompt.URL == "":
+			body = "Starting sign-in..."
+		case m.prompt.BrowserErr != nil:
+			body = "A browser could not be opened here. Open this URL on this machine:"
+		case m.prompt.WillOpen:
+			body = "Your browser should have opened. If it did not, open this URL:"
+		default:
+			body = "Open this URL to sign in:"
+		}
+		raw = m.prompt.URL
+		if m.prompt.URL != "" && m.prompt.WillOpen && m.prompt.BrowserErr == nil {
+			// The default browser is not always the one signed in to beacon.sh. Copying
+			// the URL to the one that is saves signing in a second time.
+			raw += "\n\n" + wizardDim.Width(contentWidth).Render(signInBrowserHint)
+		}
+		if m.prompt.URL != "" && m.prompt.SSHForward != "" && (!m.prompt.WillOpen || m.prompt.BrowserErr != nil) {
+			raw += "\n\n" + wizardDim.Render("From another computer over SSH, forward the port first:") +
+				"\n" + m.prompt.SSHForward
+		}
+		if m.prompt.URL != "" {
+			raw += "\n\n" + wizardDim.Render(m.waitStatus())
+		}
+	case signInFailedScreen:
+		title = "Sign-in did not finish"
+		if m.noDisplay {
+			title = "No browser on this machine"
+		}
+		if m.signInErr != nil {
+			body = wizardWarn.Render(m.signInErr.Error()) + "\n\n"
+		}
+		if m.noDisplay {
+			body += "Sign-in finishes when beacon.sh redirects a browser back to this machine.\n\n"
+		}
+		var rows []string
+		for index, choice := range m.recoveryChoices() {
+			line := "    " + choice.label
+			if index == m.selected {
+				line = wizardChoice.Render("  ❯ " + choice.label)
+			}
+			rows = append(rows, line, choiceDetail(choice.detail, contentWidth))
+		}
+		body += strings.Join(rows, "\n")
+	case destinationScreen:
+		title = "Where should this machine's telemetry go?"
+		var rows []string
+		for index, destination := range m.destinations() {
+			label, detail := destinationCopy(destination)
+			prefix := "    "
+			line := prefix + label
+			if index == m.selected {
+				line = wizardChoice.Render("  ❯ " + label)
+			}
+			rows = append(rows, line, choiceDetail(detail, contentWidth))
+		}
+		body = strings.Join(rows, "\n")
+	case managedDisclosureScreen:
+		title = "What gets sent to beacon.sh"
+		// Deliberately makes no claim about what is already on disk. The obvious
+		// reassurance -- that nothing recorded before now is sent -- is not true
+		// without naming the inventory exception, and that caveat costs more
+		// attention than it is worth on the screen where someone is deciding. An
+		// unqualified version of it is the false statement this screen used to
+		// carry; saying nothing is better than saying that.
+		body = "Your agents' activity on this machine will be sent to your Beacon " +
+			"account as it happens." +
+			"\n\nStop any time with `beacon endpoint disconnect`."
+	case privacyScreen:
+		title = "Choose what Beacon Cloud receives"
+		var rows []string
+		for index, mode := range managedprivacy.Modes {
+			label, detail := privacyCopy(mode)
+			line := "    " + label
+			if index == m.selected {
+				line = wizardChoice.Render("  ❯ " + label)
+			}
+			rows = append(rows, line, choiceDetail(detail, contentWidth))
+		}
+		body = strings.Join(rows, "\n") +
+			"\n\nChange later with `beacon endpoint connect --privacy-mode`."
+	case agentToolsScreen:
+		title = "Set up your agents"
+		body = "Give your agents their own history.\n\n"
+		var rows []string
+		for index, tool := range m.agentTools() {
+			label, detail := agentToolCopy(tool)
+			box := "[ ] "
+			if m.agentToolOn(tool) {
+				box = "[x] "
+			}
+			line := "    " + box + label
+			if index == m.selected {
+				line = wizardChoice.Render("  ❯ " + box + label)
+			}
+			rows = append(rows, line, choiceDetail(detail, contentWidth))
+		}
+		body += strings.Join(rows, "\n")
+	case confirmScreen:
+		title = "Ready to set up Beacon"
+		if m.result.Destination == DestinationAsymptote {
+			// The account is the identity this machine will enroll under. It has to
+			// stay on screen: the alt-screen renderer drops lines above the terminal
+			// height, and a default 80×24 terminal is the one this view has to fit.
+			if m.options.Email != "" {
+				body = "Account: " + m.options.Email + "\n"
+			}
+			body += "Beacon Cloud is operated by Asymptote Labs, Inc.\n" +
+				"Destination: Beacon Cloud\n" +
+				"Capture mode: " + managedprivacy.Label(m.result.PrivacyMode) + "\n" +
+				wizardWarn.Render("This installs Beacon and starts forwarding to beacon.sh.") + "\n" +
+				"Turn off research and AI training any time in Beacon Cloud: " +
+				"click your profile picture (top right), then Settings. " +
+				"Change capture mode any time with `beacon endpoint connect --privacy-mode`. " +
+				"Stop sending any time with `beacon endpoint disconnect`. " +
+				"To delete your data, email privacy@asymptotelabs.ai."
+			if m.options.BackfillDays > 0 {
+				body += fmt.Sprintf(" It also uploads your agent sessions from the last %d days, read from their session history on this machine.", m.options.BackfillDays)
+			}
+		} else {
+			label, _ := destinationCopy(m.result.Destination)
+			if m.options.Email != "" {
+				body = "Account: " + m.options.Email + "\n"
+			}
+			body += "Destination: " + label
+			body += "\n\nYour telemetry stays on this machine."
+			if m.options.BackfillDays > 0 {
+				body += fmt.Sprintf(" Beacon reads your agent sessions from the last %d days into its local log.", m.options.BackfillDays)
+			}
+			if m.result.WithoutAccount {
+				body += " You are not signed in; connect later with `beacon endpoint connect`."
+			}
+		}
+		if m.options.OfferAgentTools {
+			body += "\nAgent tools: " + m.agentToolsSummary()
+		}
+	}
+
+	card := wizardAccent.Render("B E A C O N") + "\n\n" +
+		wizardAccent.Render(title) + "\n\n" +
+		lipgloss.NewStyle().Width(contentWidth).Render(body)
+	if raw != "" {
+		// Deliberately not width-constrained: a soft-wrapped URL is one a user
+		// cannot copy, and copying it is the whole point of showing it.
+		card += "\n\n" + raw
+	}
+	card += "\n\n" + wizardDim.Render(m.hint())
+	return lipgloss.NewStyle().Padding(1, 3).Render(card)
+}
+
+func (m wizardModel) agentToolOn(tool int) bool {
+	switch tool {
+	case agentToolCloudMCP:
+		return m.result.ConnectCloudMCP
+	case agentToolSkills:
+		return m.result.InstallSkills
+	}
+	return false
+}
+
+func (m wizardModel) agentToolsSummary() string {
+	var on []string
+	for _, tool := range m.agentTools() {
+		if m.agentToolOn(tool) {
+			label, _ := agentToolCopy(tool)
+			on = append(on, label)
+		}
+	}
+	if len(on) == 0 {
+		return "none"
+	}
+	return strings.Join(on, ", ")
+}
+
+func agentToolCopy(tool int) (string, string) {
+	if tool == agentToolCloudMCP {
+		return "Beacon Cloud MCP",
+			"Adds Beacon Cloud MCP to Claude Code, Codex, Cursor, VS Code, Gemini CLI, OpenCode and Oh My Pi, " +
+				"so your agents can search the history this machine forwards. Each signs in with " +
+				"beacon.sh the first time; no token is written."
+	}
+	return "Beacon agent skills",
+		"Installs the Beacon skills for every project (~/.agents/skills, and ~/.claude/skills for " +
+			"Claude Code): recall lessons from past sessions, distill new ones, and build lenses. " +
+			"Installed on this machine; nothing is sent."
+}
+
+func destinationCopy(destination string) (string, string) {
+	switch destination {
+	case DestinationAsymptote:
+		return "Beacon Cloud (recommended)",
+			"Your agent sessions are sent to your Beacon account and kept in the cloud " +
+				"while your account is active. Includes " +
+				// Non-breaking hyphen: the wrapper treats a plain "-" as a break
+				// point and split this across lines as "AI-" / "powered".
+				"AI\u2011powered search and analytics on Beacon's hosted dashboard. " +
+				"Pick this for Beacon's full feature set. " +
+				"Unless you opt out, Asymptote uses your sessions for research and AI " +
+				"training and may share de-identified data. Details: beacon.sh/privacy"
+	default:
+		return "Local only",
+			"A local dashboard for this machine's agent activity, kept for as long as " +
+				"the logs are on disk. Your agent activity stays on this machine."
+	}
+}
+
+// choiceDetail renders the dim explanation under a choice, wrapped to the card and
+// indented on every line.
+//
+// The detail used to be emitted as one pre-indented string and wrapped later with
+// the rest of the body, which indented the first line and left every continuation
+// flush against the margin. That was invisible while the captions were one-liners
+// and became wrong the moment they were not.
+func choiceDetail(detail string, width int) string {
+	const indent = "      "
+	inner := max(20, width-len(indent))
+	var lines []string
+	for _, line := range strings.Split(lipgloss.NewStyle().Width(inner).Render(detail), "\n") {
+		lines = append(lines, wizardDim.Render(indent+strings.TrimRight(line, " ")))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func privacyCopy(mode string) (string, string) {
+	if mode == managedprivacy.MetadataOnly {
+		return "Metadata only",
+			"Prompts, responses, reasoning, tool arguments and results, command output, " +
+				"file diffs, and file contents are removed on your machine before anything " +
+				"is sent. Only structural information is sent: which agent and tool ran, " +
+				"file paths, exit codes, token counts, timestamps, repository and branch " +
+				"names, and full command lines. Common secret formats in command lines are " +
+				"also masked."
+	}
+	return "Standard",
+		"Prompts, responses, tool activity, command output, file diffs, and file " +
+			"contents returned by tools. Common secret formats, such as API keys and " +
+			"tokens, are masked on your machine before anything is sent. Masking is " +
+			"pattern-based and may not catch everything. May include source code, file " +
+			"contents, and confidential information."
+}
+
+func privacyIndex(mode string) int {
+	for index, candidate := range managedprivacy.Modes {
+		if candidate == mode {
+			return index
+		}
+	}
+	return 0
+}
+
+// waitStatus renders the spinner, how long this has been going, and how long is
+// left, so a wait with no visible progress is not mistaken for a hang.
+func (m wizardModel) waitStatus() string {
+	frame := spinnerFrames[m.frame%len(spinnerFrames)]
+	elapsed := m.now.Sub(m.startedAt)
+	if elapsed < 0 {
+		elapsed = 0
+	}
+	status := fmt.Sprintf("%s  %s elapsed", frame, clockFormat(elapsed))
+	if m.options.SignInTimeout > 0 {
+		if remaining := m.options.SignInTimeout - elapsed; remaining > 0 {
+			status += fmt.Sprintf(" · times out in %s", clockFormat(remaining))
+		}
+	}
+	return status
+}
+
+func clockFormat(d time.Duration) string {
+	total := int(d.Round(time.Second).Seconds())
+	return fmt.Sprintf("%d:%02d", total/60, total%60)
+}
+
+func (m wizardModel) hint() string {
+	if m.screen == confirmScreen && m.result.Destination == DestinationAsymptote {
+		return "enter install and connect · esc cancel"
+	}
+	return m.wizardHint(m.screen)
+}
+
+func (m wizardModel) wizardHint(screen wizardScreen) string {
+	switch screen {
+	case destinationScreen:
+		return "↑/↓ choose · enter continue · esc cancel"
+	case privacyScreen:
+		return "↑/↓ choose · enter continue · esc cancel"
+	case agentToolsScreen:
+		return "↑/↓ move · space turn on/off · enter continue · esc cancel"
+	case signInScreen:
+		if m.options.NoBrowser {
+			return "enter show the sign-in URL · esc cancel"
+		}
+		return "enter open beacon.sh · esc cancel"
+	case signInWaitScreen:
+		return "esc go back · ctrl+c cancel setup"
+	case signInFailedScreen:
+		return "↑/↓ choose · enter continue · esc cancel"
+	case confirmScreen:
+		return "enter install · esc cancel"
+	default:
+		return "enter continue · esc cancel"
+	}
+}

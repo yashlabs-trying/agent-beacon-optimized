@@ -1,0 +1,24 @@
+{
+  "dataset_id": "beacon-phase5-heldout-v1",
+  "file": "phase5_heldout_v1.json",
+  "sha256": "98307FED1FFF199F3447319428C8802C03C10511898EE4FCA553D8EF55C8DBE7",
+  "tasks": 300,
+  "hash_rule": "SHA-256 of file bytes after CRLF-to-LF normalization",
+  "by_category": {
+    "A1_learning_from_failure": 20,
+    "A2_supersession": 20,
+    "A3_knowledge_transfer": 20,
+    "A4_recovery": 20,
+    "A5_long_session": 20,
+    "B1_contradiction": 20,
+    "B2_ambiguity": 20,
+    "B3_multi_hop": 20,
+    "B4_decision": 20,
+    "B5_trust_adversarial": 20,
+    "C1_coding": 20,
+    "C2_workflow": 20,
+    "C3_security_ops": 20,
+    "C4_long_history": 20,
+    "C5_cross_project": 20
+  }
+}

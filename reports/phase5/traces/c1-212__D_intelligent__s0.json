@@ -1,0 +1,27 @@
+{
+  "task": "c1-212",
+  "suite": "C",
+  "category": "C1_coding",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "c1-212-conv"
+  ],
+  "required_evidence": [
+    "c1-212-conv"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "```python\ndef is_even(n):\n    return n % 2 == 0\n```",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.578,
+  "prompt_tokens": 164,
+  "gen_tokens": 20
+}

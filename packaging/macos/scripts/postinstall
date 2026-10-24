@@ -1,0 +1,140 @@
+#!/bin/sh
+set -eu
+
+BEACON_BIN="${BEACON_BIN:-/opt/beacon/bin/beacon}" \
+BEACON_COLLECTOR="${BEACON_COLLECTOR:-/opt/beacon/bin/beacon-otelcol}" \
+BEACON_ENDPOINT_HARNESSES="${BEACON_ENDPOINT_HARNESSES:-claude,codex}" \
+BEACON_CONTENT_RETENTION="${BEACON_CONTENT_RETENTION:-full}" \
+BEACON_OTLP_GRPC_PORT="${BEACON_OTLP_GRPC_PORT:-4317}" \
+BEACON_OTLP_HTTP_PORT="${BEACON_OTLP_HTTP_PORT:-4318}" \
+BEACON_SPLUNK_HEC_ENDPOINT="${BEACON_SPLUNK_HEC_ENDPOINT:-}" \
+BEACON_SPLUNK_HEC_TOKEN="${BEACON_SPLUNK_HEC_TOKEN:-}" \
+BEACON_SPLUNK_INDEX="${BEACON_SPLUNK_INDEX:-}" \
+BEACON_SPLUNK_SOURCE="${BEACON_SPLUNK_SOURCE:-}" \
+BEACON_SPLUNK_SOURCETYPE="${BEACON_SPLUNK_SOURCETYPE:-}" \
+BEACON_SPLUNK_INSECURE_SKIP_VERIFY="${BEACON_SPLUNK_INSECURE_SKIP_VERIFY:-0}" \
+BEACON_SPLUNK_CA_FILE="${BEACON_SPLUNK_CA_FILE:-}" \
+BEACON_NO_START=1 \
+  /opt/beacon/scripts/install-endpoint.sh
+
+"${BEACON_BIN:-/opt/beacon/bin/beacon}" endpoint user-config repair-installed \
+  --system \
+  --harness "${BEACON_ENDPOINT_HARNESSES:-claude,codex}" || {
+  echo "Warning: could not refresh installed user endpoint configuration after package install" >&2
+}
+
+forwarder_running() {
+  label="$1"
+
+  launchctl print "system/$label" 2>/dev/null | grep -Eq 'state = running|pid ='
+}
+
+forwarder_stably_running() {
+  label="$1"
+  observations=0
+
+  while [ "$observations" -lt 3 ]; do
+    if ! forwarder_running "$label"; then
+      return 1
+    fi
+    observations=$((observations + 1))
+    if [ "$observations" -lt 3 ]; then
+      sleep 1
+    fi
+  done
+}
+
+wait_for_forwarder_bootout() {
+  target="$1"
+  attempts=0
+
+  while launchctl print "$target" >/dev/null 2>&1; do
+    attempts=$((attempts + 1))
+    if [ "$attempts" -ge 65 ]; then
+      return 1
+    fi
+    sleep 1
+  done
+}
+
+restore_existing_forwarder() {
+  label="$1"
+  plist_path="$2"
+  target="system/$label"
+
+  # No plist means the customer has not installed this optional forwarder.
+  if [ ! -f "$plist_path" ]; then
+    return 0
+  fi
+
+  if forwarder_running "$label"; then
+    out="$(launchctl kickstart -k "$target" 2>&1)" || {
+      echo "Warning: launchctl kickstart failed for $label: $out" >&2
+    }
+    if forwarder_stably_running "$label"; then
+      return 0
+    fi
+  fi
+
+  for delay in 1 2 4 8 16; do
+    out="$(launchctl bootstrap system "$plist_path" 2>&1)" || {
+      echo "Warning: launchctl bootstrap failed for $label: $out" >&2
+    }
+    if forwarder_stably_running "$label"; then
+      return 0
+    fi
+
+    out="$(launchctl bootout "$target" 2>&1)" || {
+      echo "Warning: launchctl bootout retry failed for $label: $out" >&2
+    }
+    if ! wait_for_forwarder_bootout "$target"; then
+      echo "Warning: timed out waiting for launchctl bootout for $label" >&2
+      continue
+    fi
+    out="$(launchctl bootstrap system "$plist_path" 2>&1)" || {
+      echo "Warning: launchctl bootstrap after bootout failed for $label: $out" >&2
+    }
+    if forwarder_stably_running "$label"; then
+      return 0
+    fi
+
+    out="$(launchctl kickstart -k "$target" 2>&1)" || {
+      echo "Warning: launchctl kickstart retry failed for $label: $out" >&2
+    }
+    if forwarder_stably_running "$label"; then
+      return 0
+    fi
+    sleep "$delay"
+  done
+
+  out="$(launchctl print "$target" 2>&1)" || true
+  echo "Error: could not restore existing forwarder $label after package install. launchctl print: $out" >&2
+  return 1
+}
+
+if command -v launchctl >/dev/null 2>&1; then
+  launchctl bootout system/com.beacon.endpoint.collector >/dev/null 2>&1 || true
+  launchctl bootstrap system /Library/LaunchDaemons/com.beacon.endpoint.collector.plist >/dev/null 2>&1 || {
+    launchctl print system/com.beacon.endpoint.collector >/dev/null 2>&1 || exit 1
+  }
+  restore_existing_forwarder "com.beacon.endpoint.falcon-forwarder" "/Library/LaunchDaemons/com.beacon.endpoint.falcon-forwarder.plist"
+  restore_existing_forwarder "com.beacon.endpoint.s3-forwarder" "/Library/LaunchDaemons/com.beacon.endpoint.s3-forwarder.plist"
+  restore_existing_forwarder "com.beacon.endpoint.gcs-forwarder" "/Library/LaunchDaemons/com.beacon.endpoint.gcs-forwarder.plist"
+  "${BEACON_BIN:-/opt/beacon/bin/beacon}" endpoint update install-daemon || {
+    echo "Error: could not reconcile Beacon endpoint updater daemon" >&2
+    exit 1
+  }
+  # The scheduled inventory job is on by default; loading it fires the first heartbeat at once, so
+  # an endpoint upgraded from a version without the job starts reporting inventory immediately.
+  # Non-fatal: the endpoint is installed and collecting either way.
+  "${BEACON_BIN:-/opt/beacon/bin/beacon}" endpoint inventory install-daemon --system || \
+    echo "Warning: scheduled inventory job not configured (endpoint is installed and running)" >&2
+  # A connected endpoint's Beacon Cloud forwarder config is re-rendered from this version's pack,
+  # validated, and swapped in with a forwarder restart only when it changed. The install above ran
+  # with --no-start, so it left this to the package. Never enrolls or touches the device key, and
+  # a no-op on an endpoint that is not connected. Non-fatal: a rejected config keeps the old one.
+  "${BEACON_BIN:-/opt/beacon/bin/beacon}" endpoint asymptote reconcile --system || \
+    echo "Warning: Beacon Cloud forwarder config not reconciled (endpoint is installed and running)" >&2
+fi
+
+exit 0

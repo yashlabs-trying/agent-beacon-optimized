@@ -1,0 +1,31 @@
+{
+  "task": "b1-111",
+  "suite": "B",
+  "category": "B1_contradiction",
+  "difficulty": "extreme",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "b1-111-b"
+  ],
+  "required_evidence": [
+    "b1-111-b"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "17 req/min",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": [
+      "7"
+    ]
+  },
+  "forbidden_leaked": [
+    "7"
+  ],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.379,
+  "prompt_tokens": 130,
+  "gen_tokens": 5
+}

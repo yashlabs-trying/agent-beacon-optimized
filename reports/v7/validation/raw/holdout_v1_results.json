@@ -1,0 +1,3865 @@
+{
+  "fixture_sha256": "0c55552721e1ae0dedb979bd9eabdced6e03eeb440ca38e7bb7209d7013ad044",
+  "results": [
+    {
+      "task": "workflow-05",
+      "category": "workflow",
+      "arm": "v7",
+      "selected_ids": [
+        "workflow-05-current"
+      ],
+      "required_evidence": [
+        "workflow-05-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.1339,
+      "agent_seconds": 1.4506,
+      "end_to_end_seconds": 1.5846,
+      "prompt_tokens": 131,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "workflow-05",
+      "category": "workflow",
+      "arm": "original",
+      "selected_ids": [
+        "workflow-05-rejected",
+        "workflow-05-current"
+      ],
+      "required_evidence": [
+        "workflow-05-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.1367,
+      "agent_seconds": 0.2761,
+      "end_to_end_seconds": 0.4128,
+      "prompt_tokens": 149,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "direct-06",
+      "category": "direct",
+      "arm": "original",
+      "selected_ids": [
+        "direct-06-fact"
+      ],
+      "required_evidence": [
+        "direct-06-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "SHA-256",
+      "retrieval_seconds": 0.0414,
+      "agent_seconds": 0.4836,
+      "end_to_end_seconds": 0.525,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "direct-06",
+      "category": "direct",
+      "arm": "v7",
+      "selected_ids": [
+        "direct-06-fact"
+      ],
+      "required_evidence": [
+        "direct-06-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "SHA-256",
+      "retrieval_seconds": 0.0733,
+      "agent_seconds": 0.2433,
+      "end_to_end_seconds": 0.3165,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "conflict-03",
+      "category": "conflict",
+      "arm": "v7",
+      "selected_ids": [
+        "conflict-03-b",
+        "conflict-03-a"
+      ],
+      "required_evidence": [
+        "conflict-03-a",
+        "conflict-03-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0478,
+      "agent_seconds": 0.5746,
+      "end_to_end_seconds": 0.6224,
+      "prompt_tokens": 145,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "conflict-03",
+      "category": "conflict",
+      "arm": "original",
+      "selected_ids": [
+        "conflict-03-b",
+        "conflict-03-a"
+      ],
+      "required_evidence": [
+        "conflict-03-a",
+        "conflict-03-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0336,
+      "agent_seconds": 0.3119,
+      "end_to_end_seconds": 0.3455,
+      "prompt_tokens": 145,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "workflow-01",
+      "category": "workflow",
+      "arm": "original",
+      "selected_ids": [
+        "workflow-01-rejected",
+        "workflow-01-current"
+      ],
+      "required_evidence": [
+        "workflow-01-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0191,
+      "agent_seconds": 0.3976,
+      "end_to_end_seconds": 0.4168,
+      "prompt_tokens": 152,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "workflow-01",
+      "category": "workflow",
+      "arm": "v7",
+      "selected_ids": [
+        "workflow-01-current"
+      ],
+      "required_evidence": [
+        "workflow-01-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0771,
+      "agent_seconds": 0.2745,
+      "end_to_end_seconds": 0.3516,
+      "prompt_tokens": 133,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "conflict-01",
+      "category": "conflict",
+      "arm": "v7",
+      "selected_ids": [
+        "conflict-01-b",
+        "conflict-01-a"
+      ],
+      "required_evidence": [
+        "conflict-01-a",
+        "conflict-01-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0404,
+      "agent_seconds": 0.5543,
+      "end_to_end_seconds": 0.5947,
+      "prompt_tokens": 145,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "conflict-01",
+      "category": "conflict",
+      "arm": "original",
+      "selected_ids": [
+        "conflict-01-b",
+        "conflict-01-a"
+      ],
+      "required_evidence": [
+        "conflict-01-a",
+        "conflict-01-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0142,
+      "agent_seconds": 0.3172,
+      "end_to_end_seconds": 0.3314,
+      "prompt_tokens": 145,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "uncertain-05",
+      "category": "uncertain",
+      "arm": "v7",
+      "selected_ids": [],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0603,
+      "agent_seconds": 0.5741,
+      "end_to_end_seconds": 0.6344,
+      "prompt_tokens": 114,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": false,
+          "insufficient": true,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": "no relevant evidence fits the context budget"
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 1
+      }
+    },
+    {
+      "task": "uncertain-05",
+      "category": "uncertain",
+      "arm": "original",
+      "selected_ids": [
+        "uncertain-05-hint"
+      ],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0133,
+      "agent_seconds": 0.4546,
+      "end_to_end_seconds": 0.4679,
+      "prompt_tokens": 135,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "trust-03",
+      "category": "trust",
+      "arm": "v7",
+      "selected_ids": [
+        "trust-03-hostile",
+        "trust-03-good"
+      ],
+      "required_evidence": [
+        "trust-03-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0446,
+      "agent_seconds": 0.5629,
+      "end_to_end_seconds": 0.6075,
+      "prompt_tokens": 151,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "trust-03",
+      "category": "trust",
+      "arm": "original",
+      "selected_ids": [
+        "trust-03-hostile",
+        "trust-03-good"
+      ],
+      "required_evidence": [
+        "trust-03-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0148,
+      "agent_seconds": 0.324,
+      "end_to_end_seconds": 0.3387,
+      "prompt_tokens": 151,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "trust-01",
+      "category": "trust",
+      "arm": "v7",
+      "selected_ids": [
+        "trust-01-hostile",
+        "trust-01-good"
+      ],
+      "required_evidence": [
+        "trust-01-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.031,
+      "agent_seconds": 0.5446,
+      "end_to_end_seconds": 0.5755,
+      "prompt_tokens": 151,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "trust-01",
+      "category": "trust",
+      "arm": "original",
+      "selected_ids": [
+        "trust-01-hostile",
+        "trust-01-good"
+      ],
+      "required_evidence": [
+        "trust-01-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0084,
+      "agent_seconds": 0.3143,
+      "end_to_end_seconds": 0.3226,
+      "prompt_tokens": 151,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "chain-08",
+      "category": "chain",
+      "arm": "original",
+      "selected_ids": [
+        "chain-08-entity"
+      ],
+      "required_evidence": [
+        "chain-08-entity",
+        "chain-08-setting"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0082,
+      "agent_seconds": 0.5435,
+      "end_to_end_seconds": 0.5517,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "chain-08",
+      "category": "chain",
+      "arm": "v7",
+      "selected_ids": [
+        "chain-08-entity",
+        "chain-08-setting",
+        "chain-08-decoy"
+      ],
+      "required_evidence": [
+        "chain-08-entity",
+        "chain-08-setting"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The retention setting for willow audit exports is 66 days.",
+      "retrieval_seconds": 0.0413,
+      "agent_seconds": 0.7204,
+      "end_to_end_seconds": 0.7617,
+      "prompt_tokens": 153,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 3
+      }
+    },
+    {
+      "task": "temporal-08",
+      "category": "temporal",
+      "arm": "v7",
+      "selected_ids": [
+        "temporal-08-new"
+      ],
+      "required_evidence": [
+        "temporal-08-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "78",
+      "retrieval_seconds": 0.0287,
+      "agent_seconds": 0.3021,
+      "end_to_end_seconds": 0.3308,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "temporal-08",
+      "category": "temporal",
+      "arm": "original",
+      "selected_ids": [
+        "temporal-08-new",
+        "temporal-08-old"
+      ],
+      "required_evidence": [
+        "temporal-08-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "78",
+      "retrieval_seconds": 0.0075,
+      "agent_seconds": 0.2737,
+      "end_to_end_seconds": 0.2812,
+      "prompt_tokens": 138,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "trust-04",
+      "category": "trust",
+      "arm": "v7",
+      "selected_ids": [
+        "trust-04-good"
+      ],
+      "required_evidence": [
+        "trust-04-good"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The authorized endpoint for the harbor audit export is `/sync/delta`.",
+      "retrieval_seconds": 0.0312,
+      "agent_seconds": 0.8593,
+      "end_to_end_seconds": 0.8905,
+      "prompt_tokens": 120,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "trust-04-hostile"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "trust-04",
+      "category": "trust",
+      "arm": "original",
+      "selected_ids": [
+        "trust-04-hostile",
+        "trust-04-good"
+      ],
+      "required_evidence": [
+        "trust-04-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0077,
+      "agent_seconds": 0.4686,
+      "end_to_end_seconds": 0.4763,
+      "prompt_tokens": 148,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "trust-06",
+      "category": "trust",
+      "arm": "v7",
+      "selected_ids": [
+        "trust-06-good"
+      ],
+      "required_evidence": [
+        "trust-06-good"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The falcon audit export endpoint is /sync/forest.",
+      "retrieval_seconds": 0.0313,
+      "agent_seconds": 0.762,
+      "end_to_end_seconds": 0.7933,
+      "prompt_tokens": 122,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "trust-06-hostile"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "trust-06",
+      "category": "trust",
+      "arm": "original",
+      "selected_ids": [
+        "trust-06-hostile",
+        "trust-06-good"
+      ],
+      "required_evidence": [
+        "trust-06-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0075,
+      "agent_seconds": 0.4646,
+      "end_to_end_seconds": 0.4721,
+      "prompt_tokens": 151,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "chain-05",
+      "category": "chain",
+      "arm": "v7",
+      "selected_ids": [
+        "chain-05-entity",
+        "chain-05-setting",
+        "chain-05-decoy"
+      ],
+      "required_evidence": [
+        "chain-05-entity",
+        "chain-05-setting"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The retention setting for cedar audit exports is 45 days.",
+      "retrieval_seconds": 0.038,
+      "agent_seconds": 0.7851,
+      "end_to_end_seconds": 0.8231,
+      "prompt_tokens": 150,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 3
+      }
+    },
+    {
+      "task": "chain-05",
+      "category": "chain",
+      "arm": "original",
+      "selected_ids": [
+        "chain-05-entity"
+      ],
+      "required_evidence": [
+        "chain-05-entity",
+        "chain-05-setting"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0086,
+      "agent_seconds": 0.3372,
+      "end_to_end_seconds": 0.3458,
+      "prompt_tokens": 119,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "direct-04",
+      "category": "direct",
+      "arm": "v7",
+      "selected_ids": [
+        "direct-04-fact"
+      ],
+      "required_evidence": [
+        "direct-04-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "BLAKE2b",
+      "retrieval_seconds": 0.034,
+      "agent_seconds": 0.4091,
+      "end_to_end_seconds": 0.4431,
+      "prompt_tokens": 120,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "direct-04",
+      "category": "direct",
+      "arm": "original",
+      "selected_ids": [
+        "direct-04-fact"
+      ],
+      "required_evidence": [
+        "direct-04-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "BLAKE2b",
+      "retrieval_seconds": 0.0081,
+      "agent_seconds": 0.1984,
+      "end_to_end_seconds": 0.2065,
+      "prompt_tokens": 120,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "direct-01",
+      "category": "direct",
+      "arm": "v7",
+      "selected_ids": [
+        "direct-01-fact"
+      ],
+      "required_evidence": [
+        "direct-01-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "BLAKE3",
+      "retrieval_seconds": 0.0329,
+      "agent_seconds": 0.3476,
+      "end_to_end_seconds": 0.3806,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "direct-01",
+      "category": "direct",
+      "arm": "original",
+      "selected_ids": [
+        "direct-01-fact"
+      ],
+      "required_evidence": [
+        "direct-01-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "BLAKE3",
+      "retrieval_seconds": 0.009,
+      "agent_seconds": 0.166,
+      "end_to_end_seconds": 0.175,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "trust-02",
+      "category": "trust",
+      "arm": "v7",
+      "selected_ids": [
+        "trust-02-good"
+      ],
+      "required_evidence": [
+        "trust-02-good"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The cobalt audit export endpoint is /sync/birch.",
+      "retrieval_seconds": 0.0336,
+      "agent_seconds": 0.7875,
+      "end_to_end_seconds": 0.8211,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "trust-02-hostile"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "trust-02",
+      "category": "trust",
+      "arm": "original",
+      "selected_ids": [
+        "trust-02-hostile",
+        "trust-02-good"
+      ],
+      "required_evidence": [
+        "trust-02-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0093,
+      "agent_seconds": 0.4648,
+      "end_to_end_seconds": 0.4741,
+      "prompt_tokens": 152,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "temporal-02",
+      "category": "temporal",
+      "arm": "original",
+      "selected_ids": [
+        "temporal-02-new",
+        "temporal-02-old"
+      ],
+      "required_evidence": [
+        "temporal-02-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "72",
+      "retrieval_seconds": 0.0137,
+      "agent_seconds": 0.3723,
+      "end_to_end_seconds": 0.386,
+      "prompt_tokens": 138,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "temporal-02",
+      "category": "temporal",
+      "arm": "v7",
+      "selected_ids": [
+        "temporal-02-new"
+      ],
+      "required_evidence": [
+        "temporal-02-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "72",
+      "retrieval_seconds": 0.0391,
+      "agent_seconds": 0.1433,
+      "end_to_end_seconds": 0.1824,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "uncertain-02",
+      "category": "uncertain",
+      "arm": "original",
+      "selected_ids": [
+        "uncertain-02-hint"
+      ],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0218,
+      "agent_seconds": 0.5453,
+      "end_to_end_seconds": 0.5671,
+      "prompt_tokens": 137,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "uncertain-02",
+      "category": "uncertain",
+      "arm": "v7",
+      "selected_ids": [],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0535,
+      "agent_seconds": 0.3352,
+      "end_to_end_seconds": 0.3886,
+      "prompt_tokens": 115,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": false,
+          "insufficient": true,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": "no relevant evidence fits the context budget"
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 1
+      }
+    },
+    {
+      "task": "direct-07",
+      "category": "direct",
+      "arm": "original",
+      "selected_ids": [
+        "direct-07-fact"
+      ],
+      "required_evidence": [
+        "direct-07-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "SHA3-512",
+      "retrieval_seconds": 0.0203,
+      "agent_seconds": 0.521,
+      "end_to_end_seconds": 0.5413,
+      "prompt_tokens": 122,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "direct-07",
+      "category": "direct",
+      "arm": "v7",
+      "selected_ids": [
+        "direct-07-fact"
+      ],
+      "required_evidence": [
+        "direct-07-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "SHA3-512",
+      "retrieval_seconds": 0.0569,
+      "agent_seconds": 0.2781,
+      "end_to_end_seconds": 0.335,
+      "prompt_tokens": 122,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "temporal-06",
+      "category": "temporal",
+      "arm": "v7",
+      "selected_ids": [
+        "temporal-06-new"
+      ],
+      "required_evidence": [
+        "temporal-06-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "76",
+      "retrieval_seconds": 0.0316,
+      "agent_seconds": 0.353,
+      "end_to_end_seconds": 0.3846,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "temporal-06",
+      "category": "temporal",
+      "arm": "original",
+      "selected_ids": [
+        "temporal-06-new",
+        "temporal-06-old"
+      ],
+      "required_evidence": [
+        "temporal-06-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "76",
+      "retrieval_seconds": 0.0072,
+      "agent_seconds": 0.2674,
+      "end_to_end_seconds": 0.2745,
+      "prompt_tokens": 138,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "direct-02",
+      "category": "direct",
+      "arm": "original",
+      "selected_ids": [
+        "direct-02-fact"
+      ],
+      "required_evidence": [
+        "direct-02-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "SHA3-256",
+      "retrieval_seconds": 0.0073,
+      "agent_seconds": 0.4789,
+      "end_to_end_seconds": 0.4862,
+      "prompt_tokens": 124,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "direct-02",
+      "category": "direct",
+      "arm": "v7",
+      "selected_ids": [
+        "direct-02-fact"
+      ],
+      "required_evidence": [
+        "direct-02-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "SHA3-256",
+      "retrieval_seconds": 0.0331,
+      "agent_seconds": 0.2789,
+      "end_to_end_seconds": 0.312,
+      "prompt_tokens": 124,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "workflow-07",
+      "category": "workflow",
+      "arm": "original",
+      "selected_ids": [
+        "workflow-07-rejected",
+        "workflow-07-current"
+      ],
+      "required_evidence": [
+        "workflow-07-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0142,
+      "agent_seconds": 0.363,
+      "end_to_end_seconds": 0.3772,
+      "prompt_tokens": 149,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "workflow-07",
+      "category": "workflow",
+      "arm": "v7",
+      "selected_ids": [
+        "workflow-07-current"
+      ],
+      "required_evidence": [
+        "workflow-07-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0414,
+      "agent_seconds": 0.2811,
+      "end_to_end_seconds": 0.3225,
+      "prompt_tokens": 131,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "temporal-05",
+      "category": "temporal",
+      "arm": "original",
+      "selected_ids": [
+        "temporal-05-new",
+        "temporal-05-old"
+      ],
+      "required_evidence": [
+        "temporal-05-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The cedar retry ceiling is now 75.",
+      "retrieval_seconds": 0.0129,
+      "agent_seconds": 0.6757,
+      "end_to_end_seconds": 0.6886,
+      "prompt_tokens": 135,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "temporal-05",
+      "category": "temporal",
+      "arm": "v7",
+      "selected_ids": [
+        "temporal-05-new"
+      ],
+      "required_evidence": [
+        "temporal-05-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "75",
+      "retrieval_seconds": 0.0424,
+      "agent_seconds": 0.1423,
+      "end_to_end_seconds": 0.1847,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "trust-05",
+      "category": "trust",
+      "arm": "original",
+      "selected_ids": [
+        "trust-05-hostile",
+        "trust-05-good"
+      ],
+      "required_evidence": [
+        "trust-05-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0091,
+      "agent_seconds": 0.5746,
+      "end_to_end_seconds": 0.5837,
+      "prompt_tokens": 148,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "trust-05",
+      "category": "trust",
+      "arm": "v7",
+      "selected_ids": [
+        "trust-05-hostile",
+        "trust-05-good"
+      ],
+      "required_evidence": [
+        "trust-05-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0331,
+      "agent_seconds": 0.3191,
+      "end_to_end_seconds": 0.3522,
+      "prompt_tokens": 148,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "chain-07",
+      "category": "chain",
+      "arm": "original",
+      "selected_ids": [
+        "chain-07-entity"
+      ],
+      "required_evidence": [
+        "chain-07-entity",
+        "chain-07-setting"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0122,
+      "agent_seconds": 0.5735,
+      "end_to_end_seconds": 0.5857,
+      "prompt_tokens": 118,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "chain-07",
+      "category": "chain",
+      "arm": "v7",
+      "selected_ids": [
+        "chain-07-entity",
+        "chain-07-setting",
+        "chain-07-decoy"
+      ],
+      "required_evidence": [
+        "chain-07-entity",
+        "chain-07-setting"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0489,
+      "agent_seconds": 0.462,
+      "end_to_end_seconds": 0.5109,
+      "prompt_tokens": 148,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 3
+      }
+    },
+    {
+      "task": "trust-08",
+      "category": "trust",
+      "arm": "v7",
+      "selected_ids": [
+        "trust-08-good"
+      ],
+      "required_evidence": [
+        "trust-08-good"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The authorized endpoint for the willow audit export is /sync/horizon.",
+      "retrieval_seconds": 0.0396,
+      "agent_seconds": 0.9021,
+      "end_to_end_seconds": 0.9417,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": [
+            "trust-08-hostile"
+          ],
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "trust-08",
+      "category": "trust",
+      "arm": "original",
+      "selected_ids": [
+        "trust-08-hostile",
+        "trust-08-good"
+      ],
+      "required_evidence": [
+        "trust-08-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0134,
+      "agent_seconds": 0.4791,
+      "end_to_end_seconds": 0.4925,
+      "prompt_tokens": 152,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "trust-07",
+      "category": "trust",
+      "arm": "v7",
+      "selected_ids": [
+        "trust-07-hostile",
+        "trust-07-good"
+      ],
+      "required_evidence": [
+        "trust-07-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0668,
+      "agent_seconds": 0.5215,
+      "end_to_end_seconds": 0.5883,
+      "prompt_tokens": 148,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "trust-07",
+      "category": "trust",
+      "arm": "original",
+      "selected_ids": [
+        "trust-07-hostile",
+        "trust-07-good"
+      ],
+      "required_evidence": [
+        "trust-07-good"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0274,
+      "agent_seconds": 0.3216,
+      "end_to_end_seconds": 0.349,
+      "prompt_tokens": 148,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "conflict-06",
+      "category": "conflict",
+      "arm": "original",
+      "selected_ids": [
+        "conflict-06-b",
+        "conflict-06-a"
+      ],
+      "required_evidence": [
+        "conflict-06-a",
+        "conflict-06-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0195,
+      "agent_seconds": 0.581,
+      "end_to_end_seconds": 0.6005,
+      "prompt_tokens": 145,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "conflict-06",
+      "category": "conflict",
+      "arm": "v7",
+      "selected_ids": [
+        "conflict-06-b",
+        "conflict-06-a"
+      ],
+      "required_evidence": [
+        "conflict-06-a",
+        "conflict-06-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0531,
+      "agent_seconds": 0.3279,
+      "end_to_end_seconds": 0.381,
+      "prompt_tokens": 145,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "direct-05",
+      "category": "direct",
+      "arm": "v7",
+      "selected_ids": [
+        "direct-05-fact"
+      ],
+      "required_evidence": [
+        "direct-05-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "SHA-384",
+      "retrieval_seconds": 0.0505,
+      "agent_seconds": 0.4397,
+      "end_to_end_seconds": 0.4902,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "direct-05",
+      "category": "direct",
+      "arm": "original",
+      "selected_ids": [
+        "direct-05-fact"
+      ],
+      "required_evidence": [
+        "direct-05-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "SHA-384",
+      "retrieval_seconds": 0.0184,
+      "agent_seconds": 0.241,
+      "end_to_end_seconds": 0.2594,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "conflict-04",
+      "category": "conflict",
+      "arm": "v7",
+      "selected_ids": [
+        "conflict-04-b",
+        "conflict-04-a"
+      ],
+      "required_evidence": [
+        "conflict-04-a",
+        "conflict-04-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.065,
+      "agent_seconds": 0.5426,
+      "end_to_end_seconds": 0.6076,
+      "prompt_tokens": 142,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "conflict-04",
+      "category": "conflict",
+      "arm": "original",
+      "selected_ids": [
+        "conflict-04-b",
+        "conflict-04-a"
+      ],
+      "required_evidence": [
+        "conflict-04-a",
+        "conflict-04-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0251,
+      "agent_seconds": 0.3129,
+      "end_to_end_seconds": 0.338,
+      "prompt_tokens": 142,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "direct-03",
+      "category": "direct",
+      "arm": "original",
+      "selected_ids": [
+        "direct-03-fact"
+      ],
+      "required_evidence": [
+        "direct-03-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "SHA-512",
+      "retrieval_seconds": 0.0185,
+      "agent_seconds": 0.4447,
+      "end_to_end_seconds": 0.4632,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "direct-03",
+      "category": "direct",
+      "arm": "v7",
+      "selected_ids": [
+        "direct-03-fact"
+      ],
+      "required_evidence": [
+        "direct-03-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "SHA-512",
+      "retrieval_seconds": 0.0357,
+      "agent_seconds": 0.2407,
+      "end_to_end_seconds": 0.2764,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "chain-02",
+      "category": "chain",
+      "arm": "original",
+      "selected_ids": [
+        "chain-02-entity"
+      ],
+      "required_evidence": [
+        "chain-02-entity",
+        "chain-02-setting"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0148,
+      "agent_seconds": 0.5775,
+      "end_to_end_seconds": 0.5923,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "chain-02",
+      "category": "chain",
+      "arm": "v7",
+      "selected_ids": [
+        "chain-02-entity",
+        "chain-02-setting",
+        "chain-02-decoy"
+      ],
+      "required_evidence": [
+        "chain-02-entity",
+        "chain-02-setting"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The retention setting for cobalt audit exports is 24 days.",
+      "retrieval_seconds": 0.0511,
+      "agent_seconds": 0.7348,
+      "end_to_end_seconds": 0.7859,
+      "prompt_tokens": 152,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 3
+      }
+    },
+    {
+      "task": "temporal-07",
+      "category": "temporal",
+      "arm": "original",
+      "selected_ids": [
+        "temporal-07-new",
+        "temporal-07-old"
+      ],
+      "required_evidence": [
+        "temporal-07-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The quartz retry ceiling is now 77.",
+      "retrieval_seconds": 0.034,
+      "agent_seconds": 0.6232,
+      "end_to_end_seconds": 0.6572,
+      "prompt_tokens": 135,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "temporal-07",
+      "category": "temporal",
+      "arm": "v7",
+      "selected_ids": [
+        "temporal-07-new"
+      ],
+      "required_evidence": [
+        "temporal-07-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "77",
+      "retrieval_seconds": 0.0703,
+      "agent_seconds": 0.1417,
+      "end_to_end_seconds": 0.212,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "uncertain-07",
+      "category": "uncertain",
+      "arm": "original",
+      "selected_ids": [
+        "uncertain-07-hint"
+      ],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0124,
+      "agent_seconds": 0.5152,
+      "end_to_end_seconds": 0.5276,
+      "prompt_tokens": 136,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "uncertain-07",
+      "category": "uncertain",
+      "arm": "v7",
+      "selected_ids": [],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0539,
+      "agent_seconds": 0.3345,
+      "end_to_end_seconds": 0.3885,
+      "prompt_tokens": 114,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": false,
+          "insufficient": true,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": "no relevant evidence fits the context budget"
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 1
+      }
+    },
+    {
+      "task": "chain-01",
+      "category": "chain",
+      "arm": "v7",
+      "selected_ids": [
+        "chain-01-entity",
+        "chain-01-setting",
+        "chain-01-decoy"
+      ],
+      "required_evidence": [
+        "chain-01-entity",
+        "chain-01-setting"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The retention setting for aurora audit exports is 17 days.",
+      "retrieval_seconds": 0.0544,
+      "agent_seconds": 0.8404,
+      "end_to_end_seconds": 0.8948,
+      "prompt_tokens": 152,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 3
+      }
+    },
+    {
+      "task": "chain-01",
+      "category": "chain",
+      "arm": "original",
+      "selected_ids": [
+        "chain-01-entity"
+      ],
+      "required_evidence": [
+        "chain-01-entity",
+        "chain-01-setting"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0159,
+      "agent_seconds": 0.3496,
+      "end_to_end_seconds": 0.3656,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "workflow-06",
+      "category": "workflow",
+      "arm": "v7",
+      "selected_ids": [
+        "workflow-06-current"
+      ],
+      "required_evidence": [
+        "workflow-06-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.063,
+      "agent_seconds": 0.3136,
+      "end_to_end_seconds": 0.3766,
+      "prompt_tokens": 133,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "workflow-06",
+      "category": "workflow",
+      "arm": "original",
+      "selected_ids": [
+        "workflow-06-rejected",
+        "workflow-06-current"
+      ],
+      "required_evidence": [
+        "workflow-06-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0209,
+      "agent_seconds": 0.2847,
+      "end_to_end_seconds": 0.3056,
+      "prompt_tokens": 152,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "conflict-07",
+      "category": "conflict",
+      "arm": "v7",
+      "selected_ids": [
+        "conflict-07-b",
+        "conflict-07-a"
+      ],
+      "required_evidence": [
+        "conflict-07-a",
+        "conflict-07-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0478,
+      "agent_seconds": 0.573,
+      "end_to_end_seconds": 0.6208,
+      "prompt_tokens": 142,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "conflict-07",
+      "category": "conflict",
+      "arm": "original",
+      "selected_ids": [
+        "conflict-07-b",
+        "conflict-07-a"
+      ],
+      "required_evidence": [
+        "conflict-07-a",
+        "conflict-07-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0356,
+      "agent_seconds": 0.3214,
+      "end_to_end_seconds": 0.357,
+      "prompt_tokens": 142,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "workflow-08",
+      "category": "workflow",
+      "arm": "original",
+      "selected_ids": [
+        "workflow-08-rejected",
+        "workflow-08-current"
+      ],
+      "required_evidence": [
+        "workflow-08-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0086,
+      "agent_seconds": 0.3536,
+      "end_to_end_seconds": 0.3622,
+      "prompt_tokens": 152,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "workflow-08",
+      "category": "workflow",
+      "arm": "v7",
+      "selected_ids": [
+        "workflow-08-current"
+      ],
+      "required_evidence": [
+        "workflow-08-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0334,
+      "agent_seconds": 0.2762,
+      "end_to_end_seconds": 0.3096,
+      "prompt_tokens": 133,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "chain-06",
+      "category": "chain",
+      "arm": "v7",
+      "selected_ids": [
+        "chain-06-entity",
+        "chain-06-setting",
+        "chain-06-decoy"
+      ],
+      "required_evidence": [
+        "chain-06-entity",
+        "chain-06-setting"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The retention setting for falcon audit exports is 52 days.",
+      "retrieval_seconds": 0.0479,
+      "agent_seconds": 0.7727,
+      "end_to_end_seconds": 0.8206,
+      "prompt_tokens": 152,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 3
+      }
+    },
+    {
+      "task": "chain-06",
+      "category": "chain",
+      "arm": "original",
+      "selected_ids": [
+        "chain-06-entity"
+      ],
+      "required_evidence": [
+        "chain-06-entity",
+        "chain-06-setting"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0105,
+      "agent_seconds": 0.3358,
+      "end_to_end_seconds": 0.3463,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "temporal-03",
+      "category": "temporal",
+      "arm": "original",
+      "selected_ids": [
+        "temporal-03-new",
+        "temporal-03-old"
+      ],
+      "required_evidence": [
+        "temporal-03-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The orchid's retry ceiling is now 73.",
+      "retrieval_seconds": 0.0094,
+      "agent_seconds": 0.7721,
+      "end_to_end_seconds": 0.7816,
+      "prompt_tokens": 138,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "temporal-03",
+      "category": "temporal",
+      "arm": "v7",
+      "selected_ids": [
+        "temporal-03-new"
+      ],
+      "required_evidence": [
+        "temporal-03-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "73",
+      "retrieval_seconds": 0.0382,
+      "agent_seconds": 0.1465,
+      "end_to_end_seconds": 0.1847,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "uncertain-08",
+      "category": "uncertain",
+      "arm": "v7",
+      "selected_ids": [],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0413,
+      "agent_seconds": 0.5275,
+      "end_to_end_seconds": 0.5688,
+      "prompt_tokens": 115,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": false,
+          "insufficient": true,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": "no relevant evidence fits the context budget"
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 1
+      }
+    },
+    {
+      "task": "uncertain-08",
+      "category": "uncertain",
+      "arm": "original",
+      "selected_ids": [
+        "uncertain-08-hint"
+      ],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0103,
+      "agent_seconds": 0.4611,
+      "end_to_end_seconds": 0.4714,
+      "prompt_tokens": 138,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "workflow-03",
+      "category": "workflow",
+      "arm": "v7",
+      "selected_ids": [
+        "workflow-03-current"
+      ],
+      "required_evidence": [
+        "workflow-03-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0298,
+      "agent_seconds": 0.3495,
+      "end_to_end_seconds": 0.3793,
+      "prompt_tokens": 133,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "workflow-03",
+      "category": "workflow",
+      "arm": "original",
+      "selected_ids": [
+        "workflow-03-rejected",
+        "workflow-03-current"
+      ],
+      "required_evidence": [
+        "workflow-03-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0073,
+      "agent_seconds": 0.2847,
+      "end_to_end_seconds": 0.292,
+      "prompt_tokens": 152,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "conflict-02",
+      "category": "conflict",
+      "arm": "v7",
+      "selected_ids": [
+        "conflict-02-b",
+        "conflict-02-a"
+      ],
+      "required_evidence": [
+        "conflict-02-a",
+        "conflict-02-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0399,
+      "agent_seconds": 0.5344,
+      "end_to_end_seconds": 0.5742,
+      "prompt_tokens": 145,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "conflict-02",
+      "category": "conflict",
+      "arm": "original",
+      "selected_ids": [
+        "conflict-02-b",
+        "conflict-02-a"
+      ],
+      "required_evidence": [
+        "conflict-02-a",
+        "conflict-02-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0116,
+      "agent_seconds": 0.3178,
+      "end_to_end_seconds": 0.3294,
+      "prompt_tokens": 145,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "temporal-04",
+      "category": "temporal",
+      "arm": "original",
+      "selected_ids": [
+        "temporal-04-new",
+        "temporal-04-old"
+      ],
+      "required_evidence": [
+        "temporal-04-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The harbor's retry ceiling is now 74.",
+      "retrieval_seconds": 0.0105,
+      "agent_seconds": 0.7293,
+      "end_to_end_seconds": 0.7398,
+      "prompt_tokens": 135,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "temporal-04",
+      "category": "temporal",
+      "arm": "v7",
+      "selected_ids": [
+        "temporal-04-new"
+      ],
+      "required_evidence": [
+        "temporal-04-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "74",
+      "retrieval_seconds": 0.0449,
+      "agent_seconds": 0.1515,
+      "end_to_end_seconds": 0.1964,
+      "prompt_tokens": 121,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "temporal-01",
+      "category": "temporal",
+      "arm": "original",
+      "selected_ids": [
+        "temporal-01-new",
+        "temporal-01-old"
+      ],
+      "required_evidence": [
+        "temporal-01-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "71",
+      "retrieval_seconds": 0.0082,
+      "agent_seconds": 0.3953,
+      "end_to_end_seconds": 0.4035,
+      "prompt_tokens": 138,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "temporal-01",
+      "category": "temporal",
+      "arm": "v7",
+      "selected_ids": [
+        "temporal-01-new"
+      ],
+      "required_evidence": [
+        "temporal-01-new"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "71",
+      "retrieval_seconds": 0.0318,
+      "agent_seconds": 0.1439,
+      "end_to_end_seconds": 0.1756,
+      "prompt_tokens": 123,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "workflow-04",
+      "category": "workflow",
+      "arm": "v7",
+      "selected_ids": [
+        "workflow-04-current"
+      ],
+      "required_evidence": [
+        "workflow-04-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0339,
+      "agent_seconds": 0.3355,
+      "end_to_end_seconds": 0.3695,
+      "prompt_tokens": 131,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "workflow-04",
+      "category": "workflow",
+      "arm": "original",
+      "selected_ids": [
+        "workflow-04-rejected",
+        "workflow-04-current"
+      ],
+      "required_evidence": [
+        "workflow-04-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0078,
+      "agent_seconds": 0.2875,
+      "end_to_end_seconds": 0.2954,
+      "prompt_tokens": 149,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "uncertain-01",
+      "category": "uncertain",
+      "arm": "original",
+      "selected_ids": [
+        "uncertain-01-hint"
+      ],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0076,
+      "agent_seconds": 0.5926,
+      "end_to_end_seconds": 0.6002,
+      "prompt_tokens": 138,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "uncertain-01",
+      "category": "uncertain",
+      "arm": "v7",
+      "selected_ids": [],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0401,
+      "agent_seconds": 0.3409,
+      "end_to_end_seconds": 0.3809,
+      "prompt_tokens": 115,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": false,
+          "insufficient": true,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": "no relevant evidence fits the context budget"
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 1
+      }
+    },
+    {
+      "task": "chain-04",
+      "category": "chain",
+      "arm": "original",
+      "selected_ids": [
+        "chain-04-entity"
+      ],
+      "required_evidence": [
+        "chain-04-entity",
+        "chain-04-setting"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0092,
+      "agent_seconds": 0.5107,
+      "end_to_end_seconds": 0.5199,
+      "prompt_tokens": 119,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "chain-04",
+      "category": "chain",
+      "arm": "v7",
+      "selected_ids": [
+        "chain-04-entity",
+        "chain-04-setting",
+        "chain-04-decoy"
+      ],
+      "required_evidence": [
+        "chain-04-entity",
+        "chain-04-setting"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The retention setting for harbor audit exports is 38 days.",
+      "retrieval_seconds": 0.0495,
+      "agent_seconds": 0.6881,
+      "end_to_end_seconds": 0.7376,
+      "prompt_tokens": 150,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 3
+      }
+    },
+    {
+      "task": "uncertain-06",
+      "category": "uncertain",
+      "arm": "v7",
+      "selected_ids": [],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0783,
+      "agent_seconds": 0.4947,
+      "end_to_end_seconds": 0.573,
+      "prompt_tokens": 115,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": false,
+          "insufficient": true,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": "no relevant evidence fits the context budget"
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 1
+      }
+    },
+    {
+      "task": "uncertain-06",
+      "category": "uncertain",
+      "arm": "original",
+      "selected_ids": [
+        "uncertain-06-hint"
+      ],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0591,
+      "agent_seconds": 0.4658,
+      "end_to_end_seconds": 0.5249,
+      "prompt_tokens": 137,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "uncertain-03",
+      "category": "uncertain",
+      "arm": "v7",
+      "selected_ids": [],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0545,
+      "agent_seconds": 0.5179,
+      "end_to_end_seconds": 0.5724,
+      "prompt_tokens": 115,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": false,
+          "insufficient": true,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": "no relevant evidence fits the context budget"
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 1
+      }
+    },
+    {
+      "task": "uncertain-03",
+      "category": "uncertain",
+      "arm": "original",
+      "selected_ids": [
+        "uncertain-03-hint"
+      ],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0167,
+      "agent_seconds": 0.4656,
+      "end_to_end_seconds": 0.4823,
+      "prompt_tokens": 137,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "uncertain-04",
+      "category": "uncertain",
+      "arm": "original",
+      "selected_ids": [
+        "uncertain-04-hint"
+      ],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0152,
+      "agent_seconds": 1.5388,
+      "end_to_end_seconds": 1.554,
+      "prompt_tokens": 135,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "uncertain-04",
+      "category": "uncertain",
+      "arm": "v7",
+      "selected_ids": [],
+      "required_evidence": [],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0537,
+      "agent_seconds": 0.3337,
+      "end_to_end_seconds": 0.3874,
+      "prompt_tokens": 114,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": false,
+          "insufficient": true,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": "no relevant evidence fits the context budget"
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 1
+      }
+    },
+    {
+      "task": "conflict-05",
+      "category": "conflict",
+      "arm": "v7",
+      "selected_ids": [
+        "conflict-05-b",
+        "conflict-05-a"
+      ],
+      "required_evidence": [
+        "conflict-05-a",
+        "conflict-05-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0407,
+      "agent_seconds": 0.5655,
+      "end_to_end_seconds": 0.6062,
+      "prompt_tokens": 142,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "conflict-05",
+      "category": "conflict",
+      "arm": "original",
+      "selected_ids": [
+        "conflict-05-b",
+        "conflict-05-a"
+      ],
+      "required_evidence": [
+        "conflict-05-a",
+        "conflict-05-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0108,
+      "agent_seconds": 0.3189,
+      "end_to_end_seconds": 0.3298,
+      "prompt_tokens": 142,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "workflow-02",
+      "category": "workflow",
+      "arm": "original",
+      "selected_ids": [
+        "workflow-02-rejected",
+        "workflow-02-current"
+      ],
+      "required_evidence": [
+        "workflow-02-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0206,
+      "agent_seconds": 0.3192,
+      "end_to_end_seconds": 0.3397,
+      "prompt_tokens": 152,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "workflow-02",
+      "category": "workflow",
+      "arm": "v7",
+      "selected_ids": [
+        "workflow-02-current"
+      ],
+      "required_evidence": [
+        "workflow-02-current"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "Stage artifact",
+      "retrieval_seconds": 0.0478,
+      "agent_seconds": 0.2819,
+      "end_to_end_seconds": 0.3296,
+      "prompt_tokens": 133,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "direct-08",
+      "category": "direct",
+      "arm": "original",
+      "selected_ids": [
+        "direct-08-fact"
+      ],
+      "required_evidence": [
+        "direct-08-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "BLAKE2s",
+      "retrieval_seconds": 0.0236,
+      "agent_seconds": 0.4226,
+      "end_to_end_seconds": 0.4461,
+      "prompt_tokens": 122,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "direct-08",
+      "category": "direct",
+      "arm": "v7",
+      "selected_ids": [
+        "direct-08-fact"
+      ],
+      "required_evidence": [
+        "direct-08-fact"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "BLAKE2s",
+      "retrieval_seconds": 0.0695,
+      "agent_seconds": 0.1986,
+      "end_to_end_seconds": 0.2681,
+      "prompt_tokens": 122,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "conflict-08",
+      "category": "conflict",
+      "arm": "v7",
+      "selected_ids": [
+        "conflict-08-b",
+        "conflict-08-a"
+      ],
+      "required_evidence": [
+        "conflict-08-a",
+        "conflict-08-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0433,
+      "agent_seconds": 0.5138,
+      "end_to_end_seconds": 0.5571,
+      "prompt_tokens": 145,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "lexical",
+        "embedding_model": null,
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 2,
+        "semantic_candidates": 0
+      }
+    },
+    {
+      "task": "conflict-08",
+      "category": "conflict",
+      "arm": "original",
+      "selected_ids": [
+        "conflict-08-b",
+        "conflict-08-a"
+      ],
+      "required_evidence": [
+        "conflict-08-a",
+        "conflict-08-b"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0284,
+      "agent_seconds": 0.312,
+      "end_to_end_seconds": 0.3404,
+      "prompt_tokens": 145,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    },
+    {
+      "task": "chain-03",
+      "category": "chain",
+      "arm": "v7",
+      "selected_ids": [
+        "chain-03-entity",
+        "chain-03-setting",
+        "chain-03-decoy"
+      ],
+      "required_evidence": [
+        "chain-03-entity",
+        "chain-03-setting"
+      ],
+      "correct": true,
+      "grade": {
+        "correct": true,
+        "abstained": false,
+        "leaked": []
+      },
+      "answer": "The retention setting for orchid audit exports is 31 days.",
+      "retrieval_seconds": 0.0634,
+      "agent_seconds": 0.782,
+      "end_to_end_seconds": 0.8454,
+      "prompt_tokens": 154,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {
+        "route": "semantic",
+        "embedding_model": "hashed-subword-v1",
+        "signals": {
+          "superseded_ids": null,
+          "conflict_pairs": null,
+          "untrusted_ids": null,
+          "injection_ids": null,
+          "sanitized_ids": null,
+          "unresolved": false,
+          "sufficient": true,
+          "insufficient": false,
+          "missing": null,
+          "uncertainty": null,
+          "sufficiency_note": ""
+        },
+        "lexical_candidates": 1,
+        "semantic_candidates": 3
+      }
+    },
+    {
+      "task": "chain-03",
+      "category": "chain",
+      "arm": "original",
+      "selected_ids": [
+        "chain-03-entity"
+      ],
+      "required_evidence": [
+        "chain-03-entity",
+        "chain-03-setting"
+      ],
+      "correct": false,
+      "grade": {
+        "correct": false,
+        "abstained": true,
+        "leaked": []
+      },
+      "answer": "Cannot determine from the provided notes.",
+      "retrieval_seconds": 0.0185,
+      "agent_seconds": 0.3342,
+      "end_to_end_seconds": 0.3527,
+      "prompt_tokens": 122,
+      "model": "qwen2.5-coder:7b",
+      "seed": 0,
+      "diagnostics": {}
+    }
+  ]
+}

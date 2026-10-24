@@ -1,0 +1,54 @@
+=== RUN   TestPhase3AContradictionLocked
+P3A_CONTRADICTION_FIXTURE dataset=beacon-v6-phase3-contradiction-v1 pairs=24
+P3A_CONTRADICTION pair=c01 category=same_kind label_conflict=true detected=true verdict=TP
+P3A_CONTRADICTION pair=c02 category=same_kind label_conflict=true detected=true verdict=TP
+P3A_CONTRADICTION pair=c03 category=same_kind label_conflict=true detected=true verdict=TP
+P3A_CONTRADICTION pair=c04 category=same_kind label_conflict=true detected=true verdict=TP
+P3A_CONTRADICTION pair=c05 category=same_kind label_conflict=true detected=true verdict=TP
+P3A_CONTRADICTION pair=c06 category=same_kind label_conflict=true detected=true verdict=TP
+P3A_CONTRADICTION pair=c07 category=cross_kind label_conflict=true detected=false verdict=FN
+P3A_CONTRADICTION pair=c08 category=cross_kind label_conflict=true detected=false verdict=FN
+P3A_CONTRADICTION pair=c09 category=cross_kind label_conflict=true detected=false verdict=FN
+P3A_CONTRADICTION pair=c10 category=cross_kind label_conflict=true detected=false verdict=FN
+P3A_CONTRADICTION pair=c11 category=cross_kind label_conflict=true detected=false verdict=FN
+P3A_CONTRADICTION pair=c12 category=cross_kind label_conflict=true detected=false verdict=FN
+P3A_CONTRADICTION pair=c13 category=distinct_version label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c14 category=distinct_version label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c15 category=distinct_version label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c16 category=distinct_version label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c17 category=cross_project label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c18 category=cross_project label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c19 category=cross_project label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c20 category=cross_project label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c21 category=same_polarity label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c22 category=same_polarity label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c23 category=unrelated label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION pair=c24 category=unrelated label_conflict=false detected=false verdict=TN
+P3A_CONTRADICTION category=same_kind tp=6 fp=0 fn=0 tn=0 precision=1.0000 recall=1.0000 f1=1.0000
+P3A_CONTRADICTION category=cross_kind tp=0 fp=0 fn=6 tn=0 precision=0.0000 recall=0.0000 f1=0.0000
+P3A_CONTRADICTION category=distinct_version tp=0 fp=0 fn=0 tn=4 precision=0.0000 recall=0.0000 f1=0.0000
+P3A_CONTRADICTION category=cross_project tp=0 fp=0 fn=0 tn=4 precision=0.0000 recall=0.0000 f1=0.0000
+P3A_CONTRADICTION category=same_polarity tp=0 fp=0 fn=0 tn=2 precision=0.0000 recall=0.0000 f1=0.0000
+P3A_CONTRADICTION category=unrelated tp=0 fp=0 fn=0 tn=2 precision=0.0000 recall=0.0000 f1=0.0000
+P3A_CONTRADICTION category=ALL tp=6 fp=0 fn=6 tn=12 precision=1.0000 recall=0.5000 f1=0.6667
+P3A_CONTRADICTION crosstalk a=c02-a b=c23-b shared=[bearer expired request token]
+P3A_CONTRADICTION crosstalk_summary expected_conflicts=12 detected_total=7 matched=6 extra_crosstalk=1
+--- PASS: TestPhase3AContradictionLocked (0.00s)
+=== RUN   TestPhase3BLockedContradictionRegression
+P3B_LOCKED mode=default category=same_kind tp=6 fp=0 fn=0 tn=0
+P3B_LOCKED mode=default category=cross_kind tp=0 fp=0 fn=6 tn=0
+P3B_LOCKED mode=default category=distinct_version tp=0 fp=0 fn=0 tn=4
+P3B_LOCKED mode=default category=cross_project tp=0 fp=0 fn=0 tn=4
+P3B_LOCKED mode=default category=same_polarity tp=0 fp=0 fn=0 tn=2
+P3B_LOCKED mode=default category=unrelated tp=0 fp=0 fn=0 tn=2
+P3B_LOCKED mode=default total tp=6 fp=0 fn=6 tn=12 precision=1.0000 recall=0.5000
+P3B_LOCKED mode=cross_kind category=same_kind tp=6 fp=0 fn=0 tn=0
+P3B_LOCKED mode=cross_kind category=cross_kind tp=6 fp=0 fn=0 tn=0
+P3B_LOCKED mode=cross_kind category=distinct_version tp=0 fp=0 fn=0 tn=4
+P3B_LOCKED mode=cross_kind category=cross_project tp=0 fp=0 fn=0 tn=4
+P3B_LOCKED mode=cross_kind category=same_polarity tp=0 fp=0 fn=0 tn=2
+P3B_LOCKED mode=cross_kind category=unrelated tp=0 fp=0 fn=0 tn=2
+P3B_LOCKED mode=cross_kind total tp=12 fp=0 fn=0 tn=12 precision=1.0000 recall=1.0000
+--- PASS: TestPhase3BLockedContradictionRegression (0.00s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.010s

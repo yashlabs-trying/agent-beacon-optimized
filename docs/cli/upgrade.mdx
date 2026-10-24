@@ -1,0 +1,196 @@
+---
+title: "Upgrade Beacon"
+description: "Check for Beacon CLI updates and upgrade safely"
+---
+
+## Check for updates
+
+Running bare `beacon` in an interactive terminal shows a cached update notice when a
+newer release is available. It does not wait on a network request: when the cache is
+more than a day old, Beacon refreshes it in the background for the next run.
+
+Use `beacon version check` before upgrading to confirm whether a newer release is available:
+
+```bash title="Check for updates"
+beacon version check
+```
+
+When an update is available, Beacon prints the latest version, the installed version, Homebrew upgrade guidance, and a release download URL.
+
+The automatic notice is skipped for scripts, pipes, redirects, other commands, CI,
+and development builds. Set `BEACON_UPDATE_CHECK=0` to disable it without disabling
+the explicit `beacon version check` command.
+
+## Upgrade with Homebrew
+
+Upgrade Beacon with the standard Homebrew flow:
+
+```bash title="Upgrade Beacon"
+brew update
+brew trust asymptote-labs/tap
+brew upgrade beacon
+beacon version
+```
+
+## Self-updating endpoint packages
+
+For Apple Silicon systems installed from the signed endpoint package, Beacon can
+check the GitHub Release manifest and optionally apply newer signed packages.
+Self-update is **off by default** and is available only for the system package
+install under `/opt/beacon`. Homebrew and archive installs should continue to use
+their normal upgrade flow.
+
+Behind the scenes, `beacon endpoint update` reads `update-manifest.json`, selects
+the package artifact for the local architecture, downloads it into the endpoint
+update staging directory, verifies the manifest checksum, Developer ID Installer
+signature, and Gatekeeper install assessment, then runs Apple's `installer`. The
+package's installer signature must come from Asymptote Labs' Apple team
+(`3A98D35XJR`), which is built into `beacon` rather than read from the unsigned
+manifest, and both the manifest and the package must be fetched over `https`
+(plain `http` only to a loopback mirror, and never through a redirect). The
+package postinstall restarts the local collector, restores configured Vector
+forwarders, re-renders a connected endpoint's Beacon Cloud forwarder config from
+the new version's pack (see [Keeping the forwarder config current](/cli/endpoint-connect#keeping-the-forwarder-config-current)),
+reconciles the updater LaunchDaemon, and the updater health-checks
+the new install. If the new install is unhealthy, Beacon restores the previous
+`/opt/beacon` tree.
+
+Update activity is written to the local system log beside the runtime log:
+
+```text
+/var/log/beacon-agent/system.jsonl
+```
+
+### Modes
+
+Beacon supports three endpoint update modes:
+
+| Mode | Behavior |
+| --- | --- |
+| `off` | Default. No background update job applies updates. |
+| `check-only` | Periodically checks for newer compatible packages and writes local system-log events, but never downloads or installs packages. |
+| `auto` | Periodically checks for newer compatible packages, then downloads, verifies, installs, health-checks, and rolls back on failure. |
+
+Scheduled checks run from the root `launchd` job
+`com.beacon.endpoint.updater`. The default package schedule uses local business
+hours with jitter, so devices do not all fetch and install at exactly the same
+time.
+
+### Check-only monitoring
+
+```bash title="Enable check-only endpoint update monitoring"
+sudo /opt/beacon/bin/beacon endpoint update enable --check-only
+sudo /opt/beacon/bin/beacon endpoint update status
+```
+
+Disable the background check job with:
+
+```bash title="Disable endpoint update monitoring"
+sudo /opt/beacon/bin/beacon endpoint update disable
+```
+
+### Auto apply mode
+
+Enable full automatic package updates with:
+
+```bash title="Enable automatic endpoint package updates"
+sudo /opt/beacon/bin/beacon endpoint update enable
+sudo /opt/beacon/bin/beacon endpoint update status
+```
+
+The status output should show:
+
+```text
+Update mode:      auto
+Install kind:     system_pkg
+Updater daemon:   loaded=true running=false
+```
+
+Disable automatic updates and remove the updater LaunchDaemon with:
+
+```bash title="Disable automatic endpoint package updates"
+sudo /opt/beacon/bin/beacon endpoint update disable
+```
+
+### Manual apply
+
+When a newer signed endpoint package is available, apply it manually with:
+
+```bash title="Manually apply an endpoint package update"
+sudo /opt/beacon/bin/beacon endpoint update --apply
+```
+
+### Troubleshooting self-update
+
+Check installed version and updater state:
+
+```bash title="Inspect updater state"
+/opt/beacon/bin/beacon version
+/opt/beacon/bin/beacon endpoint update status
+sudo tail -n 30 /var/log/beacon-agent/system.jsonl
+```
+
+Check the updater LaunchDaemon:
+
+```bash title="Inspect updater launchd job"
+launchctl print system/com.beacon.endpoint.updater
+```
+
+Run the scheduled updater path immediately for testing:
+
+```bash title="Run scheduled updater immediately"
+sudo BEACON_UPDATE_JITTER_SECONDS=0 /opt/beacon/bin/beacon endpoint update --scheduled
+```
+
+Common states:
+
+| Symptom | What to check |
+| --- | --- |
+| `mode=off` or `Updater daemon: loaded=false` | Re-enable with `sudo /opt/beacon/bin/beacon endpoint update enable` or `--check-only`. |
+| `homebrew_install` or `not_system_package` | The seamless updater applies only to the signed system package install. Use `brew update && brew upgrade beacon` for Homebrew. |
+| Manual non-root check cannot write `system.jsonl` | Run manual system checks with `sudo`, or rely on the root scheduled updater. |
+| Package apply fails before install | Check checksum, signature, Gatekeeper, manifest URL, and network access to the package URL. |
+| Package apply fails after install | Beacon should roll back and write `update.failed` to `system.jsonl`; inspect `/Library/Application Support/Beacon/Endpoint/updates/last_failure.json` if present. |
+| S3/Falcon forwarding stops after update | Check `launchctl print system/com.beacon.endpoint.s3-forwarder` or `...falcon-forwarder`; package postinstall restores pre-existing forwarders and fails loudly if they cannot be restored. |
+
+Successful updates clean staging state under:
+
+```text
+/Library/Application Support/Beacon/Endpoint/updates
+```
+
+Only `.update.lock` should remain after a healthy update. If a future update
+fails and rollback succeeds, Beacon keeps a small `last_failure.json` diagnostic
+instead of retaining a full old install tree.
+
+## Repair endpoint configuration
+
+If you run Beacon as a local endpoint service, reapply managed service files and telemetry configuration after upgrading:
+
+```bash title="Repair endpoint configuration after upgrade"
+beacon endpoint repair
+beacon endpoint status
+```
+
+`beacon endpoint repair` preserves runtime logs while reapplying service files, collector configuration, harness telemetry settings, and forwarding destinations. On an endpoint connected to Beacon Cloud it keeps the forwarder, its device key and its Vector checkpoints, and re-renders `vector.toml` from the upgraded version's pack with the recorded privacy mode, so a Homebrew or archive upgrade picks up forwarder fixes without a re-connect. See [Keeping the forwarder config current](/cli/endpoint-connect#keeping-the-forwarder-config-current).
+
+<Note>
+  On v0.0.43 or newer, use `beacon endpoint doctor --fix` when you only need supported health-check drift remediated without a full repair.
+</Note>
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Install Beacon" icon="download" href="/cli/install">
+    Install the Beacon CLI with Homebrew or platform archives.
+  </Card>
+  <Card title="beacon version" icon="code-branch" href="/cli/version">
+    Display the installed version and check for released updates.
+  </Card>
+  <Card title="Endpoint repair" icon="wrench" href="/cli/endpoint-repair">
+    Reapply service files and telemetry configuration.
+  </Card>
+  <Card title="Endpoint health checks" icon="stethoscope" href="/cli/endpoint-doctor">
+    Validate endpoint health and apply supported fixes.
+  </Card>
+</Columns>

@@ -1,0 +1,38 @@
+File: learning.test
+Build ID: 22868944051ce04e68f79973bbe44b3b7067f03d
+Type: alloc_space
+Time: 2026-10-23 16:39:11 UTC
+Showing nodes accounting for 1816.11MB, 98.43% of 1845.10MB total
+Dropped 102 nodes (cum <= 9.23MB)
+Showing top 30 nodes out of 36
+      flat  flat%   sum%        cum   cum%
+  489.45MB 26.53% 26.53%   489.45MB 26.53%  modernc.org/sqlite.(*conn).columnBlob
+  479.44MB 25.98% 52.51%   479.44MB 25.98%  bytes.Clone (inline)
+  469.92MB 25.47% 77.98%   469.92MB 25.47%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.decodeVector (inline)
+   98.54MB  5.34% 83.32%    98.54MB  5.34%  modernc.org/sqlite.(*conn).columnText
+   98.21MB  5.32% 88.64%  1673.56MB 90.70%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.(*Store).semanticSearchExact
+   42.04MB  2.28% 90.92%  1827.15MB 99.03%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.(*Store).SearchQuestion
+   38.51MB  2.09% 93.01%    82.51MB  4.47%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.significantTerms
+   36.50MB  1.98% 94.99%    36.50MB  1.98%  strings.FieldsFunc
+      16MB  0.87% 95.85%       16MB  0.87%  internal/bytealg.MakeNoZero
+   12.50MB  0.68% 96.53%   600.49MB 32.55%  modernc.org/sqlite.(*rows).Next
+      11MB   0.6% 97.13%       11MB   0.6%  reflect.growslice
+      11MB   0.6% 97.72%    93.51MB  5.07%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.questionIntent.memoryTerms (inline)
+      11MB   0.6% 98.32%       11MB   0.6%  encoding/json/v2.makeString
+    2.01MB  0.11% 98.43%    13.01MB  0.71%  encoding/json/v2.makeStringArshaler.func2
+         0     0% 98.43%   600.49MB 32.55%  database/sql.(*Rows).Next
+         0     0% 98.43%   600.49MB 32.55%  database/sql.(*Rows).Next.func1
+         0     0% 98.43%   479.44MB 25.98%  database/sql.(*Rows).Scan
+         0     0% 98.43%   600.49MB 32.55%  database/sql.(*Rows).nextLocked
+         0     0% 98.43%   479.44MB 25.98%  database/sql.(*Rows).scanLocked
+         0     0% 98.43%   479.44MB 25.98%  database/sql.convertAssignRows
+         0     0% 98.43%    24.01MB  1.30%  encoding/json.Unmarshal (inline)
+         0     0% 98.43%    24.01MB  1.30%  encoding/json/v2.Unmarshal
+         0     0% 98.43%    13.50MB  0.73%  encoding/json/v2.makeSliceArshaler.func3
+         0     0% 98.43%    24.01MB  1.30%  encoding/json/v2.makeStructArshaler.func3
+         0     0% 98.43%    24.01MB  1.30%  encoding/json/v2.unmarshalDecode
+         0     0% 98.43%  1832.65MB 99.33%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.BenchmarkProfileV7SemanticWarm
+         0     0% 98.43%    31.50MB  1.71%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.embedWords (inline)
+         0     0% 98.43%    28.50MB  1.54%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.questionIntent.direct
+         0     0% 98.43%    62.51MB  3.39%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.questionIntent.slotMatch
+         0     0% 98.43%       11MB   0.6%  reflect.Value.Grow

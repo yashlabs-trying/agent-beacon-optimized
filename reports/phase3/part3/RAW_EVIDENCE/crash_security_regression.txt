@@ -1,0 +1,88 @@
+=== RUN   TestPutMemoryWaitsForBoundedWriteContention
+--- PASS: TestPutMemoryWaitsForBoundedWriteContention (11.08s)
+=== RUN   TestPutMemoryProcessCrashRecovery
+=== RUN   TestPutMemoryProcessCrashRecovery/after-begin
+=== RUN   TestPutMemoryProcessCrashRecovery/after-authoritative
+=== RUN   TestPutMemoryProcessCrashRecovery/after-index
+=== RUN   TestPutMemoryProcessCrashRecovery/after-generation
+=== RUN   TestPutMemoryProcessCrashRecovery/before-commit
+=== RUN   TestPutMemoryProcessCrashRecovery/after-commit
+--- PASS: TestPutMemoryProcessCrashRecovery (0.07s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/after-begin (0.01s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/after-authoritative (0.01s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/after-index (0.01s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/after-generation (0.01s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/before-commit (0.01s)
+    --- PASS: TestPutMemoryProcessCrashRecovery/after-commit (0.01s)
+=== RUN   TestPhase2CrashChild
+    phase2_crash_injection_test.go:79: not a crash child
+--- SKIP: TestPhase2CrashChild (0.00s)
+=== RUN   TestPhase2CrashDuringIndexRebuild
+--- PASS: TestPhase2CrashDuringIndexRebuild (0.02s)
+=== RUN   TestPhase2CrashDuringMigration
+--- PASS: TestPhase2CrashDuringMigration (0.01s)
+=== RUN   TestPhase2CrashDurability
+=== RUN   TestPhase2CrashDurability/tx_begin_pre
+=== RUN   TestPhase2CrashDurability/tx_begin_post
+=== RUN   TestPhase2CrashDurability/memory_insert
+=== RUN   TestPhase2CrashDurability/fts_update
+=== RUN   TestPhase2CrashDurability/generation_update
+=== RUN   TestPhase2CrashDurability/pre_commit
+=== RUN   TestPhase2CrashDurability/post_commit
+=== RUN   TestPhase2CrashDurability/post_return
+--- PASS: TestPhase2CrashDurability (0.09s)
+    --- PASS: TestPhase2CrashDurability/tx_begin_pre (0.01s)
+    --- PASS: TestPhase2CrashDurability/tx_begin_post (0.03s)
+    --- PASS: TestPhase2CrashDurability/memory_insert (0.01s)
+    --- PASS: TestPhase2CrashDurability/fts_update (0.01s)
+    --- PASS: TestPhase2CrashDurability/generation_update (0.01s)
+    --- PASS: TestPhase2CrashDurability/pre_commit (0.01s)
+    --- PASS: TestPhase2CrashDurability/post_commit (0.01s)
+    --- PASS: TestPhase2CrashDurability/post_return (0.01s)
+=== RUN   TestPhase2RepeatedRecovery
+--- PASS: TestPhase2RepeatedRecovery (0.01s)
+=== RUN   TestPhase2CrashDuringSupersession
+--- PASS: TestPhase2CrashDuringSupersession (0.01s)
+=== RUN   TestPhase2FaultHookIsNilInProduction
+--- PASS: TestPhase2FaultHookIsNilInProduction (0.00s)
+=== RUN   TestPhase2IdempotentInit
+--- PASS: TestPhase2IdempotentInit (0.00s)
+=== RUN   TestPhase2UpgradeFromOriginalStorage
+--- PASS: TestPhase2UpgradeFromOriginalStorage (0.00s)
+=== RUN   TestPhase2IndexRebuildAfterDeletion
+--- PASS: TestPhase2IndexRebuildAfterDeletion (0.01s)
+=== RUN   TestPhase2ReopenAfterInterruptedStartup
+--- PASS: TestPhase2ReopenAfterInterruptedStartup (0.01s)
+=== RUN   TestPhase2ANNLifecycleAcrossGenerations
+--- PASS: TestPhase2ANNLifecycleAcrossGenerations (0.02s)
+=== RUN   TestPhase2EmbeddingModelVersionIsolation
+--- PASS: TestPhase2EmbeddingModelVersionIsolation (0.00s)
+=== RUN   TestPhase2CorruptRowSurfacedNotSilent
+--- PASS: TestPhase2CorruptRowSurfacedNotSilent (0.00s)
+=== RUN   TestPhase2AdversarialContradictionMatrix
+    phase2_trust_adversarial_test.go:179: category=same_polarity_decoy  tp=0 fp=0 fn=0 tn=15
+    phase2_trust_adversarial_test.go:179: category=unrelated            tp=0 fp=0 fn=0 tn=10
+    phase2_trust_adversarial_test.go:179: category=cross_kind_missed    tp=0 fp=0 fn=8 tn=0
+    phase2_trust_adversarial_test.go:179: category=insufficient_overlap tp=0 fp=0 fn=0 tn=7
+    phase2_trust_adversarial_test.go:179: category=canonical_conflict   tp=20 fp=0 fn=0 tn=0
+    phase2_trust_adversarial_test.go:179: category=hidden_in_long_text  tp=5 fp=0 fn=0 tn=0
+    phase2_trust_adversarial_test.go:183: ADVERSARIAL contradiction: cases=65 detected=62 cross_talk=37 tp=25 fp=0 fn=8 tn=32 precision=1.000 recall=0.758 false_positive_rate=0.000
+--- PASS: TestPhase2AdversarialContradictionMatrix (0.00s)
+=== RUN   TestPhase2CrossScopeLeakageAllPaths
+--- PASS: TestPhase2CrossScopeLeakageAllPaths (0.04s)
+=== RUN   TestPhase2UnapprovedEvidenceNotVisible
+--- PASS: TestPhase2UnapprovedEvidenceNotVisible (0.00s)
+=== RUN   TestPhase2HostileMemoryContent
+--- PASS: TestPhase2HostileMemoryContent (0.03s)
+=== RUN   TestAdversarialMemoryRetrieval
+--- PASS: TestAdversarialMemoryRetrieval (0.02s)
+=== RUN   TestTrustPhase1LabeledScenarios
+TRUST_MATRIX status_cases=20 pair_cases=30 tp=10 fp=0 fn=0 precision=1.000 recall=1.000
+--- PASS: TestTrustPhase1LabeledScenarios (0.00s)
+=== RUN   TestTrustContradictionPrecisionRecall
+TRUST contradiction true_pairs=4 detected=4 tp=4 fp=0 fn=0 precision=1.000 recall=1.000
+--- PASS: TestTrustContradictionPrecisionRecall (0.00s)
+=== RUN   TestTrustNoCrossScopeLeakage
+--- PASS: TestTrustNoCrossScopeLeakage (0.03s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	11.491s

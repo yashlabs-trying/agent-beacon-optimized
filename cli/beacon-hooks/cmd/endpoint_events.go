@@ -1,0 +1,1062 @@
+package cmd
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/cloudshuttle"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/git"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/logging"
+	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve"
+)
+
+func emitHookEvent(logger *logging.Logger, action, category, severity, message string, input map[string]interface{}, fields map[string]interface{}) {
+	emitHookEventWithFidelity(logger, action, category, severity, message, asymptoteobserve.FidelityObserved, input, fields)
+}
+
+// emitInferredHookEvent is emitHookEvent for an action Beacon derived rather than read.
+//
+// The case that requires it: several runtimes expose a pre-tool notification but no approval hook,
+// and Beacon has long turned the former into an approval.allowed event carrying
+// approval.required=true. Nothing was gated -- a tool call was observed -- so recording that as a
+// reported approval overstates what is known, and it is indistinguishable from Claude Code's
+// PermissionRequest, which is a real operator decision. Marking it inferred leaves the action
+// where downstream rules expect it while letting anything that counts approvals exclude the ones
+// Beacon made up.
+func emitInferredHookEvent(logger *logging.Logger, action, category, severity, message string, input map[string]interface{}, fields map[string]interface{}) {
+	emitHookEventWithFidelity(logger, action, category, severity, message, asymptoteobserve.FidelityInferred, input, fields)
+}
+
+// rawPayloadKeys names the runtimes whose whole hook payload is kept under `raw.<key>`, and the
+// key each one uses.
+//
+// These runtimes carry real signal with no endpoint-schema field of its own -- Qwen's
+// `permission_mode` on every tool event, its `source` on SessionStart and the `context_usage` /
+// `context_limit` / `input_tokens` trio on Stop; Muse Code's `permission_mode` and SessionStart
+// `source`. Keeping the payload preserves them without inventing schema fields for one runtime. It
+// is the whole event's own path through SanitizeMap, so raw is
+// secret-redacted and string-limited like every other field, and it is the first thing dropped when
+// an event exceeds the 64 KiB ceiling.
+//
+// A table rather than one `if` per runtime. The branches were identical apart from the key, so each
+// new runtime copied the same three lines and the only thing distinguishing them was a string --
+// which is data, and belongs in one. The Cascade entry is why this is keyed on the --platform value
+// rather than derived from it: `devin-desktop` writes under `cascade`, so the key is not always the
+// flag.
+var rawPayloadKeys = map[string]string{
+	"grok":          "grok",
+	"hermes":        "hermes",
+	"qwen":          "qwen",
+	"vscode":        "vscode",
+	"muse":          "muse",
+	"devin-desktop": "cascade",
+	// DeepSeek Harness is here for one tool and the shape of its whole tool surface. `run_code`
+	// executes a TypeScript program against the other tools, and the program itself -- the `code`
+	// argument -- is the entire content of that call; the endpoint schema has no field for it,
+	// because it is neither a shell command line nor a file. Without the payload, the highest-
+	// privilege tool dsh ships would be recorded as a bare tool.invoked carrying only its name.
+	//
+	// It is not only run_code. Non-MCP tool arguments reach no schema field at all on any runtime
+	// -- gen_ai.tool.call.arguments is written for MCP calls only -- so on dsh this is also where a
+	// glob or grep pattern, a terminal_send `submit` flag and a job id survive. `source` on
+	// SessionStart is the ordinary rawPayloadKeys case on top of that.
+	//
+	// The cost is stated rather than hidden: on a `write` the payload repeats the file content the
+	// diff already carries. raw goes through SanitizeMap like every other field and is the first
+	// thing dropped when an event exceeds the 64 KiB ceiling, so the duplication is bounded and the
+	// diff is what survives. Qwen Code and Muse Code already pay the same cost for the same reason.
+	"dsh": "dsh",
+	// Kimi Code carries several things with no endpoint-schema field, and two of them are the
+	// reason this entry exists rather than being a habit.
+	//
+	// The first is the approval pair. A PermissionResult's `scope` says whether the operator
+	// approved this one call or every call like it for the rest of the session, and `feedback` is
+	// the reason they typed when they refused. The approval block has a `decision` and a `reason`
+	// and nowhere to put a standing grant, so without the payload the difference between "yes,
+	// once" and "yes, and stop asking" is lost -- which is the single most load-bearing fact about
+	// any approval row, the same one the Pi family records as approval_mode.
+	//
+	// The second is tool arguments. gen_ai.tool.call.arguments is written for MCP calls only, so
+	// on this runtime the payload is also where a Grep pattern, a Glob pattern, an Agent's prompt,
+	// a CronCreate schedule and a Bash `run_in_background` flag survive. `session_title`,
+	// `client_type`, `is_steer` on a prompt, `source` and `profile` on SessionStart and `reason`
+	// on SessionEnd are the ordinary rawPayloadKeys cases on top of that.
+	//
+	// The cost is stated rather than hidden: on a Write the payload repeats the file content the
+	// diff already carries. raw goes through SanitizeMap like every other field and is the first
+	// thing dropped when an event exceeds the 64 KiB ceiling, so the duplication is bounded and
+	// the diff is what survives. Qwen Code, Muse Code and DeepSeek Harness already pay the same
+	// cost for the same reason.
+	"kimi": "kimi",
+}
+
+func rawPayloadKey(platform string) string {
+	return rawPayloadKeys[platform]
+}
+
+// applyContextSize promotes a runtime's reported context size into gen_ai.context.
+//
+// Separate from usage on purpose. gen_ai.usage is additive and every report sums it; context size
+// is a level at one moment, and Qwen Code -- the first runtime to report one -- is exactly where
+// summing goes wrong: its Stop payload's input_tokens is the prompt for that turn, which already
+// contains every prior turn, so a session's total would grow with the square of its length. Read as
+// context occupancy the same number is exact and worth having.
+//
+// Both halves are required before either is written. "input_tokens" is Qwen's name for the context
+// measure and also the ecosystem's name for an additive usage count, so a reported limit beside it
+// is what says which one this payload means. Promoting a bare input_tokens here would reclassify
+// other runtimes' spend as context.
+//
+// Read from the shared alias lists rather than a per-runtime branch, the way tool call ids are, so
+// a second runtime reporting the same thing needs a spelling added and nothing else.
+func applyContextSize(fields, input map[string]interface{}) {
+	if fields == nil || input == nil {
+		return
+	}
+	limit, ok := firstToolIntAcross([]map[string]interface{}{input}, asymptoteobserve.ContextLimitKeys...)
+	if !ok || limit <= 0 {
+		return
+	}
+	used, ok := firstToolIntAcross([]map[string]interface{}{input}, asymptoteobserve.ContextUsedKeys...)
+	if !ok || used <= 0 {
+		return
+	}
+	fields["gen_ai"] = mergeNested(fields["gen_ai"], map[string]interface{}{
+		"context": map[string]interface{}{"used_tokens": used, "limit_tokens": limit},
+	})
+}
+
+func emitHookEventWithFidelity(logger *logging.Logger, action, category, severity, message, fidelity string, input map[string]interface{}, fields map[string]interface{}) {
+	if fields == nil {
+		fields = map[string]interface{}{}
+	}
+	seedCursorCloudRunID(input)
+	if key := rawPayloadKey(platformFlag); key != "" {
+		fields["raw"] = mergeNested(fields["raw"], map[string]interface{}{key: input})
+	}
+	applyToolCallID(fields, input)
+	applyPromptID(fields, input)
+	applyContextSize(fields, input)
+	if model := getFirstStr(input, "model"); model != "" {
+		fields["model"] = model
+	}
+	cwd := resolveCwd(input, platformFlag)
+	if cwd != "" {
+		fields["session"] = mergeNested(fields["session"], map[string]interface{}{"working_directory": cwd})
+		fields["repository"] = cwd
+	}
+	if branch := resolveBranch(input, cwd); branch != "" {
+		fields["branch"] = branch
+	}
+	if err := logger.EndpointEventWithFidelity(action, category, severity, message, fidelity, fields); err != nil {
+		logger.Error("Failed to write endpoint event", "error", err.Error(), "action", action)
+	}
+}
+
+// normalizedEvent is one endpoint event a mapper has decided to write, before it reaches the
+// logger.
+//
+// Mappers that receive a whole runtime's event stream through a single command return a slice of
+// these rather than writing as they go, because one payload routinely becomes several events -- a
+// tool result plus the file mutations it caused -- and because returning them makes the mapping
+// itself testable without a log file. Shared rather than per-runtime: the five parts are the
+// logger's own arguments, so a per-runtime copy would be the same struct under another name.
+type normalizedEvent struct {
+	action   string
+	category string
+	severity string
+	message  string
+	fields   map[string]interface{}
+}
+
+// resolveBranch prefers a runtime-provided branch and otherwise derives the
+// checked-out branch from the event's working directory. Runtime-provided
+// values pass through even when local git metadata enrichment is disabled.
+func resolveBranch(input map[string]interface{}, cwd string) string {
+	if branch := getFirstStr(input, "branch", "git_branch"); branch != "" {
+		return branch
+	}
+	if cwd == "" || gitMetadataDisabled() {
+		return ""
+	}
+	return git.CurrentBranch(cwd)
+}
+
+// applyWorkspaceFields fills workspace context (session.working_directory,
+// repository, branch) for emitters that write endpoint events without going
+// through emitHookEvent, mirroring emitHookEvent's enrichment. fallbackDir
+// seeds branch resolution when the payload carries no working directory,
+// such as a file edit identified only by its path; it is never used for
+// repository, which must reflect the actual workspace path.
+func applyWorkspaceFields(fields map[string]interface{}, input map[string]interface{}, fallbackDir string) {
+	applyWorkspaceFieldsForPlatform(fields, input, fallbackDir, platformFlag)
+}
+
+// applyWorkspaceFieldsForPlatform is applyWorkspaceFields for a named runtime. See
+// sessionFieldsForPlatform for why a single-runtime mapper should name its runtime.
+func applyWorkspaceFieldsForPlatform(fields map[string]interface{}, input map[string]interface{}, fallbackDir, platform string) {
+	cwd := resolveCwd(input, platform)
+	if cwd != "" {
+		fields["session"] = mergeNested(fields["session"], map[string]interface{}{"working_directory": cwd})
+		if existing, ok := fields["repository"]; !ok || existing == "" {
+			fields["repository"] = cwd
+		}
+	}
+	if existing, ok := fields["branch"]; ok && existing != "" {
+		return
+	}
+	branchDir := cwd
+	if branchDir == "" {
+		branchDir = fallbackDir
+	}
+	if branch := resolveBranch(input, branchDir); branch != "" {
+		fields["branch"] = branch
+	}
+}
+
+// gitMetadataDisabled accepts 1/true/yes, matching other Beacon disable flags.
+func gitMetadataDisabled() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("BEACON_DISABLE_GIT_METADATA"))) {
+	case "1", "true", "yes":
+		return true
+	}
+	return false
+}
+
+func uploadCloudTelemetry(logger *logging.Logger, force bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := cloudshuttle.MaybeUpload(ctx, force); err != nil {
+		logger.Warn("Cloud telemetry upload failed", "error", err.Error(), "force", force)
+	}
+}
+
+func isCursorCloudMode() bool {
+	return strings.TrimSpace(os.Getenv("BEACON_ORIGIN")) == "cloud" &&
+		strings.TrimSpace(os.Getenv("BEACON_RUN_PROVIDER")) == "cursor_cloud"
+}
+
+func seedCursorCloudRunID(input map[string]interface{}) {
+	if platformFlag != "cursor" || !isCursorCloudMode() || strings.TrimSpace(os.Getenv("BEACON_RUN_ID")) != "" {
+		return
+	}
+	if runID := getFirstStr(input, "conversation_id", "parent_conversation_id"); runID != "" {
+		_ = os.Setenv("BEACON_RUN_ID", runID)
+	}
+}
+
+func maybeUploadCursorCloudTelemetry(logger *logging.Logger) {
+	if platformFlag != "cursor" {
+		return
+	}
+	if !isCursorCloudMode() {
+		return
+	}
+	uploadCloudTelemetry(logger, true)
+}
+
+func sessionFields(sessionID string, input map[string]interface{}) map[string]interface{} {
+	return sessionFieldsForPlatform(sessionID, input, platformFlag)
+}
+
+// sessionFieldsForPlatform builds the same fields for a named runtime rather than for whichever
+// --platform the binary happened to be invoked with.
+//
+// A mapper that only ever handles one runtime's payloads should say which one. Reading the flag
+// instead made the workspace resolution depend on the invocation: a Cline payload processed without
+// --platform cline fell through to the default reader, found none of Cline's keys, and produced an
+// event with no working directory, no repository and no branch -- while the file path in the same
+// event resolved correctly, because that path already asked for the Cline shape by name.
+func sessionFieldsForPlatform(sessionID string, input map[string]interface{}, platform string) map[string]interface{} {
+	fields := map[string]interface{}{}
+	session := map[string]interface{}{}
+	if sessionID != "" {
+		session["id"] = sessionID
+	}
+	if cwd := resolveCwd(input, platform); cwd != "" {
+		session["working_directory"] = cwd
+		fields["repository"] = cwd
+	}
+	if len(session) > 0 {
+		fields["session"] = session
+	}
+	return fields
+}
+
+func toolFields(toolName string, toolInput map[string]interface{}) map[string]interface{} {
+	return toolFieldsWithResponse(toolName, toolInput, nil)
+}
+
+func toolFieldsWithResponse(toolName string, toolInput, toolResponse map[string]interface{}) map[string]interface{} {
+	fields := map[string]interface{}{}
+	if toolName != "" {
+		fields["tool"] = map[string]interface{}{"name": toolName}
+	}
+	command := firstToolString(toolInput, "command", "cmd", "shell_command", "CommandLine", "commandLine")
+	// DeepSeek Harness runs commands through a persistent terminal as well as through `bash`, and
+	// that tool names its command line `text` rather than `command`, so every key above misses it.
+	// Without this a terminal_send would be classified command.executed -- the dsh taxonomy says so
+	// -- and carry no command, which is invisible to every rule that matches on command.command.
+	// Asked after the shared list for the Kiro reason below: a payload carrying a `command` of its
+	// own has said something more direct.
+	if command == "" && platformFlag == dshPlatform {
+		command = dshTerminalCommand(toolName, toolInput)
+	}
+	if command != "" {
+		// OpenHands file editors multiplex operations onto one tool name via a `command` argument
+		// that names the editor operation (view, str_replace, create), not a shell command.
+		// Promoting it into command.command would store an editor operation as shell execution and
+		// let the policy seam upgrade tool.invoked to command.executed.
+		// Kiro's write tool has the same shape for the same reason: its `command` argument may name
+		// an editor operation (create, str_replace, insert) rather than a shell command, because
+		// the tool descends from Amazon Q Developer CLI's multiplexed fs_write. Guarded on the
+		// tool name so `shell`/`execute_bash`, where `command` really is the command line, keeps
+		// the field that makes a shell event worth recording.
+		// DeepSeek Harness's `str_replace_editor` is the third instance of the same shape, and the
+		// one that publishes it: its schema documents `command` as an enum of view/create/
+		// str_replace/insert over a `path`.
+		if !(platformFlag == openHandsPlatform && openHandsFileEditorTools[strings.ToLower(strings.TrimSpace(toolName))]) &&
+			!(platformFlag == kiroPlatform && kiroWriteCommandIsEditorOperation(toolName, toolInput)) &&
+			!(platformFlag == dshPlatform && dshEditorCommandIsOperation(toolName, toolInput)) {
+			fields["command"] = map[string]interface{}{"command": command}
+			fields["tool"] = mergeNested(fields["tool"], map[string]interface{}{"name": toolName, "command": command})
+		}
+	}
+	// `absolute_path` and `notebook_path` are the snake_case siblings of `AbsolutePath` already in
+	// this list: the first is Gemini CLI's (and so early Qwen Code's) `read_file` parameter, the
+	// second is what `notebook_edit` names its target on both Qwen and Claude. Both are unambiguous
+	// file paths, so reading them costs nothing and their absence costs a `file` field.
+	// `dir_path` is the snake_case sibling of `DirectoryPath` already in this list: it is what
+	// OpenHands' list_directory names its target. Unambiguous, so reading it costs nothing and its
+	// absence costs a `file` field on every directory listing.
+	path := firstToolString(toolInput, "file_path", "filePath", "path", "Path", "AbsolutePath", "absolute_path", "notebook_path", "DirectoryPath", "dir_path", "SearchPath", "searchPath")
+	// Kiro's read tool -- its most frequent one -- puts the path inside an `operations` array
+	// rather than at the top level of tool_input, so every key above misses it and a read event
+	// would carry no file at all. Asked after the shared list rather than before it, because a
+	// payload that does carry a top-level path has said something more direct.
+	if path == "" && platformFlag == kiroPlatform {
+		path = kiroToolPath(toolInput)
+	}
+	// goose's read_image names its target `source`, not `path`, so every key above misses it and
+	// the call would record no file at all. Asked after the shared list for the Kiro reason -- a
+	// payload carrying a top-level path has said something more direct -- and `source` is
+	// deliberately not added to that list: it is an ordinary key other runtimes use for other
+	// things, and gooseReadImageSource also has to reject the http(s) URLs this one argument
+	// legitimately carries.
+	if path == "" && platformFlag == goosePlatform {
+		path = gooseToolPath(toolName, toolInput)
+	}
+	if path != "" {
+		fields["file"] = map[string]interface{}{
+			"path":      path,
+			"operation": fileOperation(toolName, toolInput),
+			"language":  strings.TrimPrefix(filepath.Ext(path), "."),
+		}
+		fields["tool"] = mergeNested(fields["tool"], map[string]interface{}{"path": path})
+	}
+	if mcp := mcpToolFields(toolName, toolInput, toolResponse); len(mcp) > 0 {
+		fields["mcp"] = mcp
+		tool := firstNestedString(mcp, "tool")
+		fields["gen_ai"] = genAIToolFields(tool, toolInput, toolResponse)
+		for key, value := range mcpStandardFields(toolInput, toolResponse) {
+			fields[key] = value
+		}
+	}
+	// No call ID is read here, deliberately: this function sees only the tool's
+	// arguments and its output, and neither is where identity lives. Callers
+	// promote it from the payload envelope instead -- emitHookEvent for every
+	// hook mapper, and the Cline, OpenCode and file-edit emitters by name.
+	//
+	// Scanning the arguments was worse than merely useless. tool_input is what
+	// the model chose to pass, so a tool that legitimately takes an argument
+	// called call_id -- an MCP wrapper over an API whose objects have call IDs,
+	// say -- had that value written as gen_ai.tool.call.id, and because an ID
+	// already present is treated as authoritative it then blocked the runtime's
+	// real tool_use_id. One wrong join key, and the right one shut out.
+	// Reported by Cursor Bugbot.
+	return fields
+}
+
+// applyIngestedToolResult records the result of a tool that brought outside content into the
+// agent's context -- a file read, a web fetch -- as gen_ai.tool.call.result, with the retention
+// marker that describes it.
+//
+// toolFieldsWithResponse writes gen_ai.tool.call.result for MCP calls only, so before this the live
+// hook path dropped the response of every other tool (#743). A Read or WebFetch was recorded with
+// its path and nothing it returned, and the threat-rules field derived from the result,
+// gen_ai.tool.call.result_text, was empty on every event a live install wrote: indirect prompt
+// injection was visible to `beacon scan` after `claude sync` and invisible in real time.
+//
+// The scope is the shared one in pkg/asymptoteobserve, the same predicate the rules engine reads,
+// so a capture path cannot drop a result the engine would match or record one it ignores. It is
+// deliberately not every tool: a shell command's output already has command.output, a write echoes
+// what the agent itself produced, and recording either again would only grow the log.
+//
+// Called once the action is known, because the action is half of the scope. An MCP call already
+// carries its result from toolFieldsWithResponse and is left exactly as it was. The value goes out
+// through the logger's sanitizer like every other field -- secret redaction, the per-string limit
+// and the 64 KiB event ceiling, which drops the result and marks content not included -- and the
+// marker is computed over the text before that, so its hash and byte count describe what the tool
+// returned, not the stored copy.
+func applyIngestedToolResult(fields map[string]interface{}, action, toolName string, toolResponse map[string]interface{}) {
+	if len(toolResponse) == 0 {
+		return
+	}
+	// The target is read from the event's own tool.path, the field the engine reads it from.
+	target, _ := mutableChild(fields["tool"])["path"].(string)
+	if !asymptoteobserve.IngestedContentAction(action) && !asymptoteobserve.IngestedContentToolName(toolName) &&
+		!asymptoteobserve.IngestedContentTarget(target) {
+		return
+	}
+	genAI := mutableChild(fields["gen_ai"])
+	tool := mutableChild(genAI["tool"])
+	call := mutableChild(tool["call"])
+	if _, exists := call["result"]; exists {
+		return
+	}
+	call["result"] = toolResponse
+	tool["call"] = call
+	if _, exists := tool["name"]; !exists && toolName != "" {
+		tool["name"] = toolName
+	}
+	genAI["tool"] = tool
+	if _, exists := genAI["operation"]; !exists {
+		genAI["operation"] = map[string]interface{}{"name": "execute_tool"}
+	}
+	fields["gen_ai"] = genAI
+	// The marker describes this result only when nothing more specific was already retained.
+	if _, exists := fields["content"]; !exists {
+		if marker := retainedContentFields(asymptoteobserve.ToolResultPlainText(toolResponse)); marker != nil {
+			fields["content"] = marker
+		}
+	}
+}
+
+// claudeBashExitLine is the first line Claude Code writes into a failed Bash call's `error` when
+// the command ran and exited. Its absence means the shell itself could not be started.
+var claudeBashExitLine = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^Exit code (-?\d+)$`) })
+
+// applyClaudeBashResult maps the result of Claude Code's Bash tool onto the command field, and
+// reports whether the payload is a failure of a command that ran and exited.
+//
+// The two outcomes arrive in different shapes. A success (`PostToolUse`) carries `tool_response`
+// with `stdout` and `stderr` as separate strings and no exit code. They are stored stdout first,
+// then stderr, so the order in which the command interleaved them is lost. A failure
+// (`PostToolUseFailure`) carries no tool response, only a top-level `error`: a first line
+// `Exit code N`, then the output with both streams interleaved as Claude saw it. That line is
+// the only exit code Claude reports, so it is parsed rather than synthesized. An `error` without
+// it is a shell that never started; that is a message, not command output, and is not recorded.
+//
+// Claude reports an interrupted command as a success with `interrupted` set, or as a failure with
+// `is_interrupt`, and its output is partial either way, so that is recorded beside it.
+func applyClaudeBashResult(fields, input map[string]interface{}, toolName string, toolResponse map[string]interface{}) bool {
+	if !strings.EqualFold(strings.TrimSpace(toolName), "bash") {
+		return false
+	}
+	var output string
+	var exitCode int
+	exited := false
+	if errText := getFirstStr(input, "error"); errText != "" {
+		firstLine, rest, _ := strings.Cut(errText, "\n")
+		match := claudeBashExitLine().FindStringSubmatch(strings.TrimSpace(firstLine))
+		if match == nil {
+			return false
+		}
+		code, err := strconv.Atoi(match[1])
+		if err != nil {
+			return false
+		}
+		output, exitCode, exited = rest, code, true
+	} else if toolResponse != nil {
+		output = getFirstStr(toolResponse, "stdout")
+		if stderr := getFirstStr(toolResponse, "stderr"); stderr != "" {
+			if output != "" && !strings.HasSuffix(output, "\n") {
+				output += "\n"
+			}
+			output += stderr
+		}
+	}
+	command := mutableChild(fields["command"])
+	if exited {
+		command["exit_code"] = exitCode
+	}
+	if output != "" {
+		command["output"] = output
+		if _, exists := fields["content"]; !exists {
+			fields["content"] = retainedContentFields(output)
+		}
+	}
+	if len(command) > 0 {
+		fields["command"] = command
+	}
+	if interrupted, _ := toolResponse["interrupted"].(bool); interrupted || input["is_interrupt"] == true {
+		fields["raw"] = mergeNested(fields["raw"], map[string]interface{}{"claude_interrupted": true})
+	}
+	return exited
+}
+
+// toolCallIDFromEnvelope reads the runtime's own identifier for one tool
+// invocation out of a hook payload's top level.
+//
+// The envelope only. The runtime writes this field itself, whereas tool_input is
+// model-authored and tool_response is the tool's own output -- neither is a
+// statement by the runtime about which call this is, and reading identity out of
+// either lets a tool argument masquerade as the join key.
+//
+// The alias list is shared with the OTLP path so both capture paths promote the
+// same value to the same field, which is what lets duplicate suppression
+// recognise the two reports of one action as one action.
+func toolCallIDFromEnvelope(input map[string]interface{}) string {
+	return firstToolStringAcross([]map[string]interface{}{input}, asymptoteobserve.ToolCallIDKeys...)
+}
+
+// applyToolCallID promotes a call ID carried at the top level of a hook payload,
+// which is where Claude Code puts tool_use_id -- outside tool_input, so no
+// amount of reading the tool arguments would ever have found it.
+//
+// The envelope is the only source of a call ID anywhere in the hook path, so
+// this is a plain promotion rather than a contest between sources. Tool
+// arguments were once read too, which let a tool parameter that happened to be
+// called call_id become the join key and shut out the runtime's real
+// tool_use_id; that read is gone rather than merely outranked, because a tool
+// parameter is not weaker evidence of identity, it is not evidence at all.
+//
+// Only an event that already describes a tool action takes one. A session
+// lifecycle payload that happens to echo an ID is not a tool call, and giving it
+// the join key of one would join it to work it did not do.
+func applyToolCallID(fields, input map[string]interface{}) {
+	if fields == nil || !describesToolAction(fields) {
+		return
+	}
+	if callID := toolCallIDFromEnvelope(input); callID != "" {
+		setToolCallID(fields, callID)
+	}
+}
+
+func describesToolAction(fields map[string]interface{}) bool {
+	for _, key := range []string{"tool", "command", "file", "mcp"} {
+		if value, ok := fields[key].(map[string]interface{}); ok && len(value) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// setToolCallID writes gen_ai.tool.call.id, creating the objects on the way down
+// and leaving whatever is already in them alone. mergeNested cannot do this: it
+// is a one-level merge, so writing the call through it would replace the whole
+// tool object and drop the name and arguments an MCP event puts there.
+func setToolCallID(fields map[string]interface{}, callID string) {
+	genAI := mutableChild(fields["gen_ai"])
+	tool := mutableChild(genAI["tool"])
+	call := mutableChild(tool["call"])
+	call["id"] = callID
+	tool["call"] = call
+	genAI["tool"] = tool
+	fields["gen_ai"] = genAI
+}
+
+func mutableChild(value interface{}) map[string]interface{} {
+	if existing, ok := value.(map[string]interface{}); ok && existing != nil {
+		return existing
+	}
+	return map[string]interface{}{}
+}
+
+func mcpToolFields(toolName string, toolInput, toolResponse map[string]interface{}) map[string]interface{} {
+	maps := []map[string]interface{}{toolInput, toolResponse}
+	mcpServer := firstToolStringAcross(maps, "mcp_server", "mcp_server_name", "mcp.server", "mcp.server.name")
+	mcpTool := firstToolStringAcross(maps, "mcp_tool", "mcp_tool_name", "mcp.tool", "mcp.tool.name")
+	mcpMethod := firstToolStringAcross(maps, "mcp.method.name", "mcp_method_name", "mcp_method")
+	mcpProtocol := firstToolStringAcross(maps, "mcp.protocol.version", "mcp_protocol_version")
+	mcpResource := firstToolStringAcross(maps, "mcp.resource.uri", "mcp_resource_uri")
+	mcpSession := firstToolStringAcross(maps, "mcp.session.id", "mcp_session_id")
+	hasCascadeServerToolPair := isCascadePlatform(platformFlag) && firstToolStringAcross(maps, "server_name") != "" && firstToolStringAcross(maps, "tool_name") != ""
+	// OpenHands calls an MCP tool by whatever name its server gave it, with no prefix and no
+	// mcp_* argument, so every signal above misses it and the call would be recorded as an
+	// ordinary tool.invoked. Its result says so instead: tool observations are pydantic dumps
+	// carrying a `kind` discriminator, and an MCP call returns MCPToolObservation. Keyed on the
+	// platform like the Cascade pair above, because `kind` is a key other runtimes use for other
+	// things.
+	hasOpenHandsMCPObservation := platformFlag == openHandsPlatform && openHandsIsMCPToolCall(toolResponse)
+	// Kiro says so in the tool name, which is the easy case -- but it says it with a prefix no
+	// generic signal above recognizes: `@postgres/query` contains no "mcp", carries no mcp_*
+	// argument, and comes back with whatever the server returned. Keyed on the platform because a
+	// leading "@" is Kiro's convention and not a general one.
+	hasKiroMCPToolName := platformFlag == kiroPlatform && kiroIsMCPToolName(toolName)
+	// goose says so in the tool name too, but only by exclusion. It calls an MCP tool
+	// `<extension>__<tool>` with no "mcp" anywhere, no mcp_* argument, and -- since goose populates
+	// no tool output at all -- no result to inspect. What identifies the call is that the prefix is
+	// not one of goose's built-in extensions. Keyed on the platform because `a__b` is goose's
+	// convention and not a general one.
+	hasGooseMCPToolName := platformFlag == goosePlatform && gooseIsMCPToolName(toolName)
+
+	server := firstToolStringAcross([]map[string]interface{}{toolInput, toolResponse}, "server", "server_name", "mcp_server", "mcp_server_name", "mcp.server", "mcp.server.name")
+	tool := firstToolStringAcross([]map[string]interface{}{toolInput, toolResponse}, "tool", "tool_name", "function_name", "mcp_tool", "mcp_tool_name", "mcp.tool", "mcp.tool.name", "gen_ai.tool.name")
+	genericToolName := firstToolStringAcross([]map[string]interface{}{toolInput, toolResponse}, "name")
+	method := firstToolStringAcross([]map[string]interface{}{toolInput, toolResponse}, "mcp.method.name", "mcp_method_name", "mcp_method", "method_name", "method")
+	protocol := firstToolStringAcross([]map[string]interface{}{toolInput, toolResponse}, "mcp.protocol.version", "mcp_protocol_version", "protocol_version")
+	resource := firstToolStringAcross([]map[string]interface{}{toolInput, toolResponse}, "mcp.resource.uri", "mcp_resource_uri", "resource_uri", "uri")
+	session := firstToolStringAcross([]map[string]interface{}{toolInput, toolResponse}, "mcp.session.id", "mcp_session_id")
+
+	if hasKiroMCPToolName {
+		// Read before the shared derivation rather than after, because deriveMCPServerTool
+		// recognizes only the `mcp:` and `mcp__` spellings and would leave both halves empty for
+		// an `@server/tool` name -- recording an MCP call whose server and tool are blank.
+		if server == "" || tool == "" {
+			derivedServer, derivedTool, _ := kiroMCPServerTool(toolName)
+			if server == "" {
+				server = derivedServer
+			}
+			if tool == "" {
+				tool = derivedTool
+			}
+		}
+	}
+	if hasGooseMCPToolName {
+		// Same placement and the same reason as Kiro just above: the shared derivation matches
+		// `mcp__` and `mcp:` and would find neither half of `github__create_issue`, recording an
+		// MCP call whose server and tool are blank.
+		if server == "" || tool == "" {
+			derivedServer, derivedTool := gooseMCPServerTool(toolName)
+			if server == "" {
+				server = derivedServer
+			}
+			if tool == "" {
+				tool = derivedTool
+			}
+		}
+	}
+	if derivedServer, derivedTool := deriveMCPServerTool(toolName); derivedServer != "" || derivedTool != "" {
+		if server == "" {
+			server = derivedServer
+		}
+		if tool == "" {
+			tool = derivedTool
+		}
+	}
+
+	isMCP := mcpServer != "" || mcpTool != "" || mcpMethod != "" || mcpProtocol != "" || mcpResource != "" || mcpSession != "" || hasCascadeServerToolPair || hasOpenHandsMCPObservation || hasKiroMCPToolName || hasGooseMCPToolName || strings.Contains(strings.ToLower(toolName), "mcp")
+	if !isMCP {
+		return nil
+	}
+	if tool == "" {
+		tool = genericToolName
+	}
+	if method == "" {
+		method = "tools/call"
+	}
+	out := map[string]interface{}{"server": server, "tool": tool}
+	if method != "" {
+		out["method"] = map[string]interface{}{"name": method}
+	}
+	if protocol != "" {
+		out["protocol"] = map[string]interface{}{"version": protocol}
+	}
+	if resource != "" {
+		out["resource"] = map[string]interface{}{"uri": resource}
+	}
+	if session != "" {
+		out["session"] = map[string]interface{}{"id": session}
+	}
+	return out
+}
+
+func deriveMCPServerTool(toolName string) (string, string) {
+	trimmed := strings.TrimSpace(toolName)
+	lower := strings.ToLower(trimmed)
+	if strings.HasPrefix(lower, "mcp:") {
+		return "", strings.TrimSpace(trimmed[len("MCP:"):])
+	}
+	if strings.HasPrefix(lower, "mcp__") {
+		parts := strings.Split(trimmed, "__")
+		if len(parts) >= 3 {
+			return parts[1], strings.Join(parts[2:], "__")
+		}
+	}
+	return "", ""
+}
+
+func genAIToolFields(tool string, toolInput, toolResponse map[string]interface{}) map[string]interface{} {
+	genAI := map[string]interface{}{
+		"operation": map[string]interface{}{"name": "execute_tool"},
+	}
+	toolInfo := map[string]interface{}{}
+	if tool != "" {
+		toolInfo["name"] = tool
+	}
+	call := map[string]interface{}{}
+	if len(toolInput) > 0 {
+		call["arguments"] = toolInput
+	}
+	if len(toolResponse) > 0 {
+		call["result"] = toolResponse
+	}
+	if len(call) > 0 {
+		toolInfo["call"] = call
+	}
+	if len(toolInfo) > 0 {
+		genAI["tool"] = toolInfo
+	}
+	return genAI
+}
+
+func mcpStandardFields(toolInput, toolResponse map[string]interface{}) map[string]interface{} {
+	fields := map[string]interface{}{}
+	maps := []map[string]interface{}{toolInput, toolResponse}
+	if errorType := mcpErrorType(toolResponse); errorType != "" {
+		fields["error"] = map[string]interface{}{"type": errorType}
+	} else if errorType := firstToolStringAcross(maps, "error.type", "error_type"); errorType != "" {
+		fields["error"] = map[string]interface{}{"type": errorType}
+	}
+	jsonrpc := map[string]interface{}{}
+	if id := firstToolStringAcross(maps, "jsonrpc.request.id", "jsonrpc_request_id", "request_id"); id != "" {
+		jsonrpc["request"] = map[string]interface{}{"id": id}
+	}
+	if version := firstToolStringAcross(maps, "jsonrpc.protocol.version", "jsonrpc_protocol_version", "jsonrpc"); version != "" {
+		jsonrpc["protocol"] = map[string]interface{}{"version": version}
+	}
+	if len(jsonrpc) > 0 {
+		fields["jsonrpc"] = jsonrpc
+	}
+	network := map[string]interface{}{}
+	networkProtocol := map[string]interface{}{}
+	if name := firstToolStringAcross(maps, "network.protocol.name", "network_protocol_name"); name != "" {
+		networkProtocol["name"] = strings.ToLower(name)
+	}
+	if version := firstToolStringAcross(maps, "network.protocol.version", "network_protocol_version"); version != "" {
+		networkProtocol["version"] = version
+	}
+	if len(networkProtocol) > 0 {
+		network["protocol"] = networkProtocol
+	}
+	if transport := firstToolStringAcross(maps, "network.transport", "network_transport", "transport"); transport != "" {
+		network["transport"] = strings.ToLower(transport)
+	}
+	if len(network) > 0 {
+		fields["network"] = network
+	}
+	if status := firstToolStringAcross(maps, "rpc.response.status_code", "rpc_response_status_code", "status_code"); status != "" {
+		fields["rpc"] = map[string]interface{}{"response": map[string]interface{}{"status_code": status}}
+	}
+	server := map[string]interface{}{}
+	if address := firstToolStringAcross(maps, "server.address", "server_address", "serverAddress", "address"); address != "" {
+		server["address"] = address
+	}
+	if port, ok := firstToolIntAcross(maps, "server.port", "server_port", "serverPort", "port"); ok {
+		server["port"] = port
+	}
+	if len(server) > 0 {
+		fields["server"] = server
+	}
+	return fields
+}
+
+func mcpErrorType(toolResponse map[string]interface{}) string {
+	if toolResponse == nil {
+		return ""
+	}
+	if errorType := firstToolString(toolResponse, "error.type", "error_type"); errorType != "" {
+		return errorType
+	}
+	if isError := firstToolString(toolResponse, "isError", "is_error"); strings.EqualFold(isError, "true") {
+		return "tool_error"
+	}
+	if mcpHasErrorValue(toolResponse, "error") {
+		return "tool_error"
+	}
+	return ""
+}
+
+func mcpHasErrorValue(toolResponse map[string]interface{}, key string) bool {
+	value, ok := toolResponse[key]
+	if !ok || value == nil {
+		return false
+	}
+	if boolValue, ok := value.(bool); ok {
+		return boolValue
+	}
+	return normalizeToolString(value) != ""
+}
+
+func diffFields(filePath, diffStr string) map[string]interface{} {
+	if filePath == "" {
+		return nil
+	}
+	file := map[string]interface{}{
+		"path":      filePath,
+		"operation": "modify",
+		"language":  strings.TrimPrefix(filepath.Ext(filePath), "."),
+	}
+	fields := map[string]interface{}{"file": file}
+	if diffStr != "" {
+		sum := sha256.Sum256([]byte(diffStr))
+		file["diff_hash"] = hex.EncodeToString(sum[:])
+		file["diff_bytes"] = len(diffStr)
+		file["diff"] = diffStr
+		// diff_hash and diff_bytes already describe the original diff; the marker
+		// adds what they cannot say -- whether the stored copy is the whole diff,
+		// and whether redaction rewrote part of it.
+		fields["content"] = retainedContentFields(diffStr)
+	}
+	return fields
+}
+
+func mergeNested(existing interface{}, values map[string]interface{}) map[string]interface{} {
+	out := map[string]interface{}{}
+	if current, ok := existing.(map[string]interface{}); ok {
+		for key, value := range current {
+			out[key] = value
+		}
+	}
+	for key, value := range values {
+		if value != "" && value != nil {
+			out[key] = value
+		}
+	}
+	return out
+}
+
+func firstToolString(input map[string]interface{}, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := input[key]; ok {
+			if str := normalizeToolString(value); str != "" {
+				return str
+			}
+		}
+	}
+	return ""
+}
+
+func firstToolStringAcross(inputs []map[string]interface{}, keys ...string) string {
+	for _, input := range inputs {
+		if input == nil {
+			continue
+		}
+		if value := firstToolString(input, keys...); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func firstToolIntAcross(inputs []map[string]interface{}, keys ...string) (int, bool) {
+	for _, input := range inputs {
+		if input == nil {
+			continue
+		}
+		for _, key := range keys {
+			value, ok := input[key]
+			if !ok {
+				continue
+			}
+			switch typed := value.(type) {
+			case int:
+				return typed, true
+			case int64:
+				return int(typed), true
+			case float64:
+				return int(typed), true
+			case string:
+				parsed, err := strconv.Atoi(strings.TrimSpace(typed))
+				if err == nil {
+					return parsed, true
+				}
+			}
+		}
+	}
+	return 0, false
+}
+
+func firstNestedString(input map[string]interface{}, key string) string {
+	if input == nil {
+		return ""
+	}
+	value, ok := input[key]
+	if !ok {
+		return ""
+	}
+	return normalizeToolString(value)
+}
+
+func normalizeToolString(value interface{}) string {
+	str := strings.TrimSpace(fmt.Sprint(value))
+	if str == "" || str == "<nil>" {
+		return ""
+	}
+	return strings.Trim(strings.TrimSpace(str), `"`)
+}
+
+// fileOperation classifies what a tool did to the file it named.
+//
+// toolInput is part of the question rather than extra context: a runtime is free to multiplex
+// several operations onto one tool name and select between them with an argument, and OpenHands
+// does exactly that -- `file_editor` is a read with command="view" and a write with
+// command="str_replace". A classifier that only sees the name is wrong on one of those two
+// whichever way it answers, so the arguments have to be in reach. Callers with nothing to pass
+// give nil.
+func fileOperation(toolName string, toolInput map[string]interface{}) string {
+	if platformFlag == "qwen" {
+		if operation := qwenFileOperation(toolName); operation != "" {
+			return operation
+		}
+	}
+	if platformFlag == openHandsPlatform {
+		if operation := openHandsFileOperation(toolName, toolInput, nil); operation != "" {
+			return operation
+		}
+	}
+	if platformFlag == kiroPlatform {
+		if operation := kiroFileOperation(toolName, toolInput, nil); operation != "" {
+			return operation
+		}
+	}
+	if platformFlag == goosePlatform {
+		if operation := gooseFileOperation(toolName, toolInput); operation != "" {
+			return operation
+		}
+	}
+	// DeepSeek Harness needs the arguments for the reason this function takes them at all: its
+	// `str_replace_editor` is one name over four operations, one of which is a read.
+	if platformFlag == dshPlatform {
+		if operation := dshFileOperation(toolName, toolInput); operation != "" {
+			return operation
+		}
+		if _, known := dshToolKindFor(toolName); known {
+			return ""
+		}
+	}
+	// Kimi Code needs the arguments for the reason this function takes them at all: its `Write`
+	// is a create or a modify depending on a `mode` argument. The known-name short circuit below
+	// it is what keeps `CronCreate`, `CronList`, `TaskList` and `TodoList` away from the substring
+	// rules, which would answer "create" and "read" for tools that touch no file.
+	if platformFlag == kimiPlatform {
+		if operation := kimiFileOperation(toolName, toolInput); operation != "" {
+			return operation
+		}
+		if _, known := kimiToolKindFor(toolName); known {
+			return ""
+		}
+	}
+	lower := strings.ToLower(toolName)
+	switch {
+	case strings.Contains(lower, "read") || strings.Contains(lower, "view") || strings.Contains(lower, "list") || strings.Contains(lower, "grep") || strings.Contains(lower, "search"):
+		return "read"
+	case strings.Contains(lower, "write") || strings.Contains(lower, "create"):
+		return "create"
+	case strings.Contains(lower, "edit") || strings.Contains(lower, "patch"):
+		return "modify"
+	default:
+		return ""
+	}
+}
+
+// actionForTool classifies a tool call as an endpoint event action.
+//
+// toolInput and toolResponse are read for the same reason fileOperation reads the arguments, and
+// for one more: on a runtime that does not decorate MCP tool names, the only thing that says a
+// call went to an MCP server is the result it came back with. Callers with neither give nil.
+func actionForTool(hookEvent, toolName string, toolInput, toolResponse map[string]interface{}) string {
+	lower := strings.ToLower(toolName)
+	if platformFlag == openHandsPlatform {
+		if action := openHandsToolAction(toolName, toolInput, toolResponse); action != "" {
+			return action
+		}
+	}
+	if platformFlag == kiroPlatform {
+		if action := kiroToolAction(toolName, toolInput, toolResponse); action != "" {
+			return action
+		}
+	}
+	if platformFlag == goosePlatform {
+		// Asked before the failure checks other runtimes do here, and it needs none of its own:
+		// goose reports a failed call as a different event, and emitPostToolObserved has already
+		// classified that as tool.failed and returned before reaching this function.
+		if action := gooseToolAction(toolName, toolInput); action != "" {
+			return action
+		}
+	}
+	if platformFlag == dshPlatform {
+		// No failure check of its own, and unlike goose that is not because the failure arrives as
+		// a different event -- the DeepSeek Harness bridge sends no failure signal at all. See the
+		// note on parseDshEdit.
+		if action := dshToolAction(toolName, toolInput); action != "" {
+			return action
+		}
+	}
+	if platformFlag == kimiPlatform {
+		// No failure check of its own, and unlike grok and qwen below that is not an omission:
+		// Kimi Code reports a failure as a different event, and emitPostToolObserved has already
+		// classified that as tool.failed and returned before reaching this function.
+		if action := kimiToolAction(toolName, toolInput); action != "" {
+			return action
+		}
+	}
+	if platformFlag == "grok" {
+		if hookEvent == "post_tool_use_failure" {
+			return "tool.failed"
+		}
+		switch lower {
+		case "run_terminal_command":
+			return "command.executed"
+		case "read_file":
+			return "file.read"
+		case "search_replace", "write_file":
+			return "file.modified"
+		}
+	}
+	if isDevinLikePlatform(platformFlag) {
+		switch {
+		case strings.HasPrefix(lower, "mcp__"):
+			return "mcp.tool_invoked"
+		case lower == "exec":
+			return "command.executed"
+		case lower == "read":
+			return "file.read"
+		case lower == "edit" || lower == "write":
+			return "file.modified"
+		}
+	}
+	if platformFlag == "qwen" {
+		// PostToolUseFailure is classified before the tool id, so a failed edit is recorded as a
+		// failure rather than as a successful file.modified. Same ordering as grok, for the same
+		// reason: the tool name says what was attempted, not whether it worked.
+		if hookEvent == "PostToolUseFailure" {
+			return "tool.failed"
+		}
+		if action := qwenToolAction(toolName); action != "" {
+			return action
+		}
+	}
+	if platformFlag == "antigravity" {
+		switch lower {
+		case "run_command":
+			return "command.executed"
+		case "view_file", "list_dir", "grep_search", "find_by_name":
+			return "file.read"
+		case "edit_file", "write_file", "apply_patch":
+			return "file.modified"
+		}
+	}
+	switch {
+	case strings.Contains(lower, "mcp"):
+		return "mcp.tool_invoked"
+	case lower == "bash" || strings.Contains(lower, "shell") || strings.Contains(lower, "terminal") || strings.Contains(lower, "command"):
+		return "command.executed"
+	case strings.Contains(lower, "read"):
+		return "file.read"
+	case isFileEditTool(platformFlag, toolName) || hookEvent == "afterFileEdit":
+		return "file.modified"
+	default:
+		return "tool.invoked"
+	}
+}

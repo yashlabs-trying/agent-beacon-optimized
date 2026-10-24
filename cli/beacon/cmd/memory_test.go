@@ -1,0 +1,970 @@
+package cmd
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning"
+	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve"
+)
+
+func TestMemoryEvaluationCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"memory", "list"},
+		{"memory", "show"},
+		{"memory", "evaluations", "run"},
+		{"memory", "evaluations", "list"},
+		{"memory", "evaluations", "show"},
+		{"memory", "candidates", "list"},
+		{"memory", "candidates", "show"},
+		{"memory", "candidates", "create"},
+		{"memory", "candidates", "approve"},
+		{"memory", "candidates", "reject"},
+		{"memory", "candidates", "supersede"},
+		{"memory", "skills", "preview"},
+		{"memory", "skills", "install"},
+	} {
+		cmd, _, err := rootCmd.Find(path)
+		if err != nil || cmd == nil {
+			t.Fatalf("command %v not registered: %v", path, err)
+		}
+	}
+}
+
+func TestMemoryEvaluationsRunDryRunPreviewsCost(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	resetMemoryOpts(t)
+	memoryOpts.userMode = true
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = project
+	memoryOpts.traceID = "session:cursor:s1"
+	memoryOpts.dryRun = true
+	memoryOpts.jsonOutput = true
+	memoryOpts.costPerTrace = 0.01
+
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	if err := runMemoryEvaluationsRun(cmd, nil); err != nil {
+		t.Fatalf("runMemoryEvaluationsRun returned error: %v", err)
+	}
+	var result evaluationRunResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("decode result: %v\n%s", err, out.String())
+	}
+	if !result.DryRun || result.TraceCount != 1 || result.EstimatedCostUSD != 0.01 {
+		t.Fatalf("result = %#v", result)
+	}
+	if _, err := os.Stat(learning.PathForRuntimeLog(logPath)); !os.IsNotExist(err) {
+		t.Fatalf("dry-run should not create memory store, stat err=%v", err)
+	}
+}
+
+func TestMemoryEvaluationsRunPersistsMockedJevResult(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer test-key" {
+			t.Fatalf("missing auth header: %s", r.Header.Get("Authorization"))
+		}
+		_, _ = w.Write([]byte(`{"questions":[{"id":"task_success","probability":0.9},{"id":"reusable_correction","probability":0.8},{"id":"evidence_supported","probability":0.7}]}`))
+	}))
+	defer server.Close()
+
+	resetMemoryOpts(t)
+	memoryOpts.userMode = true
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = project
+	memoryOpts.traceID = "session:cursor:s1"
+	memoryOpts.jsonOutput = true
+	memoryOpts.jevEndpoint = server.URL
+	memoryOpts.jevAPIKey = "test-key"
+	memoryOpts.jevModel = "jev-test"
+	memoryOpts.costPerTrace = learning.DefaultCostPerTrace
+
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	if err := runMemoryEvaluationsRun(cmd, nil); err != nil {
+		t.Fatalf("runMemoryEvaluationsRun returned error: %v", err)
+	}
+	var result evaluationRunResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("decode result: %v\n%s", err, out.String())
+	}
+	if len(result.Evaluations) != 1 || result.Evaluations[0].Score < 0.79 || result.Evaluations[0].Score > 0.81 {
+		t.Fatalf("evaluations = %#v", result.Evaluations)
+	}
+	if len(result.Candidates) != 1 || result.Candidates[0].State != "candidate" {
+		t.Fatalf("candidates = %#v", result.Candidates)
+	}
+
+	memoryOpts.query = "session:cursor:s1"
+	list, err := memoryStore().ListEvaluations(learning.Query{ProjectID: result.Project.ID, Q: "cursor"})
+	if err != nil {
+		t.Fatalf("ListEvaluations: %v", err)
+	}
+	if len(list) != 1 || !strings.HasPrefix(list[0].ID, "eval_") {
+		t.Fatalf("persisted evaluations = %#v", list)
+	}
+}
+
+// Issue #649: a trace the judge scored as failed must not become a candidate even
+// when the mean clears the score threshold. The stored and printed score is the
+// unchanged mean; only the promotion decision applies the task_success gate.
+func TestMemoryEvaluationsRunDoesNotPromoteFailedTask(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		answers        string
+		wantScore      string
+		wantTextScore  string
+		wantCandidates int
+		wantNote       string
+	}{
+		{
+			name:          "failed task clears the mean",
+			answers:       `{"answers":{"task_success":{"type":"noul","noul":0.27},"reusable_correction":{"type":"noul","noul":0.86},"evidence_supported":{"type":"noul","noul":0.69}}}`,
+			wantScore:     "0.6067",
+			wantTextScore: "0.61",
+			wantNote:      "(task_success 0.27 is below 0.50)",
+		},
+		{
+			name:           "successful task still promotes",
+			answers:        `{"answers":{"task_success":{"type":"noul","noul":0.9},"reusable_correction":{"type":"noul","noul":0.8},"evidence_supported":{"type":"noul","noul":0.7}}}`,
+			wantScore:      "0.8000",
+			wantTextScore:  "0.80",
+			wantCandidates: 1,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, jsonOutput := range []bool{true, false} {
+				logPath, project := writeMemoryCommandFixture(t)
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					_, _ = w.Write([]byte(tc.answers))
+				}))
+				resetMemoryOpts(t)
+				memoryOpts.userMode = true
+				memoryOpts.logPath = logPath
+				memoryOpts.projectPath = project
+				memoryOpts.traceID = "session:cursor:s1"
+				memoryOpts.jsonOutput = jsonOutput
+				memoryOpts.jevEndpoint = server.URL
+				memoryOpts.jevAPIKey = "test-key"
+
+				var out bytes.Buffer
+				cmd := &cobra.Command{}
+				cmd.SetOut(&out)
+				err := runMemoryEvaluationsRun(cmd, nil)
+				server.Close()
+				if err != nil {
+					t.Fatalf("runMemoryEvaluationsRun(json=%v) returned error: %v", jsonOutput, err)
+				}
+				if jsonOutput {
+					var result evaluationRunResult
+					if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+						t.Fatalf("decode result: %v\n%s", err, out.String())
+					}
+					if len(result.Evaluations) != 1 || fmt.Sprintf("%.4f", result.Evaluations[0].Score) != tc.wantScore {
+						t.Fatalf("evaluations = %#v, want one with score %s", result.Evaluations, tc.wantScore)
+					}
+					if len(result.Candidates) != tc.wantCandidates {
+						t.Fatalf("candidates = %#v, want %d", result.Candidates, tc.wantCandidates)
+					}
+				} else {
+					text := out.String()
+					if !strings.Contains(text, "\t"+tc.wantTextScore+"\t") {
+						t.Fatalf("text output does not print the unchanged score %s:\n%s", tc.wantTextScore, text)
+					}
+					switch {
+					case tc.wantNote != "" && !strings.Contains(text, "Not promoted: eval_"):
+						t.Fatalf("text output does not say the evaluation was not promoted:\n%s", text)
+					case tc.wantNote != "" && !strings.Contains(text, tc.wantNote):
+						t.Fatalf("text output missing the gate reason %q:\n%s", tc.wantNote, text)
+					case tc.wantNote == "" && strings.Contains(text, "Not promoted:"):
+						t.Fatalf("promoted evaluation reported as not promoted:\n%s", text)
+					}
+				}
+				stored, err := memoryStore().ListCandidates(learning.Query{ProjectPath: project})
+				if err != nil {
+					t.Fatalf("ListCandidates: %v", err)
+				}
+				if len(stored) != tc.wantCandidates {
+					t.Fatalf("stored candidates = %#v, want %d", stored, tc.wantCandidates)
+				}
+			}
+		})
+	}
+}
+
+func TestMemoryCandidatesApproveCommand(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	resetMemoryOpts(t)
+	memoryOpts.userMode = true
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = project
+	candidate := testCommandCandidate(t)
+	if err := memoryStore().PutCandidate(candidate); err != nil {
+		t.Fatal(err)
+	}
+	memoryOpts.reason = "reviewed"
+	memoryOpts.jsonOutput = true
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	if err := runMemoryCandidatesApprove(cmd, []string{candidate.ID}); err != nil {
+		t.Fatalf("runMemoryCandidatesApprove returned error: %v", err)
+	}
+	if !strings.Contains(out.String(), `"memory"`) || !strings.Contains(out.String(), `"approved"`) {
+		t.Fatalf("unexpected approve output: %s", out.String())
+	}
+}
+
+func TestMemoryApproveWithEditsThenListAndShow(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	resetMemoryOpts(t)
+	memoryOpts.userMode = true
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = project
+	candidate := testCommandCandidate(t)
+	resolved, err := learning.ResolveProject(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidate.Project = resolved
+	if err := memoryStore().PutCandidate(candidate); err != nil {
+		t.Fatal(err)
+	}
+	bodyFile := filepath.Join(t.TempDir(), "lesson.md")
+	if err := os.WriteFile(bodyFile, []byte("Rerun package smoke once when the failure is a launchctl timeout.\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	memoryOpts.title = "Package smoke launchctl timeouts are transient"
+	memoryOpts.bodyFile = bodyFile
+	memoryOpts.kind = asymptoteobserve.LearningMemoryKindGotcha
+	memoryOpts.tags = []string{"packaging"}
+	memoryOpts.jsonOutput = true
+	var approveOut bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&approveOut)
+	if err := runMemoryCandidatesApprove(cmd, []string{candidate.ID}); err != nil {
+		t.Fatalf("runMemoryCandidatesApprove returned error: %v", err)
+	}
+	var approved struct {
+		Memory asymptoteobserve.LearningMemoryV1 `json:"memory"`
+	}
+	if err := json.Unmarshal(approveOut.Bytes(), &approved); err != nil {
+		t.Fatal(err)
+	}
+	if approved.Memory.Body != "Rerun package smoke once when the failure is a launchctl timeout." || approved.Memory.Kind != asymptoteobserve.LearningMemoryKindGotcha {
+		t.Fatalf("approved memory = %#v", approved.Memory)
+	}
+
+	memoryOpts.kind = ""
+	memoryOpts.query = "launchctl"
+	var listOut bytes.Buffer
+	cmd.SetOut(&listOut)
+	if err := runMemoryList(cmd, nil); err != nil {
+		t.Fatalf("runMemoryList returned error: %v", err)
+	}
+	var listed []asymptoteobserve.LearningMemoryV1
+	if err := json.Unmarshal(listOut.Bytes(), &listed); err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 1 || listed[0].ID != approved.Memory.ID {
+		t.Fatalf("listed = %#v", listed)
+	}
+
+	memoryOpts.jsonOutput = false
+	var showOut bytes.Buffer
+	cmd.SetOut(&showOut)
+	if err := runMemoryShow(cmd, []string{approved.Memory.ID}); err != nil {
+		t.Fatalf("runMemoryShow returned error: %v", err)
+	}
+	if !strings.Contains(showOut.String(), "launchctl timeout") || !strings.Contains(showOut.String(), "Trace trace-command") {
+		t.Fatalf("show output = %s", showOut.String())
+	}
+	if err := runMemoryShow(cmd, []string{"memory_missing"}); err == nil {
+		t.Fatal("showing an unknown memory should fail")
+	}
+}
+
+func TestMemoryApproveRefusesBodyAndBodyFile(t *testing.T) {
+	resetMemoryOpts(t)
+	memoryOpts.body = "inline"
+	memoryOpts.bodyFile = "-"
+	if _, err := memoryApprovalEdits(&cobra.Command{}); err == nil {
+		t.Fatal("--body with --body-file should be refused")
+	}
+}
+
+func TestMemorySkillsPreviewAndInstallCommands(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	resetMemoryOpts(t)
+	memoryOpts.userMode = true
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = project
+	candidate, memory := testApprovedCommandMemory()
+	store := memoryStore()
+	if err := store.PutCandidate(candidate); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.PutMemory(memory); err != nil {
+		t.Fatal(err)
+	}
+
+	var preview bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&preview)
+	if err := runMemorySkillsPreview(cmd, []string{candidate.ID}); err != nil {
+		t.Fatalf("runMemorySkillsPreview returned error: %v", err)
+	}
+	if !strings.Contains(preview.String(), "beacon_memory_id") || !strings.Contains(preview.String(), "Retry package smoke") {
+		t.Fatalf("preview output = %s", preview.String())
+	}
+
+	var install bytes.Buffer
+	cmd.SetOut(&install)
+	if err := runMemorySkillsInstall(cmd, []string{candidate.ID}); err != nil {
+		t.Fatalf("runMemorySkillsInstall returned error: %v", err)
+	}
+	if !strings.Contains(install.String(), ".agents") {
+		t.Fatalf("install output = %s", install.String())
+	}
+	if _, err := os.Stat(filepath.Join(project, ".agents", "skills", "beacon-debugging-pattern-retry-package-smoke", "SKILL.md")); err != nil {
+		t.Fatalf("installed skill missing: %v", err)
+	}
+}
+
+func writeMemoryCommandFixture(t *testing.T) (string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	project := filepath.Join(dir, "project")
+	if err := os.MkdirAll(filepath.Join(project, ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	logPath := filepath.Join(dir, "endpoint", "logs", "runtime.jsonl")
+	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	event := schema.Event{
+		Timestamp:     "2026-09-21T01:00:00Z",
+		Vendor:        schema.Vendor,
+		Product:       schema.Product,
+		SchemaVersion: schema.SchemaVersion,
+		Event:         schema.EventInfo{ID: "event-1", Kind: "agent_runtime", Action: "prompt.submitted", Category: "prompt"},
+		Severity:      schema.SeverityInfo,
+		Endpoint:      schema.EndpointInfo{OS: "darwin"},
+		Harness:       schema.HarnessInfo{Name: "cursor"},
+		Session:       &schema.SessionInfo{ID: "s1", WorkingDirectory: project},
+		Prompt:        &schema.PromptInfo{Text: "Fix flaky package smoke"},
+		Message:       "Fix flaky package smoke",
+		Repository:    project,
+	}
+	// A later OTLP metric sample with no session: it forms a single-event trace that
+	// sorts above the session and must not be selected for evaluation.
+	metric := schema.Event{
+		Timestamp:     "2026-09-21T02:00:00Z",
+		Vendor:        schema.Vendor,
+		Product:       schema.Product,
+		SchemaVersion: schema.SchemaVersion,
+		Event:         schema.EventInfo{ID: "metric-1", Kind: "agent_runtime", Action: "metric.observed", Category: "metric"},
+		Severity:      schema.SeverityInfo,
+		Endpoint:      schema.EndpointInfo{OS: "darwin"},
+		Harness:       schema.HarnessInfo{Name: "cursor"},
+		Message:       "cursor.active_time.total",
+	}
+	var lines []byte
+	for _, item := range []schema.Event{event, metric} {
+		line, err := json.Marshal(item)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines = append(append(lines, line...), '\n')
+	}
+	if err := os.WriteFile(logPath, lines, 0644); err != nil {
+		t.Fatal(err)
+	}
+	return logPath, project
+}
+
+func TestMemoryEvaluationsRunSkipsSessionlessTraces(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	resetMemoryOpts(t)
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = project
+	memoryOpts.dryRun = true
+	memoryOpts.jsonOutput = true
+
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	if err := runMemoryEvaluationsRun(cmd, nil); err != nil {
+		t.Fatalf("runMemoryEvaluationsRun returned error: %v", err)
+	}
+	var result evaluationRunResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("decode result: %v\n%s", err, out.String())
+	}
+	if result.TraceCount != 1 || len(result.Previews) != 1 || result.Previews[0].TraceID != "session:cursor:s1" {
+		t.Fatalf("expected only the session trace to be selected, got %#v", result)
+	}
+	if result.Project == nil || result.Project.Path != project || result.Previews[0].Project.ID != result.Project.ID {
+		t.Fatalf("with --project the result and every preview should name it, got %#v", result)
+	}
+}
+
+// Without --project each trace is scoped to its own repository, so the result must
+// not claim a single project that the stored records may not belong to.
+func TestMemoryEvaluationsRunReportsProjectOnlyWhenPinned(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	resetMemoryOpts(t)
+	memoryOpts.logPath = logPath
+	memoryOpts.dryRun = true
+	memoryOpts.jsonOutput = true
+
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	if err := runMemoryEvaluationsRun(cmd, nil); err != nil {
+		t.Fatalf("runMemoryEvaluationsRun returned error: %v", err)
+	}
+	var result evaluationRunResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("decode result: %v\n%s", err, out.String())
+	}
+	if result.Project != nil {
+		t.Fatalf("result should not name a project without --project, got %#v", result.Project)
+	}
+	want, err := learning.ResolveProject(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Previews) != 1 || result.Previews[0].Project.ID != want.ID {
+		t.Fatalf("preview should carry the trace's repository %s, got %#v", want.ID, result.Previews)
+	}
+}
+
+func TestMemoryCandidatesCreateScopesToTraceRepository(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	resetMemoryOpts(t)
+	memoryOpts.logPath = logPath
+	// No --project: the trace recorded its repository, so memory must land there and
+	// not in the reviewer's working directory.
+	memoryOpts.traceID = "session:cursor:s1"
+	memoryOpts.kind = asymptoteobserve.LearningMemoryKindDebuggingPattern
+	memoryOpts.title = "Retry package smoke once"
+	memoryOpts.bodyFile = "-"
+	memoryOpts.tags = []string{"smoke", "smoke", " "}
+	memoryOpts.jsonOutput = true
+
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	cmd.SetIn(strings.NewReader("Rerun package smoke once after confirming the failure is transient.\n"))
+	if err := runMemoryCandidatesCreate(cmd, nil); err != nil {
+		t.Fatalf("runMemoryCandidatesCreate returned error: %v", err)
+	}
+	var candidate asymptoteobserve.LearningCandidateV1
+	if err := json.Unmarshal(out.Bytes(), &candidate); err != nil {
+		t.Fatalf("decode candidate: %v\n%s", err, out.String())
+	}
+	want, err := learning.ResolveProject(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if candidate.Project.ID != want.ID {
+		t.Fatalf("candidate project = %#v, want %#v", candidate.Project, want)
+	}
+	if candidate.State != asymptoteobserve.LearningCandidateStateCandidate || candidate.SourceEvaluationID != "" {
+		t.Fatalf("candidate = %#v", candidate)
+	}
+	if candidate.Body != "Rerun package smoke once after confirming the failure is transient." {
+		t.Fatalf("body = %q", candidate.Body)
+	}
+	if len(candidate.Evidence) != 1 || candidate.Evidence[0].TraceID != "session:cursor:s1" || len(candidate.Evidence[0].EventIDs) != 1 {
+		t.Fatalf("evidence = %#v", candidate.Evidence)
+	}
+	if strings.Join(candidate.Tags, ",") != "smoke" {
+		t.Fatalf("tags = %#v", candidate.Tags)
+	}
+
+	stored, err := memoryStore().ListCandidates(learning.Query{ProjectID: want.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stored) != 1 || stored[0].ID != candidate.ID {
+		t.Fatalf("stored candidates = %#v", stored)
+	}
+
+	// The authored candidate approves like any other, and the memory carries its text.
+	memoryOpts.kind, memoryOpts.title, memoryOpts.bodyFile, memoryOpts.tags = "", "", "", nil
+	memoryOpts.reason = "reviewed"
+	var approved bytes.Buffer
+	cmd.SetOut(&approved)
+	if err := runMemoryCandidatesApprove(cmd, []string{candidate.ID}); err != nil {
+		t.Fatalf("runMemoryCandidatesApprove returned error: %v", err)
+	}
+	if !strings.Contains(approved.String(), `"approved"`) || !strings.Contains(approved.String(), "Rerun package smoke once") {
+		t.Fatalf("approve output = %s", approved.String())
+	}
+}
+
+func TestMemoryCandidatesCreateRejectsUnknownKind(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	resetMemoryOpts(t)
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = project
+	memoryOpts.traceID = "session:cursor:s1"
+	memoryOpts.kind = "anecdote"
+	memoryOpts.title = "t"
+	memoryOpts.body = "b"
+	cmd := &cobra.Command{}
+	cmd.SetOut(&bytes.Buffer{})
+	err := runMemoryCandidatesCreate(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "unknown memory kind") {
+		t.Fatalf("expected unknown kind error, got %v", err)
+	}
+	if _, statErr := os.Stat(learning.PathForRuntimeLog(logPath)); !os.IsNotExist(statErr) {
+		t.Fatalf("a rejected candidate must not create the store, stat err=%v", statErr)
+	}
+}
+
+func resetMemoryOpts(t *testing.T) {
+	t.Helper()
+	previous := memoryOpts
+	memoryOpts = struct {
+		userMode      bool
+		systemMode    bool
+		logPath       string
+		jsonOutput    bool
+		projectPath   string
+		limit         int
+		page          int
+		query         string
+		harness       string
+		traceID       string
+		since         string
+		until         string
+		dryRun        bool
+		evaluator     string
+		jevEndpoint   string
+		jevAPIKey     string
+		jevModel      string
+		costPerTrace  float64
+		subqEndpoint  string
+		subqAPIKey    string
+		subqModel     string
+		timeout       time.Duration
+		state         string
+		kind          string
+		reason        string
+		replacement   string
+		force         bool
+		title         string
+		body          string
+		bodyFile      string
+		applies       string
+		tags          []string
+		intelligent   bool
+		sufficiency   bool
+		semantic      bool
+		questionAware bool
+		question      string
+	}{userMode: true, limit: 25, page: 1, costPerTrace: learning.DefaultCostPerTrace}
+	t.Cleanup(func() { memoryOpts = previous })
+}
+
+func TestMemoryListQuestionAwareUsesFullQuestion(t *testing.T) {
+	logPath, projectPath := writeMemoryCommandFixture(t)
+	project, err := learning.ResolveProject(projectPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := learning.Open(learning.PathForRuntimeLog(logPath))
+	for _, m := range []asymptoteobserve.LearningMemoryV1{
+		{
+			ID: "convention", CandidateID: "candidate-convention", Project: project,
+			Kind: asymptoteobserve.LearningMemoryKindConvention, Title: "Worker convention",
+			Body: "All Rust workers use monotonic identifiers.", Tags: []string{"source:verified"},
+			Evidence: []asymptoteobserve.LearningEvidenceV1{{TraceID: "trace-convention"}},
+		},
+		{
+			ID: "noise", CandidateID: "candidate-noise", Project: project,
+			Kind: asymptoteobserve.LearningMemoryKindConvention, Title: "Shipping note",
+			Body: "The shipping group prefers tabs in config files.", Tags: []string{"source:verified"},
+			Evidence: []asymptoteobserve.LearningEvidenceV1{{TraceID: "trace-noise"}},
+		},
+	} {
+		if err := store.PutMemory(m); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	resetMemoryOpts(t)
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = projectPath
+	memoryOpts.query = "Rust workers"
+	memoryOpts.question = "A Rust worker is being added. Which convention should it follow?"
+	memoryOpts.questionAware = true
+	memoryOpts.jsonOutput = true
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	if err := runMemoryList(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	var result learning.QuestionResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("decode: %v: %s", err, out.String())
+	}
+	if result.Route != "lexical" || !result.Signals.Sufficient || len(result.Context.Items) != 1 || result.Context.Items[0].Memory.ID != "convention" {
+		t.Fatalf("question-aware CLI returned %+v", result)
+	}
+}
+
+func testCommandCandidate(t *testing.T) asymptoteobserve.LearningCandidateV1 {
+	t.Helper()
+	candidate, ok := learning.CandidateFromEvaluation(asymptoteobserve.LearningEvaluationV1{
+		SchemaVersion: asymptoteobserve.LearningSchemaVersion,
+		ID:            "eval-command",
+		Status:        asymptoteobserve.LearningEvaluationStatusCompleted,
+		Score:         0.9,
+		Project:       asymptoteobserve.LearningProjectV1{ID: "project-1"},
+		Trace: asymptoteobserve.LearningTraceRefV1{
+			ID:       "trace-command",
+			Title:    "Fix flaky package smoke",
+			Harness:  asymptoteobserve.TraceHarnessV1{Name: "cursor"},
+			EventIDs: []string{"event-1"},
+		},
+		Questions: []asymptoteobserve.LearningEvaluationQuestionV1{
+			{ID: "task_success", Probability: 0.9},
+			{ID: "reusable_correction", Probability: 0.9},
+			{ID: "evidence_supported", Probability: 0.9},
+		},
+	})
+	if !ok {
+		t.Fatal("candidate not created")
+	}
+	return candidate
+}
+
+func testApprovedCommandMemory() (asymptoteobserve.LearningCandidateV1, asymptoteobserve.LearningMemoryV1) {
+	project := asymptoteobserve.LearningProjectV1{ID: "project-1"}
+	evidence := []asymptoteobserve.LearningEvidenceV1{{TraceID: "trace-1", Summary: "Retry fixed a transient failure"}}
+	candidate := asymptoteobserve.LearningCandidateV1{
+		ID:       "candidate-approved",
+		MemoryID: "memory-approved",
+		State:    asymptoteobserve.LearningCandidateStateApproved,
+		Kind:     asymptoteobserve.LearningMemoryKindDebuggingPattern,
+		Title:    "Debugging pattern: Retry package smoke",
+		Body:     "Rerun package smoke once after confirming the error is transient.",
+		Project:  project,
+		Evidence: evidence,
+	}
+	memory := asymptoteobserve.LearningMemoryV1{
+		ID:            candidate.MemoryID,
+		CandidateID:   candidate.ID,
+		Kind:          candidate.Kind,
+		Title:         candidate.Title,
+		Body:          candidate.Body,
+		Applicability: "when package smoke fails transiently",
+		Tags:          []string{"beacon", "debugging_pattern"},
+		Project:       project,
+		Evidence:      evidence,
+	}
+	return candidate, memory
+}
+
+// Issue #620: evaluations stored by earlier releases carry reason "noul", the Jev
+// question type, not a rationale. The text view must not present it as one.
+func TestMemoryEvaluationsShowHidesPlaceholderReason(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	resetMemoryOpts(t)
+	memoryOpts.userMode = true
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = project
+	eval := asymptoteobserve.LearningEvaluationV1{
+		SchemaVersion: asymptoteobserve.LearningSchemaVersion,
+		ID:            "eval-placeholder",
+		Status:        asymptoteobserve.LearningEvaluationStatusCompleted,
+		Score:         0.7,
+		Project:       asymptoteobserve.LearningProjectV1{ID: "project-1"},
+		Trace:         asymptoteobserve.LearningTraceRefV1{ID: "trace-placeholder"},
+		Questions: []asymptoteobserve.LearningEvaluationQuestionV1{
+			{ID: "task_success", Probability: 0.43, Reason: "noul"},
+			{ID: "reusable_correction", Probability: 0.78, Reason: "Retry isolates the flaky step."},
+		},
+	}
+	if err := memoryStore().PutEvaluation(eval); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	if err := runMemoryEvaluationsShow(cmd, []string{eval.ID}); err != nil {
+		t.Fatalf("runMemoryEvaluationsShow returned error: %v", err)
+	}
+	if strings.Contains(out.String(), "noul") {
+		t.Fatalf("show printed the placeholder reason:\n%s", out.String())
+	}
+	if !strings.Contains(out.String(), "Retry isolates the flaky step.") {
+		t.Fatalf("show dropped a real reason:\n%s", out.String())
+	}
+}
+
+// The --jev-endpoint and --jev-model flags used to default to the hosted TypeSafe
+// values, so BEACON_JEV_ENDPOINT and BEACON_JEV_MODEL were never consulted even
+// though the docs and the --jev-api-key help text promise them. Leaving the flags
+// unset must fall through to the environment, then to the built-in defaults.
+func TestMemoryEvaluationsRunHonoursJevEnvironment(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	var gotModel string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer env-key" {
+			t.Errorf("Authorization = %q, want Bearer env-key", r.Header.Get("Authorization"))
+		}
+		var req struct {
+			Model string `json:"model"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		gotModel = req.Model
+		_, _ = w.Write([]byte(`{"model":"typesafe-ai/jev","answers":{"task_success":{"type":"noul","noul":0.9},"reusable_correction":{"type":"noul","noul":0.8},"evidence_supported":{"type":"noul","noul":0.7}}}`))
+	}))
+	defer server.Close()
+
+	t.Setenv("BEACON_JEV_ENDPOINT", server.URL)
+	t.Setenv("BEACON_JEV_MODEL", "typesafe-ai/jev")
+	t.Setenv("TYPESAFE_API_KEY", "env-key")
+	t.Setenv("BEACON_JEV_API_KEY", "")
+
+	resetMemoryOpts(t)
+	memoryOpts.userMode = true
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = project
+	memoryOpts.traceID = "session:cursor:s1"
+	memoryOpts.jsonOutput = true
+
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	if err := runMemoryEvaluationsRun(cmd, nil); err != nil {
+		t.Fatalf("runMemoryEvaluationsRun returned error: %v", err)
+	}
+	if gotModel != "typesafe-ai/jev" {
+		t.Fatalf("request model = %q, want typesafe-ai/jev", gotModel)
+	}
+	var result evaluationRunResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("decode result: %v\n%s", err, out.String())
+	}
+	if len(result.Evaluations) != 1 {
+		t.Fatalf("evaluations = %#v", result.Evaluations)
+	}
+	if got := result.Evaluations[0].Evaluator; !strings.Contains(got, server.URL) {
+		t.Fatalf("evaluator endpoint = %q, want it to reference %s", got, server.URL)
+	}
+}
+
+func TestJevEvaluatorOptionsPrecedence(t *testing.T) {
+	cases := []struct {
+		name         string
+		flagEndpoint string
+		flagModel    string
+		flagKey      string
+		env          map[string]string
+		wantEndpoint string
+		wantModel    string
+		wantKey      string
+	}{
+		{
+			name:         "defaults when nothing is set",
+			env:          map[string]string{"BEACON_JEV_ENDPOINT": "", "BEACON_JEV_MODEL": "", "TYPESAFE_API_KEY": "", "BEACON_JEV_API_KEY": ""},
+			wantEndpoint: learning.DefaultJevEndpoint,
+			wantModel:    learning.DefaultJevModel,
+		},
+		{
+			name: "environment overrides defaults",
+			env: map[string]string{
+				"BEACON_JEV_ENDPOINT": "https://gateway.example/typesafe/v1/systemone",
+				"BEACON_JEV_MODEL":    "typesafe-ai/jev",
+				"TYPESAFE_API_KEY":    "",
+				"BEACON_JEV_API_KEY":  "fallback-key",
+			},
+			wantEndpoint: "https://gateway.example/typesafe/v1/systemone",
+			wantModel:    "typesafe-ai/jev",
+			wantKey:      "fallback-key",
+		},
+		{
+			name:         "flags override environment",
+			flagEndpoint: "https://flag.example/v1/systemone",
+			flagModel:    "jev-1.13.0",
+			flagKey:      "flag-key",
+			env: map[string]string{
+				"BEACON_JEV_ENDPOINT": "https://gateway.example/typesafe/v1/systemone",
+				"BEACON_JEV_MODEL":    "typesafe-ai/jev",
+				"TYPESAFE_API_KEY":    "env-key",
+				"BEACON_JEV_API_KEY":  "fallback-key",
+			},
+			wantEndpoint: "https://flag.example/v1/systemone",
+			wantModel:    "jev-1.13.0",
+			wantKey:      "flag-key",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			resetMemoryOpts(t)
+			memoryOpts.jevEndpoint = tc.flagEndpoint
+			memoryOpts.jevModel = tc.flagModel
+			memoryOpts.jevAPIKey = tc.flagKey
+
+			got := jevEvaluatorOptions()
+			if got.Endpoint != tc.wantEndpoint || got.Model != tc.wantModel || got.APIKey != tc.wantKey {
+				t.Fatalf("jevEvaluatorOptions() = endpoint %q model %q key %q, want %q %q %q",
+					got.Endpoint, got.Model, got.APIKey, tc.wantEndpoint, tc.wantModel, tc.wantKey)
+			}
+		})
+	}
+}
+
+// SubQ's Decisions API is the same System One contract as Jev, so selecting it
+// must send the same request to the SubQ endpoint with SUBQ_API_KEY and record
+// the evaluation under the subq provider.
+func TestMemoryEvaluationsRunWithSubQ(t *testing.T) {
+	logPath, project := writeMemoryCommandFixture(t)
+	var gotModel string
+	var gotTypes []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer subq-key" {
+			t.Errorf("Authorization = %q, want Bearer subq-key", r.Header.Get("Authorization"))
+		}
+		var req struct {
+			Model     string                           `json:"model"`
+			Questions map[string]struct{ Type string } `json:"questions"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		gotModel = req.Model
+		for _, q := range req.Questions {
+			gotTypes = append(gotTypes, q.Type)
+		}
+		_, _ = w.Write([]byte(`{"model":"subq-snap-preview","answers":{"task_success":{"type":"noul","noul":0.9},"reusable_correction":{"type":"noul","noul":0.8},"evidence_supported":{"type":"noul","noul":0.7}},"usage":{"input_tokens":120,"output_tokens":0}}`))
+	}))
+	defer server.Close()
+
+	t.Setenv("BEACON_EVALUATOR", "subq")
+	t.Setenv("BEACON_SUBQ_ENDPOINT", server.URL)
+	t.Setenv("BEACON_SUBQ_MODEL", "")
+	t.Setenv("SUBQ_API_KEY", "subq-key")
+	t.Setenv("TYPESAFE_API_KEY", "jev-key-must-not-be-sent")
+
+	resetMemoryOpts(t)
+	memoryOpts.userMode = true
+	memoryOpts.logPath = logPath
+	memoryOpts.projectPath = project
+	memoryOpts.traceID = "session:cursor:s1"
+	memoryOpts.jsonOutput = true
+
+	var out bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&out)
+	if err := runMemoryEvaluationsRun(cmd, nil); err != nil {
+		t.Fatalf("runMemoryEvaluationsRun returned error: %v", err)
+	}
+	if gotModel != learning.DefaultSubQModel {
+		t.Fatalf("request model = %q, want %s", gotModel, learning.DefaultSubQModel)
+	}
+	if len(gotTypes) != len(learning.RubricQuestions) {
+		t.Fatalf("question types = %v", gotTypes)
+	}
+	for _, typ := range gotTypes {
+		if typ != "noul" {
+			t.Fatalf("question type = %q, want noul", typ)
+		}
+	}
+	var result evaluationRunResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("decode result: %v\n%s", err, out.String())
+	}
+	if len(result.Evaluations) != 1 {
+		t.Fatalf("evaluations = %#v", result.Evaluations)
+	}
+	if got, want := result.Evaluations[0].Evaluator, "subq:"+server.URL; got != want {
+		t.Fatalf("evaluator = %q, want %q", got, want)
+	}
+}
+
+func TestEvaluatorOptionsSelectsProvider(t *testing.T) {
+	for k, v := range map[string]string{
+		"BEACON_EVALUATOR": "", "BEACON_SUBQ_ENDPOINT": "", "BEACON_SUBQ_MODEL": "", "SUBQ_API_KEY": "", "BEACON_SUBQ_API_KEY": "fallback-subq",
+		"BEACON_JEV_ENDPOINT": "", "BEACON_JEV_MODEL": "", "TYPESAFE_API_KEY": "", "BEACON_JEV_API_KEY": "",
+	} {
+		t.Setenv(k, v)
+	}
+	resetMemoryOpts(t)
+	got, err := evaluatorOptions()
+	if err != nil || got.Provider != learning.ProviderJev || got.Endpoint != learning.DefaultJevEndpoint {
+		t.Fatalf("default evaluatorOptions() = %+v, %v; want Jev defaults", got, err)
+	}
+
+	memoryOpts.evaluator = "SubQ"
+	got, err = evaluatorOptions()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Provider != learning.ProviderSubQ || got.Endpoint != learning.DefaultSubQEndpoint || got.Model != learning.DefaultSubQModel || got.APIKey != "fallback-subq" {
+		t.Fatalf("subq evaluatorOptions() = %+v", got)
+	}
+
+	memoryOpts.subqEndpoint = "https://flag.example/v1/systemone"
+	memoryOpts.subqModel = "subq-pinned"
+	memoryOpts.subqAPIKey = "flag-key"
+	t.Setenv("SUBQ_API_KEY", "env-key")
+	got, _ = evaluatorOptions()
+	if got.Endpoint != "https://flag.example/v1/systemone" || got.Model != "subq-pinned" || got.APIKey != "flag-key" {
+		t.Fatalf("subq flags did not win: %+v", got)
+	}
+
+	memoryOpts.evaluator = "openai"
+	if _, err := evaluatorOptions(); err == nil {
+		t.Fatal("unknown evaluator was accepted")
+	}
+}
+
+// --cost-per-trace replaced --jev-cost-per-trace when SubQ was added; the old
+// name must keep setting the same estimate.
+func TestMemoryEvaluationsCostPerTraceFlags(t *testing.T) {
+	for _, name := range []string{"cost-per-trace", "jev-cost-per-trace"} {
+		t.Run(name, func(t *testing.T) {
+			resetMemoryOpts(t)
+			flags := memoryEvaluationsRunCmd.Flags()
+			if err := flags.Set(name, "0.02"); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { flags.Lookup(name).Changed = false })
+			if memoryOpts.costPerTrace != 0.02 {
+				t.Fatalf("costPerTrace = %v after --%s=0.02", memoryOpts.costPerTrace, name)
+			}
+		})
+	}
+}

@@ -1,0 +1,28 @@
+{
+  "task": "a2-26",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-26-new",
+    "a2-26-old"
+  ],
+  "required_evidence": [
+    "a2-26-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The current media buffer size is 45 KB.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 15.71,
+  "agent_seconds": 1.057,
+  "prompt_tokens": 134,
+  "gen_tokens": 12
+}

@@ -1,0 +1,7 @@
+=== RUN   TestPhase3AANNvsExact
+P3A_ANN config M=64 graph_seed=99 vec_seed=7 sizes=[100000]
+P3A_ANN n=100000 M=64 recall@1=1.0000 recall@10=0.9984 build_ms=102250 p50_us=175 p95_us=308 search_allocs=9.0 rss_before_mb=133 rss_after_mb=358
+P3A_ANN n=100000 M=64 determinism_same_seed=true
+--- PASS: TestPhase3AANNvsExact (218.21s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	218.241s

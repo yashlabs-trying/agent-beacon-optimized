@@ -1,0 +1,280 @@
+package hooks
+
+import (
+	"encoding/json"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/testenv"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
+)
+
+func TestInstallFactorySettingsPreservesNonBeaconHooks(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	existing := `{"enabledPlugins":{"core@factory-plugins":true},"logoAnimation":"off","hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"echo keep"}]}]}}`
+	if err := os.WriteFile(path, []byte(existing), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := installFactorySettings(path, "/tmp/beacon hooks", "/tmp/runtime.jsonl", "/tmp/config.json"); err != nil {
+		t.Fatalf("installFactorySettings returned error: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	text := string(data)
+	for _, want := range []string{
+		"enabledPlugins",
+		"logoAnimation",
+		"echo keep",
+		"--log '/tmp/runtime.jsonl'",
+		"--config '/tmp/config.json'",
+		"'/tmp/beacon hooks' --platform factory",
+		"SessionStart",
+		"UserPromptSubmit",
+		"prompt-submit",
+		"PostToolUse",
+		"Write|Edit|MultiEdit|Create",
+		"Stop",
+		"SessionEnd",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("settings missing %q:\n%s", want, text)
+		}
+	}
+}
+
+func TestInstallFactorySettingsReplacesOldBeaconAndAsymptoteHooks(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	existing := `{"hooks":{"PostToolUse":[{"hooks":[{"type":"command","command":"BEACON_ENDPOINT_MODE=1 old-beacon-hooks --platform factory post-tool"}]},{"hooks":[{"type":"command","command":"/tmp/asym-hooks --platform factory post-tool"}]},{"hooks":[{"type":"command","command":"echo keep"}]}]}}`
+	if err := os.WriteFile(path, []byte(existing), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := installFactorySettings(path, "/tmp/new-beacon-hooks", "/tmp/runtime.jsonl", "/tmp/config.json"); err != nil {
+		t.Fatalf("installFactorySettings returned error: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	text := string(data)
+	if strings.Contains(text, "old-beacon-hooks") || strings.Contains(text, "asym-hooks") {
+		t.Fatalf("old endpoint hook was not replaced:\n%s", text)
+	}
+	if !strings.Contains(text, "echo keep") || !strings.Contains(text, "/tmp/new-beacon-hooks") {
+		t.Fatalf("expected preserved hook and new hook:\n%s", text)
+	}
+}
+
+func TestInstallFactorySettingsPreservesUserHookInMixedGroup(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	existing := `{"hooks":{"PostToolUse":[{"matcher":"Write|Edit","hooks":[{"type":"command","command":"echo keep"},{"type":"command","command":"BEACON_ENDPOINT_MODE=1 old-beacon-hooks --platform factory post-tool"}]}]}}`
+	if err := os.WriteFile(path, []byte(existing), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := installFactorySettings(path, "/tmp/new-beacon-hooks", "/tmp/runtime.jsonl", "/tmp/config.json"); err != nil {
+		t.Fatalf("installFactorySettings returned error: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	text := string(data)
+	if strings.Contains(text, "old-beacon-hooks") {
+		t.Fatalf("old endpoint hook was not replaced:\n%s", text)
+	}
+	if !strings.Contains(text, "echo keep") {
+		t.Fatalf("user hook in mixed group was not preserved:\n%s", text)
+	}
+	if !strings.Contains(text, "/tmp/new-beacon-hooks") {
+		t.Fatalf("new endpoint hook was not installed:\n%s", text)
+	}
+}
+
+func TestRemoveFactoryEndpointHooksPreservesOtherHooks(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	existing := `{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"echo keep"}]},{"hooks":[{"type":"command","command":"BEACON_ENDPOINT_MODE=1 beacon-hooks --platform factory session-start"}]}]}}`
+	if err := os.WriteFile(path, []byte(existing), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := removeFactoryEndpointHooks(path)
+	if err != nil {
+		t.Fatalf("removeFactoryEndpointHooks returned error: %v", err)
+	}
+	if !changed {
+		t.Fatal("expected endpoint hook removal")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	text := string(data)
+	if !strings.Contains(text, "echo keep") {
+		t.Fatalf("non-Beacon hook was not preserved:\n%s", text)
+	}
+	if strings.Contains(text, "BEACON_ENDPOINT_MODE=1") {
+		t.Fatalf("endpoint hook was not removed:\n%s", text)
+	}
+}
+
+func TestRemoveFactoryEndpointHooksPreservesUserHookInMixedGroup(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	existing := `{"hooks":{"PostToolUse":[{"matcher":"Write|Edit","hooks":[{"type":"command","command":"echo keep"},{"type":"command","command":"BEACON_ENDPOINT_MODE=1 beacon-hooks --platform factory post-tool"}]}]}}`
+	if err := os.WriteFile(path, []byte(existing), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := removeFactoryEndpointHooks(path)
+	if err != nil {
+		t.Fatalf("removeFactoryEndpointHooks returned error: %v", err)
+	}
+	if !changed {
+		t.Fatal("expected endpoint hook removal")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	text := string(data)
+	if !strings.Contains(text, "echo keep") {
+		t.Fatalf("user hook in mixed group was not preserved:\n%s", text)
+	}
+	if strings.Contains(text, "BEACON_ENDPOINT_MODE=1") {
+		t.Fatalf("endpoint hook was not removed:\n%s", text)
+	}
+}
+
+func TestReadFactorySettingsReturnsCorruptJSONError(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := os.WriteFile(path, []byte("{not json"), 0600); err != nil {
+		t.Fatalf("write corrupt settings: %v", err)
+	}
+
+	if _, err := readFactorySettings(path); err == nil {
+		t.Fatal("expected corrupt settings error")
+	}
+}
+
+func TestInstallFactorySettingsHandlesNullHooks(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := os.WriteFile(path, []byte(`{"hooks":null}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := installFactorySettings(path, "/tmp/beacon-hooks", "/tmp/runtime.jsonl", "/tmp/config.json"); err != nil {
+		t.Fatalf("installFactorySettings returned error: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	if !strings.Contains(string(data), "UserPromptSubmit") {
+		t.Fatalf("Factory hooks were not installed from hooks:null:\n%s", string(data))
+	}
+}
+
+func TestInstallFactorySettingsDoesNotReplaceUserCommandWithBeaconEnvOnly(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	existing := `{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"BEACON_ENDPOINT_MODE=1 echo keep"}]}]}}`
+	if err := os.WriteFile(path, []byte(existing), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := installFactorySettings(path, "/tmp/beacon-hooks", "/tmp/runtime.jsonl", "/tmp/config.json"); err != nil {
+		t.Fatalf("installFactorySettings returned error: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	if !strings.Contains(string(data), "BEACON_ENDPOINT_MODE=1 echo keep") {
+		t.Fatalf("user hook with Beacon-like env token was removed:\n%s", string(data))
+	}
+}
+
+func TestFactorySettingsPathProjectLevel(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	target, err := factorySettingsPath(LevelProject)
+	if err != nil {
+		t.Fatalf("factorySettingsPath returned error: %v", err)
+	}
+	if got, want := target, filepath.Join(dir, ".factory", "settings.json"); got != want {
+		t.Fatalf("project settings path = %q, want %q", got, want)
+	}
+}
+
+func TestFactoryHookStatusDetectsInstalled(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	path := filepath.Join(home, ".factory", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(`{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"BEACON_ENDPOINT_MODE=1 beacon-hooks --platform factory stop"}]}]}}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	status := FactoryHookStatus(FactoryOptions{Level: LevelUser, UserMode: true})
+	if !status.Installed {
+		t.Fatalf("FactoryHookStatus installed = false, status=%#v", status)
+	}
+	if status.SettingsPath != path {
+		t.Fatalf("SettingsPath = %q, want %q", status.SettingsPath, path)
+	}
+}
+
+// jsonFragment renders a value as it appears inside a JSON document, minus the surrounding quotes.
+//
+// Assertions against marshaled settings must search for the encoded form: a Windows path is full
+// of backslashes, and JSON escapes every one of them.
+func jsonFragment(t *testing.T, value string) string {
+	t.Helper()
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("encode %q: %v", value, err)
+	}
+	return strings.Trim(string(encoded), `"`)
+}
+
+func TestInstallFactoryUsesSystemConfigForSystemLog(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+
+	status, err := InstallFactory(FactoryOptions{
+		Level:    LevelUser,
+		LogPath:  endpointconfig.SystemLogPath(),
+		UserMode: true,
+	})
+	if err != nil {
+		t.Fatalf("InstallFactory returned error: %v", err)
+	}
+	data, err := os.ReadFile(status.SettingsPath)
+	if err != nil {
+		t.Fatalf("read Factory settings: %v", err)
+	}
+	// A system log path must select the *system* config, not the user one. Both halves are
+	// compared against the JSON-encoded form, because that is what lands in the file: Factory
+	// settings are marshaled, so a Windows path's backslashes are escaped on the way in and a
+	// search for the raw string finds nothing. That breaks the assertion in both directions --
+	// the positive check reports the system config as not chosen when it was, and the negative
+	// check cannot see the user config being chosen wrongly. On POSIX the two forms are
+	// identical, which is why the raw comparison held until Windows joined the gate.
+	//
+	// The resolved values are used rather than hardcoded strings, since both are per-OS.
+	wantConfig := jsonFragment(t, "--config '"+endpointconfig.SystemConfigPath()+"'")
+	if !strings.Contains(string(data), wantConfig) {
+		t.Fatalf("Factory hook did not use system config for system log; want %s in:\n%s",
+			wantConfig, string(data))
+	}
+	if unwanted := jsonFragment(t, endpointconfig.ConfigPath(true)); strings.Contains(string(data), unwanted) {
+		t.Fatalf("Factory hook used the user config for a system log path:\n%s", string(data))
+	}
+}

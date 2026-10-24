@@ -1,0 +1,28 @@
+{
+  "task": "a2-21",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-21-new",
+    "a2-21-decoy"
+  ],
+  "required_evidence": [
+    "a2-21-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "15 seconds",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.529,
+  "prompt_tokens": 136,
+  "gen_tokens": 4
+}

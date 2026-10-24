@@ -1,0 +1,28 @@
+{
+  "task": "a3-47",
+  "suite": "A",
+  "category": "A3_knowledge_transfer",
+  "difficulty": "medium",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "a3-47-conv",
+    "a3-47-noise"
+  ],
+  "required_evidence": [
+    "a3-47-conv"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The new Go service must follow the convention of using typed errors.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.261,
+  "prompt_tokens": 135,
+  "gen_tokens": 14
+}

@@ -1,0 +1,6 @@
+P3B_WRITER rep=1 mode=mixed churn=false concurrency=16 duration_s=10 reads=12693 writes=3173 errors=0 busy=0 read_p50=644 read_p95=1491 read_p99=3726 write_p50=4028 write_p95=185190 write_p99=933142 write_mean=46586 rn=12693 wn=3173 goroutines=3->2 wal_bytes=0 peak_rss_mb=27
+	User time (seconds): 18.68
+	System time (seconds): 4.35
+	Percent of CPU this job got: 199%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:11.57
+	Maximum resident set size (kbytes): 216924

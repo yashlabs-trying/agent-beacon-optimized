@@ -1,0 +1,23 @@
+=== RUN   TestSelectContextActuallyTruncatesBody
+--- PASS: TestSelectContextActuallyTruncatesBody (0.00s)
+=== RUN   TestContextBudgeting
+CONTEXT queries=17 fixed_top5_tokens=2140 budgeted_tokens=1358 reduction=1.58x fixed_items=85 budgeted_items=60 gold_retained_fixed=12/17 gold_retained_budgeted=12/17
+CONTEXT gold_with_nonempty_body=12 gold_with_at_least_half_body=12 gold_with_provenance=12
+--- PASS: TestContextBudgeting (0.04s)
+=== RUN   TestPhase2RankingAlternatives
+    phase2_token_ranking_test.go:202: RANK lexical | tune n=48 R@1=0.000 R@5=0.750 MRR=0.271 NDCG@5=0.390 | held-out n=48 R@1=0.000 R@5=0.750 MRR=0.271 NDCG@5=0.390
+    phase2_token_ranking_test.go:202: RANK semantic | tune n=48 R@1=0.208 R@5=1.000 MRR=0.568 NDCG@5=0.679 | held-out n=48 R@1=0.208 R@5=1.000 MRR=0.566 NDCG@5=0.678
+    phase2_token_ranking_test.go:202: RANK hybrid_rrf | tune n=48 R@1=0.188 R@5=1.000 MRR=0.493 NDCG@5=0.620 | held-out n=48 R@1=0.167 R@5=1.000 MRR=0.484 NDCG@5=0.614
+    phase2_token_ranking_test.go:202: RANK hybrid_semantic_heavy | tune n=48 R@1=0.208 R@5=1.000 MRR=0.568 NDCG@5=0.679 | held-out n=48 R@1=0.208 R@5=1.000 MRR=0.566 NDCG@5=0.678
+    phase2_token_ranking_test.go:202: RANK hybrid_lexical_heavy | tune n=48 R@1=0.188 R@5=1.000 MRR=0.490 NDCG@5=0.617 | held-out n=48 R@1=0.167 R@5=1.000 MRR=0.477 NDCG@5=0.608
+    phase2_token_ranking_test.go:202: RANK hybrid_identifier_boost | tune n=48 R@1=0.188 R@5=1.000 MRR=0.493 NDCG@5=0.620 | held-out n=48 R@1=0.167 R@5=1.000 MRR=0.484 NDCG@5=0.614
+--- PASS: TestPhase2RankingAlternatives (0.92s)
+=== RUN   TestPhase2TokenSelectionStrategies
+    phase2_token_ranking_test.go:415: TOKEN strategy=fixed_top5       cases=48 tokens=5674 tokens/case=118.2 relevant_retained=109/144 redundancy=0.569 latency_us/case=0.0
+    phase2_token_ranking_test.go:415: TOKEN strategy=token_budget     cases=48 tokens=3840 tokens/case=80.0 relevant_retained=106/144 redundancy=0.574 latency_us/case=15.7
+    phase2_token_ranking_test.go:415: TOKEN strategy=evidence_dedup   cases=48 tokens=5563 tokens/case=115.9 relevant_retained=112/144 redundancy=0.525 latency_us/case=3.4
+    phase2_token_ranking_test.go:415: TOKEN strategy=trust_aware      cases=48 tokens=5670 tokens/case=118.1 relevant_retained=109/144 redundancy=0.581 latency_us/case=239.3
+    phase2_token_ranking_test.go:415: TOKEN strategy=diversity_mmr    cases=48 tokens=5674 tokens/case=118.2 relevant_retained=109/144 redundancy=0.569 latency_us/case=5633.5
+--- PASS: TestPhase2TokenSelectionStrategies (0.55s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	1.517s

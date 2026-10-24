@@ -1,0 +1,121 @@
+---
+title: "Redaction and Size Limits"
+description: "How Beacon handles retained content before writing endpoint events"
+---
+
+## Retention and redaction
+
+Beacon can write supported prompt, command, tool, file, approval, policy, and runtime context when a configured source runtime emits it. Before endpoint events are written to local JSONL or forwarded through configured destinations, Beacon applies redaction, sanitization, truncation, and event-size limits.
+
+## Content handling
+
+| Control | Behavior |
+|---------|----------|
+| Redaction | Common secret patterns are replaced before retained content is written (see [What is redacted](#what-is-redacted)) |
+| Sanitization | Runtime payloads are normalized into typed event fields instead of storing source payloads verbatim wherever possible |
+| Truncation | Oversized fields are shortened and marked with truncation metadata |
+| Event-size limits | Events are bounded before they are written to `runtime.jsonl` or sent to configured destinations |
+
+## What is redacted
+
+Redaction runs on retained text (prompts, command output, diffs, tool arguments and results, reasons) and on structured payloads. Each match is replaced with `[REDACTED]`, keeping the label in front of it, so `token=abc` becomes `token=[REDACTED]`. Redaction runs before truncation, so a cut never leaves part of a secret behind.
+
+| Form | Examples |
+|------|----------|
+| A value labeled as a secret | `token=…`, `GITHUB_TOKEN=…`, `AWS_SECRET_ACCESS_KEY=…`, `{"api_key": "…"}`, `client_secret: …` |
+| A structured field named for a credential | the value of any field whose name ends in `password`, `secret`, `token`, `api_key`, `access_key`, `private_key`, `authorization`, `credential(s)` or `cookie` |
+| Authorization headers and flags | `Authorization: Bearer …`, `Authorization: Basic …`, `--password …`, `--token=…` |
+| URL credentials | the password in `postgres://user:…@host`, `https://x-access-token:…@github.com` |
+| Private keys | PEM and OpenSSH `PRIVATE KEY` blocks, including a block cut off before its end line |
+| Recognizable tokens (the public type prefix stays, as in `ghp_[REDACTED]`) | Anthropic and OpenAI `sk-…`, AWS `AKIA…`/`ASIA…`, GitHub `ghp_…`/`github_pat_…`, GitLab `glpat-…`, Slack `xox…-`, Stripe `sk_live_…`, Google `AIza…`, npm, Hugging Face, Beacon keys and tokens (`bcn_api_…`, `bcn_device_…`, `bcn_enfdev_…`, `bcn_mcp_…`, `bcn_mcprt_…`, and the `beacon login` token `bcn_cli_…` with its `bcn_code_…`, `bcn_client_…` and `bcn_exchange_…` values), and JWTs |
+| An AWS secret key beside its key id | the 40-character secret that follows an `AKIA…` or `ASIA…` key id within a few spaces, commas, colons, pipes or quotes, as in a credentials CSV (`AKIA…,wJalr…`) or a table |
+
+Redaction is pattern-based. A credential with no label and no recognizable shape, such as a bare random password, is not detected, so treat retained content as sensitive. Metadata-only forwarding is the control for keeping content off Beacon Cloud entirely, and [`beacon share`](/cli/share#metadata-only-endpoints) follows it: a Metadata-only endpoint shares no content either.
+
+## Prompt event example
+
+Prompt content is included only when the source runtime emits it. Secret-like values are redacted before the event is written:
+
+```json
+{
+  "event": {
+    "action": "prompt.submitted",
+    "category": "prompt"
+  },
+  "harness": {
+    "name": "claude_code"
+  },
+  "prompt": {
+    "text": "Review this API client. Token: [REDACTED]"
+  },
+  "content": {
+    "included": true,
+    "redacted": true
+  }
+}
+```
+
+## Command event example
+
+Command events can include normalized tool and command context, with truncation metadata when fields exceed limits:
+
+```json
+{
+  "event": {
+    "action": "command.executed",
+    "category": "command"
+  },
+  "tool": {
+    "name": "Shell",
+    "command": "go test ./..."
+  },
+  "command": {
+    "command": "go test ./...",
+    "exit_code": 0,
+    "duration_ms": 18420
+  },
+  "content": {
+    "included": true,
+    "truncated": false
+  }
+}
+```
+
+## Forwarding implications
+
+Content handling is applied before events are written to `runtime.jsonl`.
+File-based destinations such as Wazuh, Elastic/Filebeat, Datadog Agent custom
+log collection, Sumo Logic forwarding, Rapid7 forwarding, Microsoft Sentinel
+forwarding, AWS S3 Vector forwarding, Google Cloud Storage Vector forwarding,
+and customer-managed shippers read the resulting local JSONL. Supported cloud
+agents upload a compressed snapshot of their sandbox-local JSONL directly to
+customer-managed GCS or S3. Splunk HEC and Falcon LogScale HEC forwarding
+receive the same normalized collector output according to the configured
+endpoint pipeline. Beacon Cloud Standard mode forwards new runtime and
+inventory lines as stored locally. Metadata-only mode adds a local Vector
+transform that removes retained text, tool arguments/results, tool definitions,
+retrieval queries and documents, approval and policy reasons, command output,
+raw fields, diffs, inventory content, and MCP definitions before buffering or
+upload while preserving stable metadata, hashes, counts, and token usage.
+
+The per-string limit also bounds what Beacon Cloud MCP can search. Each retained
+string is capped at 4 KB (`DefaultStringLimit` in `pkg/asymptoteobserve/privacy.go`)
+before it is written, so text past that point in a long tool output, command output,
+or diff is never forwarded and Beacon Cloud grep cannot match it; the event carries
+`field_truncated` and `content.truncated` instead. The limit is intentional and is
+not raised for search. Metadata-only forwarding removes the content that Beacon
+Cloud grep searches, so for those endpoints its grep and read return little. See
+[Downstream consumers](/telemetry-schema/normalization#downstream-consumers).
+
+Review runtime scope, artifact access, destination permissions, and downstream retention before rollout so retained content matches your approved telemetry policy.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Schema examples" icon="code" href="/telemetry-schema/examples">
+    Inspect endpoint event examples and content fields.
+  </Card>
+  <Card title="Endpoint install" icon="download" href="/cli/endpoint-install">
+    Configure endpoint telemetry and collector service files.
+  </Card>
+</Columns>

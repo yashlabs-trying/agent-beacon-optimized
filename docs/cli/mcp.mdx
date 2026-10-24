@@ -1,0 +1,123 @@
+---
+title: "beacon mcp"
+description: "Expose Beacon activity to MCP clients, locally and through Beacon Cloud"
+---
+
+## Command overview
+
+The `beacon mcp` command group exposes local Beacon endpoint activity and
+approved project memory to MCP clients. An assistant can search, summarize, and
+retrieve compact event records from the local `runtime.jsonl` log, then retrieve
+reviewed memory that was explicitly approved through [`beacon memory`](/cli/memory).
+
+```bash title="Command syntax"
+beacon mcp [command]
+```
+
+The server reads the same local runtime log used by the [dashboard](/cli/dashboard)
+and the local `memory.db` store next to the endpoint log base directory. It
+supports stdio for desktop MCP clients and loopback HTTP JSON-RPC for local tools
+that connect to a running server.
+
+## Local and Beacon Cloud servers
+
+Beacon has two MCP servers, registered under different names so that neither entry overwrites
+the other:
+
+| Server name | What it reads | Commands |
+|---|---|---|
+| `beacon` | This machine's `runtime.jsonl` and approved local memory, served locally over stdio or loopback HTTP | [`serve`](/cli/mcp-serve), [`doctor`](/cli/mcp-doctor) |
+| `beacon-managed` | The session history this endpoint forwards to Beacon Cloud, served by Beacon Cloud over HTTPS | [`connect`, `disconnect`, `status`, `token create`](/cli/mcp-connect) |
+
+`beacon mcp connect` registers `beacon-managed` in Claude Code, Codex CLI, Cursor, VS Code,
+Gemini CLI, OpenCode and Oh My Pi. By default it writes only the URL, and each harness signs in with OAuth.
+With `--token-env`, the config instead references a personal token, created with
+`beacon mcp token create` or at [Dashboard → Identity → MCP Access](https://beacon.sh/dashboard/mcp) and held in an environment
+variable. For other harnesses it prints the steps to add the
+server by hand.
+
+## Commands
+
+<span id="beacon-mcp-serve" />
+<span id="beacon-mcp-doctor" />
+<span id="beacon-mcp-connect" />
+
+<Columns cols={2}>
+  <Card title="beacon mcp serve" icon="server" href="/cli/mcp-serve">
+    Run the local Beacon MCP server.
+  </Card>
+  <Card title="beacon mcp doctor" icon="stethoscope" href="/cli/mcp-doctor">
+    Validate local Beacon MCP setup and print client configuration.
+  </Card>
+  <Card title="beacon mcp connect" icon="plug" href="/cli/mcp-connect">
+    Register Beacon Cloud MCP in every harness, and remove or inspect it with `disconnect` and `status`.
+  </Card>
+</Columns>
+
+## MCP tools
+
+The local `beacon` server exposes these MCP tools:
+
+| Tool | Description |
+|------|-------------|
+| `search_activity` | Search local Beacon activity logs and return compact event summaries. |
+| `summarize_activity` | Summarize local Beacon activity over a time window and optional filters. |
+| `get_activity_event` | Fetch one compact event by an ID returned from `search_activity`. |
+| `list_activity_filters` | List common filter values found in local Beacon activity logs. |
+| `search_memory` | Search approved Beacon project memory and return compact summaries. |
+| `get_memory` | Fetch one approved memory item by ID. |
+| `get_memory_context` | Return a small approved-memory context set for the current task. |
+
+Search and summary tools accept filters such as `since`, `until`, `limit`, `q`, `harness`, `model`, `action`, `severity`, `category`, `repository`, `session`, `file`, `command`, `mcp`, `approval`, `decision`, `policy`, `review`, and `wazuh_level`.
+
+Memory tools read approved project memory only. They do not run Jev, approve
+candidates, install Agent Skills, or expose pending/rejected candidates. Use
+`project_id` or the MCP client's project context when a client needs memory for a
+specific repository. A `project` path sent by a client is matched against the
+projects the memory store already holds records for; Beacon does not read git
+metadata from a path a client supplies, so an unrecognized path returns nothing
+rather than widening the search.
+
+## Flags
+
+These flags apply to `serve` and `doctor`. For the flags of `connect`, `disconnect` and `status`,
+see [`beacon mcp connect`](/cli/mcp-connect#flags).
+
+| Flag | Description |
+|------|-------------|
+| `--user` | Use per-user endpoint paths. Enabled by default |
+| `--system` | Use system endpoint paths |
+| `--log-path PATH` | Runtime JSONL log path |
+| `--transport stdio\|http` | MCP transport. Defaults to `stdio` |
+| `--addr ADDR` | Loopback HTTP JSON-RPC listen address for `--transport http`. Defaults to `127.0.0.1:8766` |
+
+<Note>
+  `beacon mcp serve` and `beacon mcp doctor` only read local Beacon runtime logs and
+  approved local memory. They do not require a Beacon account, and HTTP transport
+  should remain bound to loopback. `beacon mcp connect` is the one `beacon mcp`
+  command that makes a network request: an opt-in check of the Beacon Cloud MCP
+  URL before it writes harness configs.
+</Note>
+
+## Related
+
+<Columns cols={2}>
+  <Card title="beacon mcp serve" icon="server" href="/cli/mcp-serve">
+    Run the local Beacon MCP server.
+  </Card>
+  <Card title="beacon mcp doctor" icon="stethoscope" href="/cli/mcp-doctor">
+    Validate local Beacon MCP setup.
+  </Card>
+  <Card title="beacon mcp connect" icon="plug" href="/cli/mcp-connect">
+    Register Beacon Cloud MCP in your harnesses.
+  </Card>
+  <Card title="Connect Cursor and Claude Code" icon="plug" href="/guides/local-testing/mcp#4-connect-cursor-and-claude-code">
+    Install Beacon MCP in local assistant clients.
+  </Card>
+  <Card title="Dashboard" icon="chart-line" href="/cli/dashboard">
+    Inspect the same local activity log in a browser.
+  </Card>
+  <Card title="Endpoint event schema" icon="code" href="/telemetry-schema/event-schema">
+    Review the normalized JSONL fields behind MCP activity results.
+  </Card>
+</Columns>

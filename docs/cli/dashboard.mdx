@@ -1,0 +1,148 @@
+---
+title: "beacon endpoint dashboard"
+description: "Run the local Beacon endpoint dashboard"
+---
+
+## Command overview
+
+Beacon includes a local-only dashboard for investigating the runtime JSONL log. The dashboard binds to loopback by default, has no external network dependency during normal use, and is intended for local investigation rather than remote administration.
+
+```bash title="Command syntax"
+beacon endpoint dashboard
+```
+
+<Card title="beacon endpoint dashboard" icon="terminal" href="#beacon-endpoint-dashboard">
+  Start the local dashboard, open it in a browser, or bind it to a custom local address.
+</Card>
+
+## What it shows
+
+The dashboard reads the configured runtime JSONL log and provides a read-only view
+of local Beacon events. It follows Beacon's local rotation pattern, so session
+lists and event details can include the active file and numbered archives such as
+`runtime.jsonl.1`. In the default CLI setup, it reads the same per-user log used
+by Antigravity CLI, Claude Code, Cline, Cursor, Devin CLI, Devin Desktop, Factory
+Droid, Grok Build, Hermes Agent, OpenCode, and the other supported hook, plugin,
+poll, and OTLP collection paths.
+
+- **Agent Activity Sessions:** browse grouped agent sessions with risk, prompt,
+  harness, model, repository, duration, activity counts, and last-artifact
+  summaries. The **All**, **Captured**, **Recurring**, and **Empty** tabs are
+  mutually exclusive views except that All contains every active session:
+  Captured has user-visible activity, Recurring is described below, and Empty
+  contains only lifecycle, metric, or internal events.
+- **Session detail:** open a session timeline with metadata, activity and severity
+  summaries, event filters, raw JSON, and value inspectors.
+- **Sharing state:** a session shared with [`beacon share`](/cli/share) is marked
+  **Shared** in the session list and on its page, which links to the trace on
+  beacon.sh. It is marked **stale** when the session has activity newer than its
+  last share or refresh, and the page shows the `beacon share refresh …` command
+  to copy. The dashboard never shares or refreshes anything itself.
+- **Lenses:** add tabs to a session's page that show it from one angle: files
+  changed with diffs, an itemized token bill, a security review, approvals, or a
+  [lens you wrote](/concepts/lenses). Each lens runs in a sandboxed frame with no
+  network access.
+- **Agent Activity:** review aggregate local activity, risk signals, harnesses,
+  models, repositories, MCP servers, and runtime inventory.
+- **Memory:** inspect read-only counts and tables for local evaluations, review
+  candidates, and approved project memories from `memory.db`.
+- **Token Usage:** review runtime-reported token usage and cost where sources
+  provide it.
+- **Detections:** browse the active [threat-rule](/detections) set that Beacon
+  would use for local scans: rules installed in the local store plus the
+  built-in baseline rules the store does not replace by id.
+- **Findings:** run the active rules over the configured runtime log on demand and
+  review matching evidence with severity and session filters.
+- **Agent Inventory:** inspect [Inventory Local Agent Runtimes](/guides/inventory)
+  for detected harnesses, MCP servers, Agent Skills, hooks, and telemetry status.
+- **Runtime-log source:** see source details and warnings when a system collector
+  may be writing OTLP events to a different log.
+- **Rotated archives:** open event details from active or archived runtime logs,
+  even when older archive numbers have already been pruned.
+
+The Detections and Findings screens mirror the same local rule resolution and scan behavior used by [`beacon scan`](/cli/scan). They do not fetch rule packs, mutate telemetry, or require a hosted Beacon account.
+
+The Memory screen is also read-only. Candidate approval, rejection, superseding,
+Jev evaluation, and Agent Skill installation stay in [`beacon memory`](/cli/memory).
+
+### Recurring sessions
+
+A session is recurring when at least two sessions owned by the same user have
+the same prompt, agent harness, and repository within the dashboard's selected
+date range. Beacon compares these values after trimming surrounding whitespace
+and converting them to lowercase; harness names also use Beacon's standard
+harness-name normalization. Missing harness and repository values compare
+consistently. Sessions without a non-blank captured prompt are never recurring.
+
+Every row in a recurring group shows **Recurring ×N**, where `N` is the number
+of matching sessions in the selected date range and user scope. Classification
+and this count are calculated before result limiting, so limiting the displayed
+rows does not change either value. Opening a recurring row still shows that
+individual session's timeline; Beacon does not merge the group.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--user` | Use per-user endpoint paths. Enabled by default |
+| `--system` | Use system endpoint paths and launch daemon |
+| `--log-path <path>` | Runtime JSONL log path |
+| `--addr <host:port>` | Local dashboard listen address |
+| `--open` | Open the dashboard in a browser |
+
+## beacon endpoint dashboard
+
+`beacon endpoint dashboard` starts a local-only dashboard for inspecting Beacon runtime JSONL events.
+
+```bash title="Open the local dashboard"
+beacon endpoint dashboard
+```
+
+The dashboard binds to loopback by default and reads the configured runtime log and its local rotated archives. It is intended for local investigation, not remote administration.
+
+### Examples
+
+Start the dashboard:
+
+```bash title="Start the dashboard"
+beacon endpoint dashboard
+```
+
+Open the dashboard in your browser:
+
+```bash title="Open the dashboard in your browser"
+beacon endpoint dashboard --open
+```
+
+Use a custom local address:
+
+```bash title="Use a custom local address"
+beacon endpoint dashboard --addr 127.0.0.1:8765
+```
+
+Inspect a custom runtime log:
+
+```bash title="Inspect a custom runtime log"
+beacon endpoint dashboard --log-path /path/to/runtime.jsonl
+```
+
+<Note>
+  During normal use, the dashboard has no external network dependency. It reads local Beacon logs and serves a local read-only UI from a loopback address.
+</Note>
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Detections" icon="shield-halved" href="/detections">
+    Understand the rule format, detection flow, and findings model.
+  </Card>
+  <Card title="beacon scan" icon="magnifying-glass" href="/cli/scan">
+    Run the same active rules from the command line.
+  </Card>
+  <Card title="Inventory Local Agent Runtimes" icon="clipboard-list" href="/guides/inventory">
+    Understand configured, detected, and observed local runtime coverage.
+  </Card>
+  <Card title="beacon endpoint inventory" icon="terminal" href="/cli/endpoint-inventory">
+    Print endpoint inventory from the command line or as JSON.
+  </Card>
+</Columns>

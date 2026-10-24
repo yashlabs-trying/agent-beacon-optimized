@@ -1,0 +1,6 @@
+=== RUN   TestHNSWBuildTiming
+    phase2_hnsw_bench_test.go:94: HNSW build n=1000 M=64 wall_ms=194 vectors_per_sec=5138 peak_rss_mb=20
+    phase2_hnsw_bench_test.go:94: HNSW build n=10000 M=64 wall_ms=5826 vectors_per_sec=1716 peak_rss_mb=54
+--- PASS: TestHNSWBuildTiming (6.03s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	6.303s

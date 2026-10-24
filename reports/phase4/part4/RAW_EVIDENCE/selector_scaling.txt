@@ -1,0 +1,4 @@
+n=20 naive_detect=0.21ms indexed_detect=0.19ms speedup=1.1x select_all=0.29ms conflicts=0 kept=20
+n=100 naive_detect=2.15ms indexed_detect=0.88ms speedup=2.5x select_all=1.54ms conflicts=0 kept=100
+n=500 naive_detect=38.53ms indexed_detect=3.91ms speedup=9.9x select_all=8.21ms conflicts=0 kept=500
+n=1000 naive_detect=168.43ms indexed_detect=5.36ms speedup=31.5x select_all=8.48ms conflicts=0 kept=1000

@@ -1,0 +1,28 @@
+{
+  "task": "a1-8",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-8-fixed",
+    "a1-8-failed"
+  ],
+  "required_evidence": [
+    "a1-8-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 9.966,
+  "agent_seconds": 0.709,
+  "prompt_tokens": 155,
+  "gen_tokens": 8
+}

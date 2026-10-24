@@ -1,0 +1,28 @@
+{
+  "task": "a2-24",
+  "suite": "A",
+  "category": "A2_supersession",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a2-24-new",
+    "a2-24-old"
+  ],
+  "required_evidence": [
+    "a2-24-new"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The current profile rate limit is 44 req/min.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 10.197,
+  "agent_seconds": 1.406,
+  "prompt_tokens": 135,
+  "gen_tokens": 13
+}

@@ -1,0 +1,32 @@
+{
+  "task": "b1-111",
+  "suite": "B",
+  "category": "B1_contradiction",
+  "difficulty": "extreme",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "b1-111-b",
+    "b1-111-a"
+  ],
+  "required_evidence": [
+    "b1-111-b"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The currently applicable value is 17 req/min, as per Source B (correction).",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": [
+      "7"
+    ]
+  },
+  "forbidden_leaked": [
+    "7"
+  ],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.742,
+  "prompt_tokens": 144,
+  "gen_tokens": 20
+}

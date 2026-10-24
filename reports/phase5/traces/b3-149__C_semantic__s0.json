@@ -1,0 +1,30 @@
+{
+  "task": "b3-149",
+  "suite": "B",
+  "category": "B3_multi_hop",
+  "difficulty": "extreme",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "b3-149-svc",
+    "b3-149-port",
+    "b3-149-decoy"
+  ],
+  "required_evidence": [
+    "b3-149-svc",
+    "b3-149-port"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The ingest service's database listens on port 5439.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 1.291,
+  "prompt_tokens": 153,
+  "gen_tokens": 15
+}

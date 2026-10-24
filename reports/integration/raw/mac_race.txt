@@ -1,0 +1,2 @@
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	343.858s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw	6.778s

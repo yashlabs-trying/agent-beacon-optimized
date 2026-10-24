@@ -1,0 +1,745 @@
+# macOS Deployment
+
+This directory contains macOS deployment assets for the Beacon Endpoint Agent,
+including Jamf- and Fleet-ready package scripts, policy helpers, inventory
+queries, and Jamf Extension Attributes.
+
+Beacon's MDM support is deployment-native: Jamf or Fleet installs and
+inventories a local-only endpoint agent, while Beacon continues to write local
+JSONL telemetry without requiring a hosted account, remote policy fetch, or MDM
+API credentials.
+
+## Package Layout
+
+The package builder assembles this payload:
+
+```text
+/opt/beacon/bin/beacon
+/opt/beacon/bin/beacon-otelcol
+/opt/beacon/bin/vector
+/opt/beacon/scripts/install-endpoint.sh
+/opt/beacon/scripts/uninstall-endpoint.sh
+/opt/beacon/jamf/extension-attributes/*.sh
+/opt/beacon/jamf/scripts/*.sh
+/opt/beacon/jamf/claude/gcs/install-forwarder.sh
+/opt/beacon/jamf/claude/gcs/run-forwarder.sh
+/opt/beacon/jamf/claude/gcs/repair-hooks-and-forwarder.sh
+/opt/beacon/fleet/policies/*.sql
+/opt/beacon/fleet/queries/*.sql
+/opt/beacon/fleet/scripts/*.sh
+```
+
+The endpoint install creates system configuration and runtime state:
+
+```text
+/Library/Application Support/Beacon/Endpoint/config.json
+/Library/Application Support/Beacon/Endpoint/otelcol.yaml
+/Library/LaunchDaemons/com.beacon.endpoint.collector.plist
+/Library/LaunchDaemons/com.beacon.endpoint.inventory.plist
+/var/log/beacon-agent/runtime.jsonl
+/var/log/beacon-agent/inventory_state.jsonl
+```
+
+Connecting a system-mode endpoint to Asymptote managed ingest
+(`sudo /opt/beacon/bin/beacon endpoint connect --system`) opens the approval page
+in the active console user's browser and then adds a second resident service,
+`com.beacon.endpoint.asymptote-forwarder` (`/Library/LaunchDaemons/…plist`),
+running the bundled `/opt/beacon/bin/vector` with the config, disk buffer,
+enrollment record and `0600` device key below
+`/Library/Application Support/Beacon/Endpoint/asymptote/`. `beacon endpoint
+disconnect --system` and `beacon endpoint uninstall --system` remove it. A package
+upgrade keeps it and runs `beacon endpoint asymptote reconcile --system`, which
+re-renders its `vector.toml` from the new version's pack with the recorded privacy
+mode, validates it with Vector, and restarts the forwarder only when it changed; the
+device key, the enrollment and Vector's checkpoints are left as they are.
+
+The package postinstall also repairs endpoint user configuration for the active
+console user when one is logged in. This user-context step points Claude Code and
+Codex native OTLP settings at the system collector and refreshes supported user
+hooks. Already-running Claude Code sessions may need to be restarted before
+settings-based OTLP environment changes take effect.
+
+## Build A Test Package
+
+Build Beacon, `beacon-otelcol`, and have the release Vector binary available,
+then assemble the macOS package:
+
+```bash
+cd cli/beacon
+make build
+cd ../..
+
+cd collector-builder
+ocb --config builder.yaml
+cd ..
+
+BEACON_VECTOR_BIN="$(command -v vector)" \
+  sh packaging/macos/build-pkg.sh
+```
+
+Set `BEACON_APP_SIGN_IDENTITY` to sign payload binaries with a Developer ID
+Application certificate, set `PKG_SIGN_IDENTITY` to sign the package with a
+Developer ID Installer certificate, set `BEACON_VECTOR_BIN` to include the
+Vector binary at `/opt/beacon/bin/vector`, and set `NOTARYTOOL_PROFILE` to
+submit and staple the package with Apple's notary service.
+
+For release artifacts, use the signing wrapper so required identities are checked
+up front and the final package signature, stapled ticket, Gatekeeper assessment,
+and checksum are verified:
+
+```bash
+BEACON_APP_SIGN_IDENTITY="Developer ID Application: Example Corp (TEAMID)" \
+PKG_SIGN_IDENTITY="Developer ID Installer: Example Corp (TEAMID)" \
+BEACON_VECTOR_BIN="$(command -v vector)" \
+NOTARYTOOL_PROFILE="beacon-notary-profile" \
+  sh packaging/macos/build-signed-notarized-pkg.sh
+```
+
+The CI release workflow publishes the signed endpoint package from pushed `v*`
+tags. GoReleaser still publishes multi-arch CLI tarballs for Homebrew and manual
+archive installs, while the signed/notarized/stapled endpoint `.pkg` is currently
+Apple Silicon only (`BeaconEndpointAgent-<version>-arm64.pkg`) so the package can
+include the current Vector macOS distribution. The workflow also uploads the
+package `.sha256` and `update-manifest.json` assets to the GitHub release.
+
+## Manual Install
+
+```bash
+sudo beacon endpoint install --system
+beacon endpoint status
+beacon endpoint wazuh print-config
+```
+
+The macOS package installs Beacon's custom `beacon-otelcol` collector at
+`/opt/beacon/bin/beacon-otelcol`, so the CLI discovers it automatically.
+
+## Smoke Test
+
+Run the non-root endpoint smoke test on a macOS host or VM:
+
+```bash
+sh packaging/macos/smoke-endpoint.sh
+```
+
+The smoke test builds a temporary Beacon binary, uses a temporary `HOME`, runs a
+user-mode install with `--no-start`, validates status/Wazuh output, installs
+Cursor hooks, and uninstalls while preserving the runtime log for assertions.
+
+## MDM Deployment Model
+
+Use the signed and notarized `.pkg` as the base deployment artifact. The package
+installs Beacon under `/opt/beacon`, writes system endpoint configuration, and
+loads the local collector LaunchDaemon. The shared endpoint wrapper installs
+system-level configuration and writes logs to
+`/var/log/beacon-agent/runtime.jsonl`.
+
+For Sumo Logic, keep Beacon as the local JSONL producer and deploy a
+customer-managed shipper that tails `/var/log/beacon-agent/runtime.jsonl` into a
+Hosted Collector HTTP Logs & Metrics Source. Generate Beacon's Sumo content pack
+for setup guidance, a one-shot smoke test, and sample events:
+
+```bash
+/opt/beacon/bin/beacon endpoint sumo install-pack --system --output ./beacon-sumo-pack
+/opt/beacon/bin/beacon endpoint sumo validate --system
+```
+
+Recommended Sumo metadata is `_sourceCategory=security/agentbeacon`, source
+name `agentbeacon`, and fields
+`product=agentbeacon,telemetry=ai_agent,env=prod`. For production forwarding,
+use a tailing shipper that checkpoints offsets, batches JSONL records, sends
+gzip-compressed POST payloads, and avoids repeatedly uploading the whole file.
+
+For Rapid7 InsightIDR, use the same local JSONL producer model and deploy a
+customer-managed shipper that tails `/var/log/beacon-agent/runtime.jsonl` into a
+Custom Logs webhook as NDJSON. Generate Beacon's Rapid7 content pack for setup
+guidance, a one-shot smoke test, and sample events:
+
+```bash
+/opt/beacon/bin/beacon endpoint rapid7 install-pack --system --output ./beacon-rapid7-pack
+/opt/beacon/bin/beacon endpoint rapid7 validate --system
+```
+
+Keep the Rapid7 webhook URL in deployment tooling or the forwarder environment,
+not in Beacon endpoint configuration. For production forwarding, use a tailing
+shipper that checkpoints offsets, batches JSONL records, and avoids repeatedly
+uploading the whole file.
+
+For AWS CloudWatch Logs, keep Beacon as the local JSONL producer and deploy a
+customer-managed Vector host agent that tails
+`/var/log/beacon-agent/runtime.jsonl` into a CloudWatch Logs log group. Generate
+Beacon's AWS CloudWatch Logs content pack for setup guidance, a Vector config,
+sample events, and validation search guidance:
+
+```bash
+/opt/beacon/bin/beacon endpoint cloudwatch install-pack --system --output ./beacon-cloudwatch-pack
+/opt/beacon/bin/beacon endpoint cloudwatch validate --system
+```
+
+Provide `BEACON_CLOUDWATCH_LOG_GROUP`, optional
+`BEACON_CLOUDWATCH_LOG_STREAM_PREFIX`, `AWS_REGION`, and AWS
+credential-provider settings through the Vector service environment, host
+identity, MDM, or secret tooling. Keep AWS credentials, IAM roles, log group
+retention, and encryption outside Beacon endpoint configuration.
+
+For AWS S3, keep Beacon as the local JSONL producer and deploy Vector to tail
+`/var/log/beacon-agent/runtime.jsonl` and
+`/var/log/beacon-agent/inventory_state.jsonl` into a customer-managed bucket.
+The generated S3 config writes runtime activity under `runtime/date=.../` and
+inventory telemetry under `inventory/date=.../` below the same
+`BEACON_S3_PREFIX`. Generate Beacon's S3 content pack for setup guidance, a
+Vector config, sample events, and validation commands:
+
+```bash
+/opt/beacon/bin/beacon endpoint s3 install-pack --system --output ./beacon-s3-pack
+/opt/beacon/bin/beacon endpoint s3 validate --system
+```
+
+For Jamf-managed Claude deployments, the Beacon package can include Vector and
+run `/opt/beacon/jamf/claude/s3/install-forwarder.sh` or the combined
+`/opt/beacon/jamf/claude/s3/repair-hooks-and-forwarder.sh`. Provide
+`BEACON_S3_BUCKET`, `AWS_REGION`, optional `BEACON_S3_PREFIX`, and AWS
+provider-chain values through MDM secret tooling or a root environment. The
+helper persists set AWS provider-chain variables such as `AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AWS_PROFILE`,
+`AWS_SHARED_CREDENTIALS_FILE`, `AWS_CONFIG_FILE`,
+`AWS_WEB_IDENTITY_TOKEN_FILE`, and `AWS_ROLE_ARN` to
+`/Library/Application Support/Beacon/Forwarders/s3-vector.env` with mode `0600`
+for the launchd-managed Vector process. Keep bucket policy, IAM, lifecycle, and
+encryption in AWS.
+
+For Google Cloud Storage, the package includes a managed Vector path equivalent
+to S3. It tails `/var/log/beacon-agent/runtime.jsonl` and the sibling
+`inventory_state.jsonl`, then writes both below one root prefix:
+
+```text
+gs://<bucket>/<prefix>/runtime/date=YYYY-MM-DD/<timestamp>-<uuid>.jsonl.gz
+gs://<bucket>/<prefix>/inventory/date=YYYY-MM-DD/<timestamp>-<uuid>.jsonl.gz
+```
+
+Run `/opt/beacon/jamf/claude/gcs/install-forwarder.sh` for forwarding only, or
+`/opt/beacon/jamf/claude/gcs/repair-hooks-and-forwarder.sh` to repair the
+endpoint and Claude hooks too. The service label is
+`com.beacon.endpoint.gcs-forwarder`; its config, environment, and checkpoint
+state live below `/Library/Application Support/Beacon/Forwarders`.
+
+Provide `BEACON_GCS_BUCKET`, a root `BEACON_GCS_PREFIX`, optional
+`BEACON_GCS_STORAGE_CLASS`, and `GOOGLE_APPLICATION_CREDENTIALS`. The latter
+must reference a readable service-account JSON file delivered and rotated by
+MDM or secret tooling outside `/opt/beacon` and
+`/Library/Application Support/Beacon`. Vector `0.56` supports service-account
+JSON and GCE metadata credentials, but interactive `gcloud` ADC and Workload
+Identity Federation are not reliable launchd authentication contracts on
+macOS. Use `roles/storage.objectCreator` for the endpoint writer and a separate
+reader identity because the writer cannot list or inspect uploaded objects.
+
+For CrowdStrike Falcon, use Beacon as the local JSONL producer and deploy Vector
+to tail hook-written or OTLP-written `runtime.jsonl` events into the Falcon HEC
+connector. Generate Beacon's Falcon content pack for setup guidance, a Vector
+config, a direct HEC smoke test, sample events, and validation search guidance:
+
+```bash
+/opt/beacon/bin/beacon endpoint falcon install-pack --system --output ./beacon-falcon-pack
+/opt/beacon/bin/beacon endpoint falcon validate --system
+```
+
+For Jamf-managed hook-only Claude deployments, the Beacon package can include a
+Vector binary at `/opt/beacon/bin/vector` and run
+`/opt/beacon/jamf/claude/falcon/install-forwarder.sh`. Provide the exact
+CrowdStrike connector URL shown by Falcon, for example
+`https://<tenant>.ingest.<region>.crowdstrike.com/services/collector` for
+Next-Gen SIEM HEC connectors or `/api/v1/ingest/hec` for LogScale-style HEC
+endpoints. The script stores the token in a root-owned forwarder environment
+file and starts `com.beacon.endpoint.falcon-forwarder`.
+
+Environment variables take precedence, followed by MDM script parameters:
+
+```text
+BEACON_ENDPOINT_HARNESSES: default claude,codex
+BEACON_OTLP_GRPC_PORT: default 4317
+BEACON_OTLP_HTTP_PORT: default 4318
+BEACON_COLLECTOR: default /opt/beacon/bin/beacon-otelcol when present
+BEACON_NO_START: accepts 1/true/yes
+BEACON_SPLUNK_HEC_ENDPOINT: optional Splunk HEC URL
+BEACON_SPLUNK_HEC_TOKEN: optional Splunk HEC token
+BEACON_SPLUNK_INDEX: optional Splunk index
+BEACON_SPLUNK_SOURCE: optional Splunk source
+BEACON_SPLUNK_SOURCETYPE: optional Splunk sourcetype
+BEACON_SPLUNK_INSECURE_SKIP_VERIFY: accepts 1/true/yes
+BEACON_SPLUNK_CA_FILE: optional CA certificate path
+```
+
+Gemini CLI is available as an opt-in local OpenTelemetry harness. Include it in
+the harness list, for example `BEACON_ENDPOINT_HARNESSES=claude,codex,gemini`,
+when you want the deployment to manage Gemini telemetry settings.
+
+GitHub Copilot CLI is opt-in and MDM-managed. Do not add it to the default
+Beacon harness list; instead, deploy Copilot's OTel environment in the Copilot
+CLI launch environment so it exports to Beacon's local OTLP HTTP receiver:
+
+```sh
+export COPILOT_OTEL_ENABLED="true"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://127.0.0.1:4318"
+export OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="true"
+```
+
+`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` is optional. Beacon
+validates Copilot CLI through endpoint discovery/status and normalizes events
+when the MDM-managed environment sends OTLP. Copilot CLI currently exports OTLP
+over HTTP, not gRPC.
+
+Recommended rollout:
+
+1. Upload the signed/notarized package to a pilot group.
+2. Confirm the LaunchDaemon is running and `beacon endpoint wazuh validate`
+   writes a validation event.
+3. Add inventory signals for version, service health, log freshness, harnesses,
+   and log writability.
+4. Scope repair/remediation to unhealthy devices.
+5. Broaden deployment in stages after inventory and validation stay healthy.
+
+During install or repair, Beacon waits briefly for stale collector processes to
+release the configured OTLP ports before reporting a port conflict. Persistent
+`4317`/`4318` conflicts still fail because they may indicate another non-Beacon
+process owns the local receiver port.
+
+Cursor, Devin CLI, Devin Desktop, Factory, Grok Build, and opencode hook
+installation is separate from the base system package because these integrations
+write per-user or per-project runtime settings. Run hook helpers only when an
+interactive console user is present. Cursor hooks use `.cursor/hooks.json`;
+Devin CLI and Devin Desktop hooks use `.devin/hooks.v1.json` for project
+installs or `~/.config/devin/config.json` for user installs; Factory hooks use
+`.factory/settings.json`; Grok Build uses `.grok/hooks/beacon-endpoint.json` or
+`~/.grok/hooks/beacon-endpoint.json`; opencode uses Beacon's owned plugin at
+`~/.config/opencode/plugins/beacon.ts`. Restart the runtime after installation
+so new sessions pick up the settings. Install hooks with the same endpoint log
+path as the collector when you want hook telemetry and OTLP telemetry to appear
+in one dashboard.
+
+Factory Droid OTLP metrics are also managed outside the base system package.
+Droid reads OTLP settings from its launch environment, so deploy the environment
+from a user-context MDM policy or another customer-owned launch policy:
+
+```sh
+export OTEL_TELEMETRY_ENDPOINT="http://127.0.0.1:4318"
+```
+
+Beacon's endpoint status and discovery commands can validate whether the
+effective Droid environment points at the local OTLP HTTP receiver. If
+`OTEL_TELEMETRY_HEADERS` is needed, treat it as customer-managed secret material
+and avoid storing it in Beacon defaults or package parameters.
+
+For richer Factory prompt/session/tool/file telemetry, install Beacon's Factory
+hooks in the logged-in user's context:
+
+```bash
+beacon endpoint hooks install --harness factory --level user --log-path /var/log/beacon-agent/runtime.jsonl
+```
+
+For opencode prompt/session/tool telemetry, install Beacon's opencode plugin in
+the logged-in user's context:
+
+```bash
+beacon endpoint hooks install --harness opencode --level user --log-path /var/log/beacon-agent/runtime.jsonl
+```
+
+For Grok Build session/prompt/tool telemetry, install Beacon's Grok hook file.
+User-level hooks are always trusted by Grok; project-level hooks require
+`/hooks-trust` in Grok before they execute:
+
+```bash
+beacon endpoint hooks install --harness grok --level user --log-path /var/log/beacon-agent/runtime.jsonl
+beacon endpoint hooks install --harness grok --level project --log-path /var/log/beacon-agent/runtime.jsonl
+```
+
+For Devin prompt/session/tool/approval/file telemetry, install Beacon's Devin
+CLI or Devin Desktop hooks in the logged-in user's context or project context.
+`devin` remains a legacy alias for `devin-cli`:
+
+```bash
+beacon endpoint hooks install --harness devin-cli --level user --log-path /var/log/beacon-agent/runtime.jsonl
+beacon endpoint hooks install --harness devin-cli --level project --log-path /var/log/beacon-agent/runtime.jsonl
+beacon endpoint hooks install --harness devin-desktop --level user --log-path /var/log/beacon-agent/runtime.jsonl
+```
+
+The main install path can also configure hook-backed Devin targets alongside
+OTLP-backed harnesses, for example
+`beacon endpoint install --harness claude,codex,devin-cli,devin-desktop`.
+After installing Devin Desktop hooks, generate a Desktop event and check the
+runtime log to confirm the Desktop app executed the hook file.
+
+The opencode plugin is a small Beacon-owned TypeScript adapter that calls the
+Beacon Go hook binary with raw opencode payloads. It does not depend on the
+third-party `@devtheops/opencode-plugin-otel` package or configure a separate
+OTLP exporter. For troubleshooting, set `BEACON_OPENCODE_DEBUG=1` in the
+environment that launches opencode to enable best-effort plugin debug logs.
+
+## Jamf Pro
+
+Upload the generated `.pkg` to Jamf Pro and create a Policy scoped to a pilot
+Smart Group. The package postinstall performs the default system install and
+repairs the active console user's Claude/Codex native OTLP settings plus user
+hooks, so no script is required for the common path.
+
+Use `/opt/beacon/jamf/scripts/install.sh` when a policy needs explicit
+parameters or a reinstall action:
+
+```bash
+/opt/beacon/jamf/scripts/install.sh "$@"
+```
+
+Jamf script parameters:
+
+```text
+Parameter 4: harnesses, default claude,codex
+Parameter 5: OTLP gRPC port, default 4317
+Parameter 6: OTLP HTTP port, default 4318
+Parameter 7: collector path, default /opt/beacon/bin/beacon-otelcol
+Parameter 8: no-start flag for install.sh only
+Parameter 9: Splunk HEC endpoint for install.sh only
+Parameter 10: Splunk HEC token for install.sh only
+Parameter 11: Splunk index for install.sh only
+Parameter 12: Splunk source for install.sh only
+Parameter 13: Splunk sourcetype for install.sh only
+Parameter 14: Splunk insecure TLS skip verify for install.sh only
+Parameter 15: Splunk CA file for install.sh only
+```
+
+To opt in Gemini CLI telemetry through Jamf, include `gemini` in parameter 4,
+for example `claude,codex,gemini`.
+
+For GitHub Copilot CLI, keep parameter 4 at the normal default unless you want
+install or repair output to call out that Copilot is MDM-managed. Configure the
+Copilot launch environment separately:
+
+```sh
+export COPILOT_OTEL_ENABLED="true"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://127.0.0.1:4318"
+export OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="true"
+```
+
+For repair policies, prefer the `BEACON_SPLUNK_*` environment variables so
+tokens do not need to be entered as visible script parameters.
+
+Use `/opt/beacon/jamf/scripts/repair.sh` as a remediation policy for Macs where
+Extension Attributes report a stale or unhealthy install. Use
+`/opt/beacon/jamf/scripts/install-cursor-hooks.sh` as a separate user-context
+policy for hook telemetry. Set
+`BEACON_HOOK_HARNESSES=cline,cursor,devin-cli,devin-desktop,factory,opencode` to install supported hook
+integrations; the helper writes hook events to
+`/var/log/beacon-agent/runtime.jsonl` by default.
+
+Use `/opt/beacon/jamf/scripts/full-cleanup.sh` only for destructive rollback or
+complete uninstall. It removes Beacon launch daemons, package files, system
+configuration, optional forwarder configuration, package receipts, and
+Beacon-managed active-user hook/OTLP settings. It backs up touched user config
+files before editing them and only removes Claude/Codex OTLP settings that point
+to local Beacon endpoints. Set `BEACON_KEEP_LOGS=1` to preserve
+`/var/log/beacon-agent`, or `BEACON_CLEAN_ALL_USERS=1` to scan all local user
+homes instead of only the active console user.
+
+Use `/opt/beacon/jamf/claude/common/repair-hooks.sh` when a Jamf policy
+needs only to repair the system endpoint, prepare
+`/var/log/beacon-agent/runtime.jsonl`,
+`/var/log/beacon-agent/inventory_state.jsonl`, and the inventory heartbeat state
+file (inventory is written by the root-scheduled `com.beacon.endpoint.inventory` job now, so
+user-run hooks no longer need those files writable), reinstall Claude Code hooks for the interactive console
+user, and run a manual Claude hook smoke test. Newer packages perform the
+console-user native OTLP repair in postinstall; Jamf scripts should not need to
+hand-edit Claude settings JSON.
+
+`repair-hooks.sh` Jamf script parameters:
+
+```text
+Parameter 4: OTLP gRPC port, default 4317
+Parameter 5: OTLP HTTP port, default 4318
+```
+
+Use `/opt/beacon/jamf/claude/falcon/install-forwarder.sh` when a Jamf
+policy should install only the Vector runtime-log forwarder. This is the
+recommended path when Claude events are produced by user-level hooks and the
+customer's managed Claude OTLP settings bypass Beacon's local collector.
+
+`install-forwarder.sh` Jamf script parameters:
+
+```text
+Parameter 4: Falcon HEC endpoint, exact connector URL
+Parameter 5: Falcon HEC token
+Parameter 6: Falcon source, default beacon-endpoint-agent
+Parameter 7: Falcon sourcetype, default json
+Parameter 8: Falcon repository/index
+Parameter 9: Runtime log paths, default /var/log/beacon-agent/runtime.jsonl,/Users/*/.beacon/endpoint/logs/runtime.jsonl
+Parameter 10: Vector read_from, default end
+```
+
+Use `/opt/beacon/jamf/claude/falcon/repair-hooks-and-forwarder.sh` when one
+policy should repair Beacon, prepare `/var/log/beacon-agent/runtime.jsonl` and
+the sibling inventory log/state files, install Claude hooks for the console
+user, and install the Falcon Vector forwarder without relying on collector-based
+Falcon forwarding.
+
+`s3/install-forwarder.sh` Jamf script parameters:
+
+```text
+Parameter 4: S3 bucket
+Parameter 5: AWS region
+Parameter 6: S3 prefix root, default beacon
+Parameter 7: S3 storage class, default STANDARD
+Parameter 8: Vector read_from, default end
+```
+
+Set `BEACON_RUNTIME_LOG_PATHS` to override the tailed runtime logs. The S3
+forwarder derives an `inventory_state.jsonl` path beside each runtime path and
+ships those inventory files under the `inventory/` S3 folder.
+
+`gcs/install-forwarder.sh` Jamf script parameters:
+
+```text
+Parameter 4: GCS bucket
+Parameter 5: GCS prefix root, default beacon
+Parameter 6: GCS storage class, default STANDARD
+Parameter 7: Vector read_from, default end
+```
+
+Set `GOOGLE_APPLICATION_CREDENTIALS` in the root policy environment. The GCS
+forwarder derives an `inventory_state.jsonl` path beside each runtime path and
+ships those inventory files under the `inventory/` GCS folder.
+
+The Jamf Claude helper source paths map into the package as:
+
+- [`packaging/macos/jamf/claude/common/repair-hooks.sh`](https://github.com/Asymptote-Labs/agent-beacon/blob/main/packaging/macos/jamf/claude/common/repair-hooks.sh) -> `/opt/beacon/jamf/claude/common/repair-hooks.sh`
+- [`packaging/macos/jamf/claude/falcon/install-forwarder.sh`](https://github.com/Asymptote-Labs/agent-beacon/blob/main/packaging/macos/jamf/claude/falcon/install-forwarder.sh) -> `/opt/beacon/jamf/claude/falcon/install-forwarder.sh`
+- [`packaging/macos/jamf/claude/falcon/repair-hooks-and-forwarder.sh`](https://github.com/Asymptote-Labs/agent-beacon/blob/main/packaging/macos/jamf/claude/falcon/repair-hooks-and-forwarder.sh) -> `/opt/beacon/jamf/claude/falcon/repair-hooks-and-forwarder.sh`
+- [`packaging/macos/jamf/claude/falcon/run-forwarder.sh`](https://github.com/Asymptote-Labs/agent-beacon/blob/main/packaging/macos/jamf/claude/falcon/run-forwarder.sh) -> `/opt/beacon/jamf/claude/falcon/run-forwarder.sh`
+- [`packaging/macos/jamf/claude/gcs/install-forwarder.sh`](https://github.com/Asymptote-Labs/agent-beacon/blob/main/packaging/macos/jamf/claude/gcs/install-forwarder.sh) -> `/opt/beacon/jamf/claude/gcs/install-forwarder.sh`
+- [`packaging/macos/jamf/claude/gcs/repair-hooks-and-forwarder.sh`](https://github.com/Asymptote-Labs/agent-beacon/blob/main/packaging/macos/jamf/claude/gcs/repair-hooks-and-forwarder.sh) -> `/opt/beacon/jamf/claude/gcs/repair-hooks-and-forwarder.sh`
+- [`packaging/macos/jamf/claude/gcs/run-forwarder.sh`](https://github.com/Asymptote-Labs/agent-beacon/blob/main/packaging/macos/jamf/claude/gcs/run-forwarder.sh) -> `/opt/beacon/jamf/claude/gcs/run-forwarder.sh`
+- [`packaging/macos/jamf/claude/s3/install-forwarder.sh`](https://github.com/Asymptote-Labs/agent-beacon/blob/main/packaging/macos/jamf/claude/s3/install-forwarder.sh) -> `/opt/beacon/jamf/claude/s3/install-forwarder.sh`
+- [`packaging/macos/jamf/claude/s3/repair-hooks-and-forwarder.sh`](https://github.com/Asymptote-Labs/agent-beacon/blob/main/packaging/macos/jamf/claude/s3/repair-hooks-and-forwarder.sh) -> `/opt/beacon/jamf/claude/s3/repair-hooks-and-forwarder.sh`
+- [`packaging/macos/jamf/claude/s3/run-forwarder.sh`](https://github.com/Asymptote-Labs/agent-beacon/blob/main/packaging/macos/jamf/claude/s3/run-forwarder.sh) -> `/opt/beacon/jamf/claude/s3/run-forwarder.sh`
+
+The managed forwarder writes:
+
+```text
+/Library/Application Support/Beacon/Forwarders/falcon-vector.toml
+/Library/Application Support/Beacon/Forwarders/falcon-vector.env
+/Library/Application Support/Beacon/Forwarders/vector-data/falcon
+/Library/LaunchDaemons/com.beacon.endpoint.falcon-forwarder.plist
+/Library/Application Support/Beacon/Forwarders/gcs-vector.toml
+/Library/Application Support/Beacon/Forwarders/gcs-vector.env
+/Library/Application Support/Beacon/Forwarders/vector-data/gcs
+/Library/LaunchDaemons/com.beacon.endpoint.gcs-forwarder.plist
+```
+
+Validate hook-only forwarding by generating a unique Claude prompt and searching
+Falcon for:
+
+```text
+source = "beacon-endpoint-agent" "hook-only unique marker"
+```
+
+### Jamf Extension Attributes
+
+Upload scripts from `packaging/macos/jamf/extension-attributes` to inventory:
+
+- Beacon version
+- Collector service health
+- Last runtime event age in seconds
+- Configured harnesses
+- Runtime log writability
+- Splunk HEC forwarding state
+- Falcon Vector forwarder health
+- Falcon Vector forwarding configured state
+
+Suggested Smart Groups:
+
+- Beacon version is `not_installed`
+- Collector service health is not `running`
+- Last runtime event age is greater than `86400`
+- Runtime log writability is not `writable` or `creatable`
+
+### Jamf Validation
+
+After deploying the package, run:
+
+```bash
+sudo /opt/beacon/bin/beacon endpoint status --json
+sudo /opt/beacon/bin/beacon endpoint wazuh validate
+sudo launchctl print system/com.beacon.endpoint.collector
+```
+
+### Safari Browser Extension (Experimental)
+
+The Safari build of the browser collector is not shipped yet. Its app wrapper,
+signing plan, and Declarative Device Management example live in
+[`safari/`](safari/README.md). Safari extensions can only be force-enabled by a
+declaration on supervised Macs running macOS 15 or later, not by a
+configuration profile.
+
+## Fleet
+
+Upload the signed/notarized `.pkg` as Fleet software and scope it to a pilot
+team or label. The package postinstall performs the default system install.
+Custom packages require Fleet Premium and a specific team (not All teams).
+The current endpoint `.pkg` is Apple Silicon only.
+
+An admin helper that uploads the latest GitHub release package, enables
+self-updates via a Fleet script, and configures Vector S3 forwarding with
+Fleet secret variables is in
+[`examples/fleet/configure-beacon-macos-s3.sh`](../../examples/fleet/configure-beacon-macos-s3.sh).
+The customer-facing walkthrough is
+[Beacon with Fleet and S3](https://docs.asymptotelabs.ai/guides/fleet-s3-mdm).
+Do not put S3 or self-update enablement in the Fleet package post-install
+script: a non-zero post-install causes Fleet to uninstall the package.
+
+What the helper sets up on the team:
+
+- The package, named "Beacon Endpoint Agent", with a pre-install query that
+  skips Intel Macs. Fleet otherwise names the title "endpoint", after the last
+  part of the package identifier. On a rerun the helper finds the title by its
+  bundle identifier and updates only what changed, so a new release replaces
+  the package instead of adding a second one.
+- The AWS keys as Fleet secret variables. Only a global admin, maintainer, or
+  GitOps user can write those, so the API token needs a global admin or
+  maintainer role. With `BEACON_AWS_CREDENTIAL_MODE=none` the helper stores no
+  keys and a team admin or maintainer token is enough.
+- The host scripts for self-updates, S3 forwarding, and validation.
+- The five policies from `policies/` and five reports from `queries/`.
+- Automatic install, when `FLEET_AUTOMATIC_INSTALL=true`, as an install-software
+  automation on the "Beacon: installed" policy. Fleet's own automatic install
+  for a `.pkg` checks the `apps` table for a bundle identifier, and Beacon
+  installs no `.app`, so that policy never passes. The helper replaces one it
+  finds.
+
+The helper stops before writing anything when the token lacks a needed role,
+when AWS keys are missing under `--yes` (set `BEACON_AWS_CREDENTIAL_MODE=none`
+to deliver them another way), or when a key starting with `ASIA` has no session
+token. Temporary credentials work but stop uploads when they expire, so use a
+long-lived IAM user key for the writer. `--dry-run` makes no network calls.
+Run `sh examples/fleet/test/test-configure-beacon-macos-s3.sh` to exercise the
+helper against a local stand-in for the Fleet API.
+
+Fleet scripts are installed under `/opt/beacon/fleet/scripts`:
+
+```text
+install.sh: reinstall or install with optional arguments
+validate.sh: status JSON, Wazuh validation, and LaunchDaemon check
+repair.sh: preserve logs/config while repairing collector and harness config
+uninstall.sh: remove endpoint service files
+```
+
+Fleet install script positional arguments:
+
+```text
+install.sh argument 1: harnesses, default claude,codex
+install.sh argument 2: OTLP gRPC port, default 4317
+install.sh argument 3: OTLP HTTP port, default 4318
+install.sh argument 4: collector path, default /opt/beacon/bin/beacon-otelcol
+install.sh argument 5: no-start flag, accepts 1/true/yes
+install.sh argument 6: Splunk HEC endpoint
+install.sh argument 7: Splunk HEC token
+install.sh argument 8: Splunk index
+install.sh argument 9: Splunk source
+install.sh argument 10: Splunk sourcetype
+install.sh argument 11: Splunk insecure TLS skip verify
+install.sh argument 12: Splunk CA file
+```
+
+Fleet runs scripts without arguments. To change these values, upload a short
+wrapper script that sets the matching `BEACON_*` variables, for example
+`BEACON_ENDPOINT_HARNESSES=claude,codex,gemini /opt/beacon/fleet/scripts/install.sh`.
+
+Fleet repair script positional arguments:
+
+```text
+repair.sh argument 1: harnesses, default claude,codex
+repair.sh argument 2: OTLP gRPC port, default 4317
+repair.sh argument 3: OTLP HTTP port, default 4318
+repair.sh argument 4: Splunk HEC endpoint
+repair.sh argument 5: Splunk HEC token
+repair.sh argument 6: Splunk index
+repair.sh argument 7: Splunk source
+repair.sh argument 8: Splunk sourcetype
+repair.sh argument 9: Splunk insecure TLS skip verify
+repair.sh argument 10: Splunk CA file
+```
+
+To opt in Gemini CLI telemetry through Fleet, include `gemini` in the harness
+argument, for example `claude,codex,gemini`.
+
+For GitHub Copilot CLI, deploy the same `COPILOT_OTEL_ENABLED=true` and
+`OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318` environment outside the
+Beacon package. Copilot is not part of the default Fleet harness argument and
+Beacon does not write Copilot shell profiles or `~/.copilot/config.json`.
+
+Fleet osquery files come in two kinds:
+
+- `packaging/macos/fleet/policies/*.sql` are Fleet policies. Each returns a row
+  only when that part of Beacon is healthy, so the policy fails on a host where
+  it is not. Each also passes on Intel Macs, where the Apple Silicon package
+  does not apply.
+- `packaging/macos/fleet/queries/*.sql` are reports (saved queries). Each
+  returns one row per host with a status value. Do not use them as policies:
+  they return a row on every host, and Fleet passes a policy whenever its query
+  returns a row.
+
+Policies built from the `queries/` files before this change always passed,
+and three of them read a `pid` column that osquery's `launchd` table does not
+have. Replace them with the files in `policies/`.
+
+Policies:
+
+- `beacon-installed.sql`: package receipt and `/opt/beacon/bin/beacon` present
+- `collector-running.sql`: `beacon-otelcol` running as root
+- `s3-forwarder-running.sql`: Vector running with the Beacon S3 config
+- `s3-forwarding-configured.sql`: S3 env file, Vector config, and LaunchDaemon present
+- `inventory-heartbeat-recent.sql`: inventory heartbeat written in the last 96
+  hours. The job runs every 6 hours but skips runs while the Mac sleeps, so a
+  shorter window fails laptops after a weekend.
+
+Reports:
+
+- `beacon-version.sql`
+- `collector-service-health.sql`
+- `inventory-heartbeat-age-seconds.sql`
+- `last-event-age-seconds.sql`
+- `configured-harnesses.sql`
+- `runtime-log-writable.sql`
+- `splunk-hec-forwarding.sql`
+- `falcon-vector-forwarder-health.sql`
+- `s3-vector-forwarder-health.sql`
+- `s3-vector-forwarding-configured.sql`
+
+Run `/opt/beacon/fleet/scripts/validate.sh` for full CLI-level validation of
+status, harness configuration, Wazuh validation, and launchd health.
+
+## Uninstall And Rollback
+
+Use the vendor uninstall helper to remove endpoint service files. Set
+`BEACON_KEEP_LOGS=1` or the first uninstall argument to preserve runtime logs
+during removal. Set `BEACON_KEEP_CONFIG=1` or the second uninstall argument to
+preserve harness telemetry configuration.
+
+```bash
+/opt/beacon/jamf/scripts/uninstall.sh "$@"
+/opt/beacon/fleet/scripts/uninstall.sh "$@"
+```
+
+The endpoint uninstall removes service/configuration state. That includes the
+S3, GCS and Falcon forwarder LaunchDaemons and, unless config is kept, their
+env files under `/Library/Application Support/Beacon/Forwarders`, which hold
+the forwarding credentials. `beacon endpoint repair` leaves the forwarders
+running. Package payload removal remains under the MDM/package receipt
+lifecycle.
+
+## Troubleshooting
+
+- `launchctl print system/com.beacon.endpoint.collector` fails: run the repair
+  helper and check `/Library/LaunchDaemons/com.beacon.endpoint.collector.plist`.
+- `endpoint wazuh validate` fails: confirm `/var/log/beacon-agent` exists and is
+  writable by the collector.
+- No recent runtime events: confirm supported harnesses are configured and the
+  local OTLP ports are not in use by another process.
+- Cursor, Devin CLI/Desktop, Factory, or opencode hooks are missing: run the hook helper
+  while a non-root console user is logged in, and confirm the helper uses the
+  same runtime log path as the endpoint collector.
+

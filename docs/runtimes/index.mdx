@@ -1,0 +1,152 @@
+---
+title: "Runtime Surface Overview"
+description: "Beacon agent harness support overview and runtime-specific pages"
+---
+
+## Overview
+
+Beacon supports multiple [runtime surfaces](/concepts/core-concepts#runtime-surface) because each [agent harness](/concepts/core-concepts#agent-harness) exposes telemetry differently. Beacon collects and normalizes supported local, CI, and cloud-agent telemetry, while Beacon Cloud adds hosted ingest, visibility, and governance on top of the same surfaces.
+
+These integrations are grouped by where the agent runs and how telemetry is collected:
+
+- **Local**: Agent harnesses running on an endpoint write telemetry to Beacon's local collector, hook adapter, plugin, or gateway path.
+- **Browser chat**: An optional MV3 extension for Chromium browsers and beta Firefox reads the chat streams of supported sites and posts them to the same local collector.
+- **[CI](/concepts/core-concepts#ci-telemetry)**: Ephemeral CI jobs use a temporary collector and write normalized runtime JSONL as a build artifact or upload target instead of installing a persistent endpoint service.
+- **[Cloud](/concepts/core-concepts#cloud-agent-telemetry)**: Provider-managed cloud agents can write session telemetry from the cloud sandbox to customer-managed storage, while [SDK integrations](/concepts/core-concepts#observe-sdk) instrument agent applications that run in servers, serverless functions, workers, and hosted agent platforms.
+
+## Support matrix
+
+### Local coding agent harnesses
+
+| Agent harness | Collection path | Telemetry coverage |
+|----------------|-----------------|--------------------|
+| [Antigravity CLI](/runtimes/antigravity-cli) | Native hooks | Prompt, pre-tool, post-tool, stop, invocation, command, and file telemetry where Antigravity exposes hook payloads |
+| [Claude Code](/runtimes/claude-code) | Local OTLP export plus optional hooks and poll of `~/.claude/projects` through `beacon endpoint claude sync` | OTLP/hooks: prompt, command, tool, file, lifecycle, subagent, permission, token, and cost telemetry. Poll: historical prompts, assistant messages, tool results, commands, files, MCP-shaped activity, sidechains, and session lifecycle where persisted |
+| [Cline](/runtimes/cline) | Managed plugin hooks plus optional poll of Cline's local task/session stores through `beacon endpoint cline sync` | Plugin: prompts, task lifecycle, tool lifecycle, commands, file reads and edits with diffs, MCP activity, and token usage. Poll: historical prompts, assistant messages, reasoning, tool results, commands, files, MCP-shaped activity, and token counts where persisted |
+| [Codex CLI](/runtimes/codex-cli) | Local OTLP logs, selective usage trace, endpoint hooks, and poll of `~/.codex/sessions` through `beacon endpoint codex sync` | OTLP/hooks: session, prompt, approval, and tool-result activity plus per-user/session/model turn token usage. Poll: historical prompts, assistant messages, commands, files, tool calls, MCP-shaped activity, and token snapshots where persisted |
+| [Cursor](/runtimes/cursor) | Native hooks plus optional poll of Cursor's local session stores through `beacon endpoint cursor sync` | Hooks: prompt, tool, shell command, MCP-like, approval, file edit, reasoning, and context telemetry. Poll: historical Composer and agent-session records from Cursor's global storage database and `~/.cursor/projects` |
+| [DeepSeek Harness](/runtimes/deepseek-harness) | DeepSeek's own Claude Code hook bridge, mounted by a Beacon row in `$DSH_HOME/cordis.patch.yml` at a hooks file Beacon owns, plus poll of `$DSH_HOME/sessions` through `beacon endpoint dsh sync` | Hooks: session start, prompts, pre-tool and post-tool activity, commands with output and exit code, file reads and edits with diffs, MCP tool calls, subagent start and stop, and the turn-closing stop. Poll: historical prompts, assistant text/reasoning, tool calls/results, failed tools, command/file/MCP activity, and token usage where persisted. No approval decisions, because neither surface exposes them |
+| [Devin CLI](/runtimes/devin) | Native hooks | Session, prompt, pre-tool, post-tool, permission request, stop, session-end, approval, and file telemetry |
+| [Devin Desktop](/runtimes/devin-desktop) | Cascade/Windsurf hooks | Prompt, command, MCP tool, file read, and file write telemetry where Desktop exposes Cascade hook payloads |
+| [Factory Droid](/runtimes/factory-droid) | OTLP HTTP, optional hooks, and poll of `~/.factory/sessions` through `beacon endpoint factory sync` | OTLP/hooks: session, prompt, write/edit/create tool use, stop, session-end, and available OTLP telemetry. Poll: historical session records committed by Factory |
+| [fx (Vercel Labs)](/runtimes/vercel-fx) | Poll of fx's own session records under `~/.fx/sessions` through `beacon endpoint fx sync` | Session start, prompts, tool calls, commands with exit codes and output, file reads and edits with diffs, MCP tool calls, agent messages, history compaction, and token usage and cost. No approval or session-end telemetry, because fx persists neither |
+| [Gemini CLI](/runtimes/gemini-cli) | Opt-in local OTLP | Prompts, tool calls, MCP activity, file operations, and approval-related events emitted through OTLP |
+| [GitHub Copilot CLI](/runtimes/github-copilot-cli) | MDM-managed OTLP HTTP plus poll of `~/.copilot/session-state` through `beacon endpoint copilot sync` | OTLP: prompt, session, tool, and approval-like activity emitted through Copilot CLI spans. Poll: assistant text, complete tool results, commands, files, and token usage from committed session records |
+| [goose](/runtimes/goose) | Adapter only today: manually written plugin hooks in `.agents/plugins/`, plus manually configured local OTLP export over HTTP | Hooks: session start and end, prompts, pre-tool and post-tool activity, failed tools, command lines, file creates and edits with diffs, and MCP tool calls. OTLP adds token usage, model and provider, response ids, and agent reasoning. No automatic installer/discovery yet, no tool output of any kind on the hook path, and no approval decisions because goose exposes none of those on a hook |
+| [Grok Build](/runtimes/grok-build) | Native hooks plus optional poll of `~/.grok/sessions` through `beacon endpoint grok sync` | Hooks: session, prompt, pre-tool, post-tool, failed tool, stop, session-end, command, and file telemetry. Poll: historical committed sessions, tool activity, commands, file activity, and compaction where persisted |
+| [Kimi Code](/runtimes/kimi-code) | Native hooks appended to the `[[hooks]]` array of Kimi Code's own `$KIMI_CODE_HOME/config.toml` | Session start and end, prompts, pre-tool and post-tool activity, failed tools, real operator approval decisions, commands with output and exit code, file reads and edits with diffs, MCP tool calls, subagents, and context compaction. No token usage or agent message text, because Kimi Code exposes neither on a hook |
+| [Kiro](/runtimes/kiro) | Native hooks through a Beacon-owned file in `.kiro/hooks/` | Session start, prompts, pre-tool and post-tool activity, commands with output, file reads and edits, MCP tool calls, failed tools, and the agent's final response. No approval decisions or token usage, because Kiro exposes neither on a hook |
+| [Muse Code](/runtimes/muse-code) | Native hooks through a managed hooks file | Session start, prompt, pre-tool, post-tool, permission request, subagent, context compaction, stop, command, and file telemetry |
+| [Oh My Pi](/runtimes/oh-my-pi) | Managed extension hooks | Session lifecycle, prompts, tool lifecycle, operator approval decisions, commands including operator `!` and `$` commands, file reads and edits with the unified patch, MCP tool activity, agent reasoning, and token usage |
+| [OpenCode](/runtimes/opencode) | Managed plugin hooks plus optional poll of OpenCode's local session store through `beacon endpoint opencode sync` | Plugin: chat messages, session events, command execution, permission activity, diffs, and errors. Poll: historical prompts, assistant text/reasoning, tool outcomes, commands, file activity with paths, compaction, and token usage where persisted. Approval telemetry comes from the live plugin only |
+| [OpenHands](/runtimes/openhands) | Native hooks merged into the repository's own `.openhands/hooks.json` | Session start and end, prompts, pre-tool and post-tool activity, commands with exit codes and output, file reads and edits with exact before/after diffs, MCP tool calls, and failed tools. No approval decisions or token usage, because OpenHands exposes neither on a hook |
+| [Pi](/runtimes/pi) | Managed extension hooks plus optional poll of Pi's local session store through `beacon endpoint pi sync` | Extension: session lifecycle, prompts, tool lifecycle, commands including operator `!` commands, file reads and edits with the unified patch, agent reasoning, and token usage. Poll: historical prompts, assistant text/reasoning, tool calls/results, commands, file activity with paths and diffs where persisted, compaction, skill-load records, and token usage. No approval decisions, because Pi exposes none |
+| [Prime Agent](/runtimes/prime-agent) | Managed extension hooks plus optional poll of Prime Agent's session files through `beacon endpoint prime sync` | Extension: session lifecycle, prompts, tool lifecycle, commands including each `ipython` kernel cell and operator `!` commands, file edits with the unified patch, agent reasoning, and token usage. Poll: historical prompts, assistant messages and reasoning, tool results, context attachments, errors, compactions, refinement state, and subagent artifacts. No approval decisions, because Prime Agent exposes none |
+| [Qwen Code](/runtimes/qwen-code) | Native hooks | Session, prompt, pre-tool, post-tool, failed tool, permission request, subagent, stop, session-end, command, and file telemetry |
+| [Senpi](/runtimes/senpi) | Managed extension hooks | Session lifecycle, prompts, tool lifecycle, commands including operator `!` commands, file reads and edits with the unified patch, agent reasoning, and token usage. The standalone `omo` edition of oh-my-openagent; its OpenCode and Codex CLI editions ride the existing OpenCode and Codex CLI integrations instead. No approval decisions, because Senpi exposes none through its extension API |
+| [VS Code](/runtimes/vscode) | Copilot Chat OTel plus optional preview hooks | Copilot session, prompt, model, and tool activity through OTel; optional hooks for extra lifecycle and cross-agent detail |
+
+Poll collection reads records a runtime has already committed to disk, so every event from those paths is marked `harness.collection_method=poll`. It is useful for backfill and scheduled catch-up, but it cannot hold, approve, deny, or delay a tool call. [fx](/runtimes/vercel-fx) is the pure poll case because it exposes no hook, plugin, or OpenTelemetry surface at all; the other poll paths complement live hooks, plugins, or OTLP export.
+
+### Local knowledge worker agent harnesses
+
+| Agent harness | Collection path | Telemetry coverage |
+|----------------|-----------------|--------------------|
+| [Claude Cowork](/runtimes/claude-cowork) | Admin-configured OTLP | Prompt, assistant response, approval, command, tool, file, MCP, session, model, token usage, and runtime-reported cost telemetry when emitted through Cowork OTLP |
+| [Hermes Agent](/runtimes/hermes-agent) | Shell hooks plus optional poll of `~/.hermes/state.db` through `beacon endpoint hermes sync` | Hooks: prompt, observed tool, command, file, approval request and response, session lifecycle, and subagent stop telemetry. Poll: historical committed sessions and messages from Hermes Agent's local state database |
+| [OpenClaw Gateway](/runtimes/openclaw-gateway) | Managed plugin, gateway-configured OTLP/HTTP, plus poll of committed session files through `beacon endpoint integrations openclaw sessions sync` | Plugin: session lifecycle, prompts with the sender and chat channel, tool, command with exit code and output, file with diffs, MCP, compaction, subagent, and token usage. OTLP: gateway traces and metrics from OpenClaw's own diagnostics export. Poll: historical committed session files. Approvals are not exposed by OpenClaw and are not synthesized |
+
+### Browser chat surfaces
+
+| Agent harness | Collection path | Telemetry coverage |
+|----------------|-----------------|--------------------|
+| [Claude.ai](/runtimes/claude-web) (beta) | Managed browser extension over local OTLP | Prompt, assistant response, and tool call telemetry from the claude.ai chat stream. Token usage is parsed when the stream carries it, which recorded traffic so far does not |
+| [ChatGPT](/runtimes/chatgpt-web) (beta) | Managed browser extension over local OTLP | Prompt, assistant response, and web search tool telemetry from the chatgpt.com chat stream. No token usage, which the site does not report |
+
+Both sites are collected by one optional extension, with one build for Chromium browsers and a separate beta Firefox build. Browser chat resolves to the `claude_web` and `chatgpt_web` harness names, so it stays distinguishable from CLI agents. The extension retains full prompt and response text by default. See [Browser Extension](/runtimes/browser-extension) to install it and to change the retention mode.
+
+### CI harnesses
+
+| Harness | Collection path | Telemetry coverage |
+|---------|-----------------|--------------------|
+| [CI agent telemetry](/runtimes/claude-code-ci) | Temporary local collector through `beacon ci exec` or `beacon ci start` / `beacon ci finish` | Supported agent prompt, tool, command, file, and run context where emitted during the job |
+
+### Cloud agent harnesses and SDKs
+
+| Cloud surface | Collection path | Telemetry coverage |
+|---------------|-----------------|--------------------|
+| [Claude Code Cloud Agents](/runtimes/claude-code-cloud-agents) | Cloud sandbox hooks with direct GCS or S3 upload | Session, prompt, tool, command, file, and lifecycle telemetry where Claude Code cloud hook payloads expose it |
+| [Cursor Cloud Agents](/runtimes/cursor-cloud-agents) | Cloud sandbox hooks with direct GCS or S3 upload | Follow-up prompts, tool, shell command, file, subagent, and compaction telemetry after project hooks become active |
+| [Anthropic](/sdk/integrations-anthropic) | OpenLLMetry instrumentation through `@asymptote/sdk` | Supported Anthropic model call spans, errors, and OpenTelemetry attributes |
+| [Claude Agent SDK](/sdk/integrations-claude-agent-sdk) | Query wrapper through `Observe.wrapClaudeAgentQuery()` | Query root spans with Beacon-compatible prompt attributes |
+| [OpenAI](/sdk/integrations-openai) | OpenLLMetry instrumentation through `@asymptote/sdk` | Supported OpenAI model call spans, errors, and OpenTelemetry attributes |
+| [Vercel AI SDK](/sdk/integrations-vercel-ai-sdk) | Tracer handoff through `experimental_telemetry` | AI SDK model call and tool spans where telemetry is enabled |
+
+## Deployment notes
+
+Local agent harnesses need the endpoint agent installed on the machine they run on. Use the native package for that platform, which installs and starts everything in one step:
+
+<Columns cols={3}>
+  <Card title="macOS" icon="apple" href="/platforms/macos">
+    Signed, notarized `.pkg` for Jamf Pro, Fleet, Rippling, or manual install.
+  </Card>
+  <Card title="Linux" icon="linux" href="/platforms/linux">
+    `.deb` and `.rpm` for amd64 and arm64.
+  </Card>
+  <Card title="Windows" icon="windows" href="/platforms/windows">
+    `.msi` for x64, installed as a Windows service.
+  </Card>
+</Columns>
+
+Each package installs the endpoint agent, starts the [local collector](/concepts/core-concepts#local-collector) as a service, and configures the installing user's supported agent runtimes to export to it. Paths differ per platform:
+
+| | macOS | Linux | Windows |
+|---|---|---|---|
+| Binaries | `/opt/beacon` | `/opt/beacon` | `%ProgramFiles%\Beacon\bin` |
+| System config | `/Library/Application Support/Beacon/Endpoint` | `/etc/beacon/endpoint` | `%ProgramData%\Beacon\Endpoint` |
+| Service | LaunchDaemon | systemd unit | `BeaconCollector` Windows service |
+| Runtime log | `/var/log/beacon-agent/runtime.jsonl` | `/var/log/beacon-agent/runtime.jsonl` | `%ProgramData%\Beacon\Endpoint\logs\runtime.jsonl` |
+
+MDM assets, meaning Jamf Pro Extension Attributes, Fleet osquery queries, and Rippling deployment, are macOS only. On Linux and Windows, deploy the package with whatever configuration management you already run.
+
+### Enterprise runtime configuration
+
+| Runtime | Enterprise configuration |
+|---------|--------------------------|
+| Claude Code | The default `beacon endpoint install` detects Claude and configures local OTLP export plus hooks. To backfill committed transcripts, schedule `beacon endpoint claude sync` in the logged-in user's context or leave `--watch` running. |
+| Cursor | The default `beacon endpoint install` detects Cursor and installs its hooks. To backfill committed local sessions, schedule `beacon endpoint cursor sync` in the logged-in user's context or leave `--watch` running. |
+| Cline | Install the managed plugin with `beacon endpoint hooks install --harness cline`. To backfill committed local tasks and sessions, schedule `beacon endpoint cline sync` in the logged-in user's context or leave `--watch` running. |
+| Codex CLI | `beacon endpoint install` configures local OTLP export. To backfill committed sessions, schedule `beacon endpoint codex sync` in the logged-in user's context or leave `--watch` running. |
+| DeepSeek Harness | Install hooks with `beacon endpoint hooks install --harness dsh`. To backfill committed native sessions, schedule `beacon endpoint dsh sync` in the logged-in user's context or leave `--watch` running. |
+| Gemini CLI | The default `beacon endpoint install` detects Gemini and manages `~/.gemini/settings.json` for local OTLP collection. Use an explicit list such as `claude,codex,gemini` when automatic discovery is unavailable. |
+| fx (Vercel Labs) | Nothing to configure in fx. Schedule [`beacon endpoint fx sync`](/cli/endpoint-fx) in the logged-in user's context, or leave `--watch` running, so committed sessions keep reaching the runtime log. Nothing sweeps on its own. |
+| OpenCode | Install the managed plugin for live telemetry with `beacon endpoint hooks install --harness opencode`. To backfill committed local sessions, schedule [`beacon endpoint opencode sync`](/cli/endpoint-opencode) in the logged-in user's context or leave `--watch` running. |
+| Pi | Install the managed extension for live telemetry with `beacon endpoint hooks install --harness pi`. To backfill committed local sessions, schedule [`beacon endpoint pi sync`](/cli/endpoint-pi) in the logged-in user's context or leave `--watch` running. |
+| GitHub Copilot CLI | Configure launch environment through MDM or customer policy: `COPILOT_OTEL_ENABLED=true` and `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318`. Beacon validates the endpoint but does not edit shell profiles or launch environments. To backfill committed sessions, schedule [`beacon endpoint copilot sync`](/cli/endpoint-copilot) in the logged-in user's context or leave `--watch` running. |
+| Factory Droid | Configure launch environment with `OTEL_TELEMETRY_ENDPOINT=http://127.0.0.1:4318`. Beacon discovers the runtime and validates the endpoint but does not edit shell profiles or launch environments. To backfill committed sessions, schedule `beacon endpoint factory sync` in the logged-in user's context or leave `--watch` running. |
+| Grok Build | Install hooks with `beacon endpoint hooks install --harness grok`. To backfill committed local sessions, schedule `beacon endpoint grok sync` in the logged-in user's context or leave `--watch` running. |
+| Hermes Agent | Install hooks with `beacon endpoint hooks install --harness hermes`. To backfill committed sessions from `~/.hermes/state.db`, schedule `beacon endpoint hermes sync` in the logged-in user's context or leave `--watch` running. |
+| Kimi Code | Install user-level hooks with `beacon endpoint hooks install --harness kimi`. Beacon appends its entries to `$KIMI_CODE_HOME/config.toml` without re-serializing the rest of the file. Start a new Kimi Code session or run `/reload` after installation. |
+| OpenClaw Gateway | Install the managed plugin in the account the gateway runs as with `beacon endpoint hooks install --harness openclaw`, then grant `plugins.entries.beacon-endpoint.hooks.allowConversationAccess` in OpenClaw's own config so token usage is collected. For the gateway's OTLP export, use [`beacon endpoint integrations openclaw`](/cli/openclaw) to print local settings and validate events; Beacon never writes OpenClaw's config. To backfill committed session files, schedule `beacon endpoint integrations openclaw sessions sync` in the gateway account or leave `--watch` running. |
+| Prime Agent | Install the managed extension for live telemetry with `beacon endpoint hooks install --harness prime`. To backfill committed local sessions and subagent artifacts, schedule `beacon endpoint prime sync` in the logged-in user's context or leave `--watch` running. |
+
+The default user-mode install discovers and configures supported user-level hooks, plugins, and extensions. Use `beacon endpoint hooks install` for an explicit target or project-level setup. OpenHands CLI/GUI coverage specifically requires project scope, and goose remains the exception: its adapter can map manually configured hooks, but Beacon does not yet install or discover it. System packages and MDM scripts keep their explicit fleet harness lists because runtime hook configuration belongs to the logged-in user's profile. Poll sync commands are also run or scheduled in the account that owns the runtime's local session store.
+
+If a system collector is running while the CLI is reading the default per-user log, `beacon endpoint status` and the local dashboard surface a runtime-log source warning so you can tell where OTLP events are being written.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Core concepts" icon="book" href="/concepts/core-concepts">
+    Runtime surfaces, agent harnesses, and endpoint events.
+  </Card>
+  <Card title="Agent harness integration model" icon="plug" href="/runtimes/integration-model">
+    See how Beacon discovers and configures each runtime.
+  </Card>
+  <Card title="Hooks" icon="plug" href="/cli/hooks">
+    Install, inspect, and uninstall runtime hook integrations.
+  </Card>
+  <Card title="MDM deployment" icon="laptop-mobile" href="/mdm">
+    Deploy Beacon through Jamf Pro, Fleet, or another macOS MDM.
+  </Card>
+</Columns>

@@ -1,0 +1,6 @@
+### go version: go version go1.27.3 linux/amd64  uname: Linux lappiiii 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64 GNU/Linux  nproc: 8
+### gofmt -l .
+### go build ./...
+build=0
+### go vet ./...
+vet=0

@@ -1,0 +1,25 @@
+{
+  "task": "a5-92",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "A_none",
+  "seed": 0,
+  "retrieved_ids": [],
+  "required_evidence": [
+    "a5-92-gold"
+  ],
+  "evidence_recall": 0.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.593,
+  "prompt_tokens": 110,
+  "gen_tokens": 8
+}

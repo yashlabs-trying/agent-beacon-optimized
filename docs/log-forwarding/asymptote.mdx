@@ -1,0 +1,91 @@
+---
+title: "Beacon Cloud"
+description: "Forward Beacon endpoint events to Beacon's managed ingest service and see them on the Beacon dashboard."
+---
+
+## Forwarding overview
+
+Beacon Cloud is the forwarding path that lands Beacon endpoint events on the Beacon dashboard without any customer-run infrastructure. Beacon stays the local JSONL producer. A Vector forwarder on the endpoint tails the [runtime JSONL log](/concepts/core-concepts#runtime-jsonl-log) and the inventory log and POSTs gzip-compressed NDJSON batches over HTTPS to Beacon's ingest service, authenticated with a key issued to that one device.
+
+This is the only Beacon destination that sends telemetry to a Beacon-run endpoint. It is preselected during interactive onboarding, and confirming it mints a device key and starts the forwarder in the same command, once the local install has succeeded. Signing in alone forwards nothing. Choosing Local explicitly opts out. Revoking the device from the dashboard's Beacon Endpoints page stops ingestion within about a minute.
+
+Generate the pack with [`beacon endpoint asymptote`](/cli/asymptote). `beacon endpoint connect` performs enrollment and runs the forwarder as a service; the pack is for running or inspecting the same forwarder by hand.
+
+## What leaves the machine
+
+For runtime telemetry, Standard mode forwards every line written after the
+forwarder starts exactly as Beacon wrote it locally. Pre-connect runtime history is
+not sent, except the bounded [session backfill](/cli/endpoint-connect#session-backfill)
+each connect stages, in user and system mode: the last 30 days of events read from the agents'
+own session stores (at most 24 MiB), which go through the same privacy transform.
+Inventory is read from the beginning of `inventory_state.jsonl` so a
+newly connected endpoint sends its current inventory baseline, including inventory
+records written before connection. Metadata-only mode applies a local Vector
+transform first, removing retained prompts, responses, reasoning, tool
+arguments/results, tool descriptions and definitions, retrieval queries and
+documents, approval and policy reasons, command output, raw fields, diffs, inventory content, and MCP
+definitions while preserving stable ids, hashes, counts, actions, paths, token
+usage, and other structured metadata. Beacon's [retention and
+redaction](/security/retention-redaction) controls still run before either mode.
+The ingest service adds tenant identity server-side.
+
+Nothing else is sent. The forwarder does not read prompts, files, environment variables, or shell history beyond what the events already contain.
+
+## How identity works
+
+Each enrolled machine gets its own key. For user mode, the signed-in CLI account's
+`device:enroll` scope authorizes the key without another browser round trip. System
+mode retains browser approval. The account token is never written into endpoint
+state; the returned device key is stored in a `0600` secrets file that Vector reads
+through its secret backend.
+
+The ingest service checks three things on every request: the key is known and not revoked or expired, the user who approved the device is still a member of the organization, and the organization is enabled for managed ingest. Those checks are cached for one minute, which is the longest a revoked device can keep sending.
+
+## Wire contract
+
+- `POST <ingest url>/v1/ingest/runtime` and `POST <ingest url>/v1/ingest/inventory` with `Authorization: Bearer <device key>`, `Content-Type: application/x-ndjson`, and `Content-Encoding: gzip`. HTTPS only; the CLI and pack refuse other schemes.
+- Each line must be a Beacon endpoint event: `vendor=beacon`, `product=endpoint-agent`, `schema_version`, a parseable `timestamp`, and `event.kind` and `event.action`. Malformed lines are counted and reported; a batch fails only if every line is bad.
+- Limits per request: 8 MiB compressed, 10,000 lines, 1 MiB per line. The pack batches at 5 MB or 5,000 events or 10 seconds, whichever comes first, and sends runtime batches at most once a second, the rate the ingest service allows each device.
+- Responses: `200` with accepted and rejected counts and the object written; `401` for an unknown, revoked, or expired key, or an approver who left the organization; `403` when the organization is not enabled; `413` when a limit is exceeded; `429` and `5xx` are retried by Vector with backoff. Other `4xx` responses are dropped, which is the intended behavior for a revoked key.
+- `GET /v1/ingest/health` (or `HEAD`) with the bearer key returns `200` or `401` and is the credential check the forwarder's startup healthcheck and the smoke-test script use.
+
+## Offline behavior
+
+Vector keeps reading into a disk buffer (512 MiB for runtime, 256 MiB for inventory) while the network is unavailable and drains it when connectivity returns. The service accepts events with old timestamps, so a laptop that was asleep or on a flight catches up without loss, up to the buffer size. A batch whose acknowledgement was lost is re-sent; the dashboard's storage collapses duplicates on Beacon's deterministic event id.
+
+## Install the pack
+
+```bash title="Generate the Beacon pack for a system-mode deployment"
+sudo /opt/beacon/bin/beacon endpoint asymptote install-pack \
+  --system \
+  --output ./beacon-asymptote-pack
+```
+
+The pack includes `README.md`, `vector.toml`, `asymptote-ingest-smoke-test.sh`, and `sample-event.jsonl`. Run Vector by hand with the environment described in [`beacon endpoint asymptote print-config`](/cli/asymptote#beacon-endpoint-asymptote-print-config).
+
+## Validation
+
+1. Run `sh ./beacon-asymptote-pack/asymptote-ingest-smoke-test.sh` with `BEACON_ASYMPTOTE_INGEST_URL` and `BEACON_ASYMPTOTE_SECRETS_FILE` set. It checks the key (`200` valid, `401` revoked) and posts the log tail once.
+2. With Vector running, write a validation event: `beacon endpoint asymptote validate`.
+3. Within about 15 seconds, search the dashboard telemetry page for `Beacon endpoint Beacon validation event`.
+
+## Revocation
+
+Revoke a device, or every device a person approved, from the dashboard's Beacon Endpoints page. The ingest service rejects the key within about a minute, Vector logs `401` responses and drops those batches, and the forwarder needs a new enrollment to resume. Removing a user from the organization has the same effect on every device they approved.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="beacon endpoint asymptote" icon="terminal" href="/cli/asymptote">
+    Generate the pack, print the config, and write validation events.
+  </Card>
+  <Card title="Data flow and threat model" icon="shield" href="/security/data-flow-threat-model">
+    Where this channel sits among Beacon's trust boundaries.
+  </Card>
+  <Card title="Retention and redaction" icon="eye-slash" href="/security/retention-redaction">
+    Controls applied before events are written or forwarded.
+  </Card>
+  <Card title="Log forwarding" icon="tower-broadcast" href="/log-forwarding">
+    Every other destination Beacon supports.
+  </Card>
+</Columns>

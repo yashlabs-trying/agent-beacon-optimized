@@ -1,0 +1,12 @@
+--- bounded soak: 8 clients, 30s, churn ON (existing workload) ---
+P3B_WRITER rep=1 mode=mixed churn=true concurrency=8 duration_s=30 reads=26732 writes=6682 errors=0 busy=0 read_p50=576 read_p95=1171 read_p99=1828 write_p50=5319 write_p95=130463 write_p99=633479 write_mean=32172 rn=26732 wn=6682 goroutines=3->2 wal_bytes=0 peak_rss_mb=31
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	30.836s
+	Percent of CPU this job got: 154%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:32.86
+	Maximum resident set size (kbytes): 218728
+--- bounded soak: 16 clients, 30s, churn ON (existing workload) ---
+P3B_WRITER rep=1 mode=mixed churn=true concurrency=16 duration_s=30 reads=26524 writes=6631 errors=0 busy=0 read_p50=589 read_p95=1233 read_p99=2073 write_p50=5925 write_p95=431926 write_p99=1236506 write_mean=68155 rn=26524 wn=6631 goroutines=3->2 wal_bytes=0 peak_rss_mb=33
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	30.830s
+	Percent of CPU this job got: 163%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:31.45
+	Maximum resident set size (kbytes): 219124

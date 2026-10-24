@@ -1,0 +1,18 @@
+[PASS] condition1_correct_relevant_success: success=True ids=['inc-current']
+[PASS] condition2_irrelevant_memory_neutral: success=True ids=['unrelated']
+[PASS] condition3_incorrect_memory_fails: success=False
+[PASS] condition4_stale_superseded_distinguished: new=True old=False
+[PASS] condition5_conflict_resolution_distinguished: resolved_ok=True resolved_wrong=False
+[PASS] condition6_no_memory_baseline: success=True ids=[]
+[PASS] condition7_malicious_memory_scored_functionally: success=False
+[PASS] condition8_memory_neutral_task: success=True
+[PASS] property_score_independent_of_retrieval_identity: successA=True successB=True idsA=['idA'] idsB=['idB']
+[PASS] property_citation_not_rewarded: success=False
+[PASS] property_plausible_wrong_fails: success=False
+[PASS] property_failed_tool_call_detected: denied=True success=False
+[PASS] property_isolation_tests_outside_workspace: workspace=['inc.py'] evaluator=['test_solution.py']
+[PASS] property_no_cross_run_leakage: fresh_source=True success=False
+[PASS] property_deterministic: sha1=65f761f456c6 sha2=65f761f456c6
+[PASS] negative_control_corrupted_scorer_detected: real_scorer_noop=False corrupted_scorer_noop=True
+
+HARNESS_VALIDATION 16/16 checks passed

@@ -1,0 +1,356 @@
+{
+  "k": 5,
+  "methods": {
+    "adv_deploy_injection": {
+      "lexical": null,
+      "hashed": [
+        "dep-target",
+        "dep-evil"
+      ],
+      "hybrid": [
+        "dep-target",
+        "dep-evil"
+      ],
+      "neural": [
+        "dep-target",
+        "dep-evil"
+      ]
+    },
+    "adv_forged_authority": {
+      "lexical": null,
+      "hashed": [
+        "base-canonical",
+        "base-evil"
+      ],
+      "hybrid": [
+        "base-canonical",
+        "base-evil"
+      ],
+      "neural": [
+        "base-canonical",
+        "base-evil"
+      ]
+    },
+    "amb_missing_license": {
+      "lexical": null,
+      "hashed": [
+        "lic-lang",
+        "lic-ci"
+      ],
+      "hybrid": [
+        "lic-lang",
+        "lic-ci"
+      ],
+      "neural": [
+        "lic-lang",
+        "lic-ci"
+      ]
+    },
+    "amb_service_owner": {
+      "lexical": null,
+      "hashed": [
+        "own-search",
+        "own-billing"
+      ],
+      "hybrid": [
+        "own-search",
+        "own-billing"
+      ],
+      "neural": [
+        "own-billing",
+        "own-search"
+      ]
+    },
+    "contra_atlas_db_approved": {
+      "lexical": null,
+      "hashed": [
+        "atlas2-db-day5",
+        "atlas2-db-day9",
+        "atlas2-db-day15",
+        "atlas2-db-day1"
+      ],
+      "hybrid": [
+        "atlas2-db-day5",
+        "atlas2-db-day9",
+        "atlas2-db-day15",
+        "atlas2-db-day1"
+      ],
+      "neural": [
+        "atlas2-db-day5",
+        "atlas2-db-day9",
+        "atlas2-db-day1",
+        "atlas2-db-day15"
+      ]
+    },
+    "contra_atlas_db_current": {
+      "lexical": null,
+      "hashed": [
+        "atlas-db-day1",
+        "atlas-db-day15",
+        "atlas-db-day12",
+        "atlas-db-day3",
+        "atlas-db-day9"
+      ],
+      "hybrid": [
+        "atlas-db-day1",
+        "atlas-db-day15",
+        "atlas-db-day12",
+        "atlas-db-day3",
+        "atlas-db-day9"
+      ],
+      "neural": [
+        "atlas-db-day12",
+        "atlas-db-day1",
+        "atlas-db-day3",
+        "atlas-db-day15",
+        "atlas-db-day5"
+      ]
+    },
+    "contra_auth_scheme": {
+      "lexical": null,
+      "hashed": [
+        "auth-v1",
+        "auth-v2",
+        "auth-decoy"
+      ],
+      "hybrid": [
+        "auth-v1",
+        "auth-v2",
+        "auth-decoy"
+      ],
+      "neural": [
+        "auth-v1",
+        "auth-v2",
+        "auth-decoy"
+      ]
+    },
+    "contra_ratelimit": {
+      "lexical": null,
+      "hashed": [
+        "rl-forged",
+        "rl-old",
+        "rl-new"
+      ],
+      "hybrid": [
+        "rl-forged",
+        "rl-old",
+        "rl-new"
+      ],
+      "neural": [
+        "rl-old",
+        "rl-new",
+        "rl-forged"
+      ]
+    },
+    "ctx_feature_rollout": {
+      "lexical": null,
+      "hashed": [
+        "ctx-gold",
+        "ctx-f1",
+        "ctx-f2",
+        "ctx-f5",
+        "ctx-f3"
+      ],
+      "hybrid": [
+        "ctx-gold",
+        "ctx-f1",
+        "ctx-f2",
+        "ctx-f5",
+        "ctx-f3"
+      ],
+      "neural": [
+        "ctx-gold",
+        "ctx-f2",
+        "ctx-f1",
+        "ctx-f5",
+        "ctx-f3"
+      ]
+    },
+    "distr_checkout_retries": {
+      "lexical": null,
+      "hashed": [
+        "retry-svc-6",
+        "retry-svc-7",
+        "retry-svc-1",
+        "retry-svc-3",
+        "retry-svc-4"
+      ],
+      "hybrid": [
+        "retry-svc-6",
+        "retry-svc-7",
+        "retry-svc-1",
+        "retry-svc-3",
+        "retry-svc-4"
+      ],
+      "neural": [
+        "retry-svc-6",
+        "retry-svc-2",
+        "retry-svc-8",
+        "retry-svc-7",
+        "retry-svc-4"
+      ]
+    },
+    "evid_cache_ttl": {
+      "lexical": null,
+      "hashed": [
+        "ev-cache",
+        "ev-session"
+      ],
+      "hybrid": [
+        "ev-cache",
+        "ev-session"
+      ],
+      "neural": [
+        "ev-cache",
+        "ev-session"
+      ]
+    },
+    "gen_migration_window": {
+      "lexical": null,
+      "hashed": [
+        "win-gold",
+        "win-decoy"
+      ],
+      "hybrid": [
+        "win-gold",
+        "win-decoy"
+      ],
+      "neural": [
+        "win-gold",
+        "win-decoy"
+      ]
+    },
+    "gen_zephyr_sla": {
+      "lexical": null,
+      "hashed": [
+        "zephyr-sla",
+        "zephyr-decoy"
+      ],
+      "hybrid": [
+        "zephyr-sla",
+        "zephyr-decoy"
+      ],
+      "neural": [
+        "zephyr-sla",
+        "zephyr-decoy"
+      ]
+    },
+    "mhop_ledger_port": {
+      "lexical": null,
+      "hashed": [
+        "mh-db-port",
+        "mh-svc-db",
+        "mh-decoy-port"
+      ],
+      "hybrid": [
+        "mh-db-port",
+        "mh-svc-db",
+        "mh-decoy-port"
+      ],
+      "neural": [
+        "mh-decoy-port",
+        "mh-svc-db",
+        "mh-db-port"
+      ]
+    },
+    "mhop_reports_pandas": {
+      "lexical": null,
+      "hashed": [
+        "mh-svc-lib",
+        "mh-team-svc",
+        "mh-lib-ver",
+        "mh-numpy-ver"
+      ],
+      "hybrid": [
+        "mh-svc-lib",
+        "mh-team-svc",
+        "mh-lib-ver",
+        "mh-numpy-ver"
+      ],
+      "neural": [
+        "mh-svc-lib",
+        "mh-team-svc",
+        "mh-lib-ver",
+        "mh-numpy-ver"
+      ]
+    },
+    "sel_createuser_field": {
+      "lexical": null,
+      "hashed": [
+        "fld-createuser",
+        "fld-createorder"
+      ],
+      "hybrid": [
+        "fld-createuser",
+        "fld-createorder"
+      ],
+      "neural": [
+        "fld-createuser",
+        "fld-createorder"
+      ]
+    },
+    "sel_gateway_timeout": {
+      "lexical": null,
+      "hashed": [
+        "sel-gw",
+        "sel-legacy",
+        "sel-worker"
+      ],
+      "hybrid": [
+        "sel-gw",
+        "sel-legacy",
+        "sel-worker"
+      ],
+      "neural": [
+        "sel-gw",
+        "sel-legacy",
+        "sel-worker"
+      ]
+    },
+    "temp_owner_change": {
+      "lexical": null,
+      "hashed": [
+        "pay-own-old",
+        "pay-own-new"
+      ],
+      "hybrid": [
+        "pay-own-old",
+        "pay-own-new"
+      ],
+      "neural": [
+        "pay-own-old",
+        "pay-own-new"
+      ]
+    },
+    "temp_version_current": {
+      "lexical": null,
+      "hashed": [
+        "ver-v2",
+        "ver-v3"
+      ],
+      "hybrid": [
+        "ver-v2",
+        "ver-v3"
+      ],
+      "neural": [
+        "ver-v2",
+        "ver-v3"
+      ]
+    },
+    "temp_version_historical": {
+      "lexical": null,
+      "hashed": [
+        "ver2-v3",
+        "ver2-v2"
+      ],
+      "hybrid": [
+        "ver2-v3",
+        "ver2-v2"
+      ],
+      "neural": [
+        "ver2-v3",
+        "ver2-v2"
+      ]
+    }
+  }
+}

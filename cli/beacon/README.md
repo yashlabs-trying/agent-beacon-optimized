@@ -1,0 +1,807 @@
+# beacon
+
+Public CLI for Beacon Endpoint Agent.
+
+## Build
+
+```bash
+make build
+```
+
+## Common Commands
+
+```bash
+./beacon endpoint install
+./beacon login
+./beacon whoami
+./beacon endpoint status --json
+./beacon endpoint connect
+./beacon endpoint disconnect
+./beacon endpoint discover --json
+./beacon endpoint repair
+./beacon traces
+./beacon endpoint dashboard
+./beacon endpoint uninstall --keep-logs
+./beacon logout
+```
+
+Endpoint commands use per-user paths by default so hook and OTLP telemetry share
+`~/.beacon/endpoint/logs/runtime.jsonl`. Use `--system` for root-managed
+deployment paths.
+
+With no `--harness` flag, install and repair discover local runtimes and configure
+every integration Beacon can safely install. Pass an exact comma-separated list
+to override discovery, or `--harness all` to force every installable integration.
+
+Add optional Splunk HEC forwarding during install or repair:
+
+```bash
+./beacon endpoint install \
+  --splunk-hec-endpoint https://splunk.example:8088/services/collector \
+  --splunk-hec-token "$SPLUNK_HEC_TOKEN" \
+  --splunk-index beacon
+```
+
+The local JSONL runtime log remains enabled when Splunk forwarding is
+configured.
+
+## Cloud Agent Telemetry
+
+Use `beacon cloud` helpers to configure provider-managed cloud agent sandboxes.
+Claude Code on the web and Cursor cloud agents can forward Beacon JSONL to
+customer-managed GCS or S3:
+
+```bash
+./beacon cloud gcs setup \
+  --project "$GCP_PROJECT" \
+  --bucket "$BEACON_CLOUD_GCS_BUCKET" \
+  --prefix "$BEACON_CLOUD_GCS_PREFIX" \
+  --service-account beacon-cloud-trace-uploader \
+  --apply \
+  --print-env
+```
+
+Copy the printed `BEACON_CLOUD_GCS_BUCKET`,
+`BEACON_CLOUD_GCS_PREFIX`, and `BEACON_CLOUD_GCS_CREDENTIALS_B64`
+values into the cloud agent environment.
+
+For S3, use `beacon cloud s3 setup --apply --print-env` and copy the printed
+`BEACON_CLOUD_S3_*` and AWS credential values instead.
+
+For both destinations, also set:
+
+```bash
+BEACON_ORIGIN=cloud
+BEACON_RUN_PROVIDER=claude_code_web # or cursor_cloud
+BEACON_RUN_EPHEMERAL=true
+BEACON_CLOUD_USER_ID_HASH=<stable-user-or-test-id>
+```
+
+For Cursor Cloud Agents, keep the repository-owned setup in `.cursor/`:
+
+```text
+.cursor/environment.json
+.cursor/hooks.json
+.cursor/install.sh
+.cursor/start.sh
+```
+
+The install script builds the current branch by default, or downloads a release
+when `BEACON_VERSION` is set. Generate `.cursor/hooks.json` with
+`beacon cloud cursor print-hooks`, then commit it before starting a cloud agent;
+the environment update script must not create hooks after Cursor has already
+loaded the project configuration.
+
+For Claude Code on the web, generate the setup script for a Beacon release and
+paste it into the provider's cloud setup field:
+
+```bash
+./beacon cloud claude-web print-setup --version vX.Y.Z
+```
+
+The setup script installs `beacon-hooks` into the cloud sandbox and uploads a
+gzip-compressed `/tmp/beacon/runtime.jsonl` snapshot to object storage. Claude web writes
+`.claude/settings.local.json` inside the sandbox clone. Cursor cloud uses
+`.cursor/environment.json` to install Beacon and committed project-level
+`.cursor/hooks.json` because Cursor cloud only runs repository project hooks.
+
+```text
+<prefix>/runtime/date=YYYY-MM-DD/<timestamp>-claude_code_web-<claude-session-id>.jsonl.gz
+<prefix>/runtime/date=YYYY-MM-DD/<timestamp>-cursor_cloud-<generated-or-explicit-run-id>.jsonl.gz
+```
+
+Cloud network access must allow the selected destination: both
+`oauth2.googleapis.com` and `storage.googleapis.com` for GCS, or
+`s3.<region>.amazonaws.com` for S3. Cursor cloud project hooks capture follow-up
+prompts, tool activity, shell execution, file reads and edits, subagents, and
+compaction after the writable environment becomes available. Early bootstrap
+turns can precede project-hook activation. If you are testing unreleased Beacon
+changes, build the feature branch in the setup script instead of using
+`print-setup --version`.
+
+Add optional Falcon LogScale HEC forwarding during install or repair:
+
+```bash
+./beacon endpoint repair \
+  --falcon-hec-endpoint "$LOGSCALE_URL/api/v1/ingest/hec" \
+  --falcon-hec-token "$LOGSCALE_INGEST_TOKEN" \
+  --falcon-source beacon-endpoint-agent \
+  --falcon-sourcetype json
+```
+
+Beacon sends LogScale HEC requests with `Authorization: Bearer <ingest token>`.
+The HEC `event` value is the normalized Beacon event object with an ISO
+`@timestamp` nested inside it for LogScale's built-in JSON parser. The optional
+`--falcon-index` flag maps to a LogScale repository and is usually only needed
+with organization or system multi-repository ingest tokens; repository-scoped
+ingest tokens already select the target repository.
+
+## Dashboard
+
+Use the full-screen terminal browser for a local trace list, search, event filters,
+and event details:
+
+```bash
+./beacon traces
+```
+
+The browser reads the same local runtime JSONL and trace index as the commands
+under `beacon endpoint traces`. With redirected input or output it falls back to
+a bounded tab-separated list, while `endpoint traces list`, `search`, and `show`
+remain available for scripting and JSON output.
+
+```bash
+./beacon endpoint dashboard
+./beacon endpoint dashboard --addr 127.0.0.1:8765
+./beacon endpoint dashboard --open
+```
+
+The dashboard reads the configured runtime JSONL log and serves a local,
+read-only view on loopback. It has no external network dependency during normal
+use.
+
+Use `./beacon token-usage` for the same token data in the terminal. Claude Code
+and supported Codex versions share the canonical `gen_ai.usage` schema; Codex
+turn traces add per-session and per-model counts, and its metadata-only
+SessionStart hook enables local OS-user rollups.
+
+Use the search bar to find events by action, command, file path, MCP tool,
+approval decision, repository, session, or message. Quick filters surface
+high-severity events, failures, approvals, MCP activity, file changes, and events
+that may need review.
+
+## Agent Telemetry in CI
+
+Use `beacon ci exec` to collect Claude Code or Codex OpenTelemetry for a single
+CI command without installing a persistent endpoint service or changing local
+developer configuration:
+
+```bash
+./beacon ci exec -- claude --print "Summarize this repository in one sentence"
+```
+
+For actions or workflows that launch an agent internally, use CI session mode:
+
+```bash
+./beacon ci start --harness claude,codex
+# run one or more agent CI steps here
+./beacon ci finish --min-events 1
+```
+
+Beacon starts the bundled `beacon-otelcol` in the foreground, writes a
+job-scoped collector config under `$RUNNER_TEMP/beacon`, configures supported
+agent harnesses to export OTLP to the local collector, validates that structured
+Beacon events reached the runtime JSONL log, and writes normalized JSONL for
+artifact upload or customer-managed forwarding.
+
+`ci exec` injects telemetry only into its child process. `ci start` writes
+session exports to `$GITHUB_ENV` when run through the composite action, which
+lets later `uses:` actions inherit Claude Code environment variables or a
+generated Codex `CODEX_HOME`.
+
+Validate an existing CI artifact explicitly:
+
+```bash
+./beacon ci validate \
+  --log-path "$RUNNER_TEMP/beacon/runtime.jsonl" \
+  --min-events 1
+```
+
+Captured events carry the GitHub Actions run context (`origin`, `run.provider`,
+`run.repository`, `run.branch`, `run.run_id`, `run.run_attempt`, `run.workflow`,
+`run.job`, `run.event_name`, `run.commit`, `run.actor`, and `run.pr_number` on
+pull-request events) so they can be correlated per-workflow and per-PR
+downstream.
+
+Upload the log from GitHub Actions for customer-controlled retention:
+
+```yaml
+- name: Run Claude with Beacon telemetry
+  run: beacon ci exec -- claude --print "Summarize this repository"
+
+- name: Upload Beacon telemetry
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: beacon-runtime-log
+    path: ${{ runner.temp }}/beacon/runtime.jsonl
+```
+
+Upload only the `runtime.jsonl` file (as above), not the whole
+`${{ runner.temp }}/beacon` directory. When forwarding is configured, Beacon
+keeps the SIEM token in the runner environment and writes only collector
+environment references into `otelcol.yaml`; excluding the collector config from
+artifacts still avoids exposing forwarding endpoints or local collector details.
+
+The JSONL artifact is the universal CI export contract. Existing destination
+packs can consume the same file after it is downloaded or copied into the
+customer-managed forwarder path:
+
+| Destination | CI export path |
+| --- | --- |
+| Wazuh | Download the artifact and tail it with the Wazuh localfile pack. |
+| Elastic | Download the artifact and ingest it with Filebeat or Elastic Agent pack assets. |
+| Datadog | Download the artifact and tail it with the Datadog Agent log collection pack. |
+| Sumo Logic | Download the artifact for Vector-based forwarding, or use `--upload` when object storage is the handoff point. |
+| Rapid7 | Download the artifact for Vector/webhook forwarding. |
+| S3 | Use direct `--upload s3` in CI, or upload/download the artifact manually. |
+| CloudWatch Logs | Download the artifact and forward with the Vector CloudWatch pack. |
+| GCS | Use direct `--upload gcs` in CI, or upload/download the artifact manually. |
+| Sentinel | Download the artifact and ingest with the Azure Monitor Agent/DCR pack. |
+| Splunk | Use direct `--forward splunk`, or ingest the JSONL artifact with an existing Splunk pipeline. |
+| Falcon LogScale | Use direct `--forward falcon`, or ingest the JSONL artifact with an existing pipeline. |
+
+### Forwarding to a customer-managed SIEM
+
+Because CI runners are ephemeral, the local JSONL is destroyed when the runner
+is torn down. In addition to (or instead of) uploading an artifact, `ci exec`
+can forward events from its ephemeral collector to a customer-managed Splunk or
+CrowdStrike Falcon LogScale HEC endpoint before teardown:
+
+```bash
+export BEACON_CI_SPLUNK_HEC_TOKEN="$SPLUNK_HEC_TOKEN"   # from CI secrets
+beacon ci exec \
+  --forward splunk \
+  --forward-endpoint "https://splunk.example:8088/services/collector" \
+  -- claude --print "Summarize this repository"
+```
+
+- The token is read from the environment only
+  (`BEACON_CI_SPLUNK_HEC_TOKEN` / `BEACON_CI_FALCON_HEC_TOKEN`) and is never
+  accepted as a flag, so it does not appear in CI process listings. The
+  endpoint may be passed via `--forward-endpoint` or
+  `BEACON_CI_SPLUNK_HEC_ENDPOINT` / `BEACON_CI_FALCON_HEC_ENDPOINT`.
+- Forwarding is best-effort: a SIEM delivery failure does not fail the job, and
+  Beacon still writes the local JSONL.
+- Beacon remains a local JSONL producer; egress goes only to infrastructure the
+  customer already operates.
+
+### Uploading CI JSONL to object storage
+
+For CI runners that should hand off telemetry through object storage, `ci exec`
+can upload the completed `runtime.jsonl` after telemetry validation:
+
+```bash
+export BEACON_CI_S3_BUCKET="my-beacon-telemetry"
+export BEACON_CI_S3_PREFIX="github-actions"
+beacon ci exec --upload s3 -- claude --print "Summarize this repository"
+```
+
+```bash
+export BEACON_CI_GCS_BUCKET="my-beacon-telemetry"
+export BEACON_CI_GCS_PREFIX="github-actions"
+beacon ci exec --upload gcs -- claude --print "Summarize this repository"
+```
+
+- S3 upload uses `aws s3 cp` and the standard AWS credential provider chain.
+- GCS upload uses `gcloud storage cp` when available, falling back to `gsutil cp`.
+- Beacon strips common AWS and Google credential environment variables from the
+  child agent process, while keeping them available to the post-run uploader.
+- Object keys default to
+  `<prefix>/<repository>/<run_id>/<run_attempt>/runtime.jsonl` in GitHub Actions,
+  with a timestamp fallback outside GitHub Actions.
+
+By default `ci exec` fails the step when no Beacon events reach the runtime log,
+which surfaces a broken telemetry pipeline. Pass `--require-telemetry=false` to
+downgrade that to a warning when you do not want telemetry health to gate the
+build.
+
+### GitHub Action
+
+A composite action wraps binary resolution, `ci exec`, session
+`start`/`finish`, and artifact upload. For a direct command, use the default
+`exec` mode:
+
+```yaml
+- name: Run Claude with Beacon telemetry
+  uses: asymptote-labs/agent-beacon@<tag>
+  with:
+    command: claude --print "Summarize the changes in this pull request"
+```
+
+The action downloads a pinned Beacon release and verifies it against the
+release `checksums.txt` before running. When the action is invoked from a
+version tag, that tag is used as the default Beacon CLI release; set `version`
+explicitly or use `binary-path` when testing from a branch or local checkout,
+or on air-gapped and self-hosted runners that already provide `beacon` and
+`beacon-otelcol`. See
+[`examples/github-actions/binary-path-telemetry.yml`](../../examples/github-actions/binary-path-telemetry.yml)
+for a complete reference workflow.
+It uploads the runtime JSONL log as an artifact by default.
+
+To wrap a third-party agent action, split the action into `start` and `finish`
+steps:
+
+```yaml
+- name: Start Beacon telemetry
+  uses: asymptote-labs/agent-beacon@<tag>
+  with:
+    mode: start
+    harnesses: claude,codex
+
+- name: Run agent review action
+  uses: vendor/agent-review-action@main
+
+- name: Finish Beacon telemetry
+  if: always()
+  uses: asymptote-labs/agent-beacon@<tag>
+  with:
+    mode: finish
+    min-events: "1"
+```
+
+For Codex-based actions that accept a custom home directory, pass the generated
+Codex home output:
+
+```yaml
+- name: Start Beacon telemetry
+  id: beacon
+  uses: asymptote-labs/agent-beacon@<tag>
+  with:
+    mode: start
+    harnesses: codex
+
+- uses: openai/codex-action@main
+  with:
+    openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+    codex-home: ${{ steps.beacon.outputs.codex-home }}
+    prompt: "Review this pull request"
+```
+
+To forward to a customer-managed SIEM, set `forward`/`forward-endpoint` on
+`exec` or `start` and provide the token through a job- or workflow-level
+environment variable from a secret:
+
+```yaml
+jobs:
+  claude-telemetry:
+    runs-on: ubuntu-latest
+    env:
+      BEACON_CI_SPLUNK_HEC_TOKEN: ${{ secrets.SPLUNK_HEC_TOKEN }}
+    steps:
+      - uses: asymptote-labs/agent-beacon@<tag>
+        with:
+          command: claude --print "Summarize this repository"
+          forward: splunk
+          forward-endpoint: https://splunk.example:8088/services/collector
+```
+
+To upload the completed JSONL artifact to object storage, configure cloud
+credentials at the job level and set `upload`:
+
+```yaml
+- uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: ${{ secrets.BEACON_TELEMETRY_ROLE_ARN }}
+    aws-region: us-east-1
+
+- name: Run Claude with Beacon telemetry
+  uses: asymptote-labs/agent-beacon@<tag>
+  env:
+    BEACON_CI_S3_BUCKET: my-beacon-telemetry
+    BEACON_CI_S3_PREFIX: github-actions
+  with:
+    command: claude --print "Summarize this repository"
+    upload: s3
+```
+
+See [`examples/github-actions/claude-code-telemetry.yml`](../../examples/github-actions/claude-code-telemetry.yml),
+[`examples/github-actions/claude-security-review-session.yml`](../../examples/github-actions/claude-security-review-session.yml),
+[`examples/github-actions/codex-action-session.yml`](../../examples/github-actions/codex-action-session.yml),
+[`examples/github-actions/s3-upload-telemetry.yml`](../../examples/github-actions/s3-upload-telemetry.yml),
+[`examples/github-actions/gcs-upload-telemetry.yml`](../../examples/github-actions/gcs-upload-telemetry.yml),
+[`examples/github-actions/s3-gcs-upload-telemetry.yml`](../../examples/github-actions/s3-gcs-upload-telemetry.yml),
+[`examples/github-actions/splunk-forward-telemetry.yml`](../../examples/github-actions/splunk-forward-telemetry.yml),
+[`examples/github-actions/falcon-forward-telemetry.yml`](../../examples/github-actions/falcon-forward-telemetry.yml),
+and [`examples/github-actions/binary-path-telemetry.yml`](../../examples/github-actions/binary-path-telemetry.yml)
+for complete reference workflows.
+
+## Wazuh
+
+```bash
+./beacon endpoint wazuh print-config
+./beacon endpoint wazuh install-pack --output ./beacon-wazuh
+./beacon endpoint wazuh validate
+```
+
+## Sumo Logic
+
+```bash
+./beacon endpoint sumo print-config
+./beacon endpoint sumo install-pack --output ./beacon-sumo-pack
+./beacon endpoint sumo validate
+```
+
+The Sumo pack keeps Beacon as a local JSONL producer and documents forwarding
+`runtime.jsonl` into a customer-managed Sumo Hosted Collector HTTP Logs &
+Metrics Source. Use a tailing forwarder for production so offsets are
+checkpointed and the whole file is not repeatedly uploaded.
+
+## Rapid7 InsightIDR
+
+```bash
+./beacon endpoint rapid7 print-config
+./beacon endpoint rapid7 install-pack --output ./beacon-rapid7-pack
+./beacon endpoint rapid7 validate
+```
+
+The Rapid7 pack keeps Beacon as a local JSONL producer and documents forwarding
+`runtime.jsonl` into a Rapid7 InsightIDR Custom Logs webhook as NDJSON. Store the
+webhook URL in your customer-managed shipper or deployment tooling, not in
+Beacon endpoint configuration.
+
+## AWS S3
+
+```bash
+./beacon endpoint s3 print-config
+./beacon endpoint s3 install-pack --output ./beacon-s3-pack
+./beacon endpoint s3 validate
+```
+
+The S3 pack keeps Beacon as a local JSONL producer and documents forwarding
+`runtime.jsonl` and the sibling `inventory_state.jsonl` into separate
+`runtime/` and `inventory/` S3 prefixes with a customer-managed Vector host
+agent. Store AWS credentials, profiles, IAM roles, bucket policies, lifecycle
+rules, and encryption settings in AWS, Vector, or deployment tooling, not in
+Beacon endpoint configuration.
+
+## AWS CloudWatch Logs
+
+```bash
+./beacon endpoint cloudwatch print-config
+./beacon endpoint cloudwatch install-pack --output ./beacon-cloudwatch-pack
+./beacon endpoint cloudwatch validate
+```
+
+The AWS CloudWatch Logs pack keeps Beacon as a local JSONL producer and
+documents forwarding `runtime.jsonl` into a CloudWatch Logs log group with a
+customer-managed Vector host agent. Store AWS credentials, profiles, IAM roles,
+log group retention, stream naming, and encryption settings in AWS, Vector, or
+deployment tooling, not in Beacon endpoint configuration.
+
+## Google Cloud Storage
+
+```bash
+./beacon endpoint gcs print-config
+./beacon endpoint gcs install-pack --output ./beacon-gcs-pack
+./beacon endpoint gcs validate
+```
+
+The GCS pack keeps Beacon as a local JSONL producer and documents forwarding
+`runtime.jsonl` and the sibling `inventory_state.jsonl` into separate
+`runtime/` and `inventory/` folders below one root GCS prefix.
+
+The macOS package includes
+`/opt/beacon/jamf/claude/gcs/{install-forwarder.sh,run-forwarder.sh,repair-hooks-and-forwarder.sh}`
+and runs bundled Vector as `com.beacon.endpoint.gcs-forwarder`. Vector `0.56`
+supports service-account JSON and GCE metadata credentials; on a normal Mac,
+deliver the JSON through MDM or secret tooling to a root-owned path outside
+Beacon-managed directories and reference it with
+`GOOGLE_APPLICATION_CREDENTIALS`. Do not rely on interactive `gcloud` ADC or
+Workload Identity Federation for the launchd service. An endpoint writer with
+`roles/storage.objectCreator` cannot list or read objects, so use a separate
+reader identity for validation.
+
+## Microsoft Sentinel
+
+```bash
+./beacon endpoint sentinel print-config
+./beacon endpoint sentinel install-pack --output ./beacon-sentinel-pack
+./beacon endpoint sentinel validate
+```
+
+The Sentinel pack keeps Beacon as a local JSONL producer and documents
+forwarding `runtime.jsonl` through Azure Monitor Agent, a Data Collection Rule,
+and a `BeaconRuntime_CL` custom Log Analytics table. Store Azure workspace,
+DCR, endpoint, and credential details in Azure or customer-managed deployment
+tooling, not in Beacon endpoint configuration.
+
+## Beacon Cloud
+
+```bash
+./beacon endpoint connect
+./beacon endpoint status --json | jq .managed_ingest
+./beacon endpoint disconnect
+```
+
+Beacon Cloud is the Beacon-hosted forwarding destination. User-mode connect
+uses the signed-in account to authorize a separate device key; system mode keeps
+browser approval. The account token is never given to Vector. Connect stores the
+device key in a `0600` secrets file and runs Vector as the
+`com.beacon.endpoint.asymptote-forwarder` (launchd) or
+`beacon-asymptote-forwarder.service` (systemd) service. Beacon stays the local
+JSONL producer and Vector does the network. Standard privacy forwards locally
+sanitized retained content; `--privacy-mode metadata-only` strips retained text,
+raw fields, diffs, inventory content, and MCP definitions locally before upload.
+Runtime forwarding starts at the end of the existing runtime log, while inventory
+starts at the beginning of `inventory_state.jsonl` to send the endpoint's current
+inventory baseline. Revoking the device stops ingestion within about a minute.
+Vector 0.50 or newer is required: `/opt/beacon/bin/vector` from
+the signed package, the `beacon-vector` keg that `brew install beacon` pulls in on
+macOS, any other Vector 0.50+ already on the machine, or the Linux package from
+vector.dev. The Homebrew mirror is named `beacon-vector` rather than `vector`, and
+keeps its binary in `libexec`, because Homebrew allows a single keg named `vector`
+and a single `bin/vector` symlink: under its own name it installs alongside a Vector
+from `vectordotdev/brew` instead of refusing to install at all.
+
+The same pack is available for running Vector by hand:
+
+```bash
+./beacon endpoint asymptote print-config
+./beacon endpoint asymptote install-pack --output ./beacon-asymptote-pack
+./beacon endpoint asymptote validate
+```
+
+See https://docs.asymptotelabs.ai/log-forwarding/asymptote for the wire
+contract, what leaves the machine, and revocation.
+
+## Optional Integrations
+
+```bash
+./beacon endpoint hooks install --harness cursor
+./beacon endpoint hooks status --harness cursor
+
+./beacon endpoint hooks install --harness claude --level user
+./beacon endpoint hooks status --harness claude
+
+./beacon endpoint hooks install --harness opencode
+./beacon endpoint hooks status --harness opencode
+
+./beacon endpoint hooks install --harness grok
+./beacon endpoint hooks status --harness grok
+
+./beacon endpoint hooks install --harness muse
+./beacon endpoint hooks status --harness muse
+
+./beacon endpoint hooks install --harness openhands --level project
+./beacon endpoint hooks status --harness openhands --level project
+
+./beacon endpoint hooks install --harness kiro
+./beacon endpoint hooks status --harness kiro
+
+./beacon endpoint hooks install --harness dsh
+./beacon endpoint hooks status --harness dsh
+./beacon endpoint dsh status
+./beacon endpoint dsh sync
+
+./beacon endpoint hooks install --harness hermes
+./beacon endpoint hooks status --harness hermes
+
+./beacon endpoint hooks install --harness devin-cli --level project
+./beacon endpoint hooks status --harness devin-cli --level project
+./beacon endpoint hooks install --harness devin-desktop --level user
+./beacon endpoint hooks status --harness devin-desktop --level user
+
+./beacon endpoint install --harness claude,codex,devin-cli,devin-desktop
+
+./beacon endpoint integrations claude-cowork setup --endpoint https://collector.example.com --open
+./beacon endpoint integrations claude-cowork setup --ngrok --open
+./beacon endpoint integrations claude-cowork validate --since 10m
+
+./beacon endpoint integrations openclaw print-config
+./beacon endpoint integrations openclaw status
+./beacon endpoint integrations openclaw validate --since 10m
+
+./beacon endpoint integrations vscode setup
+./beacon endpoint integrations vscode status
+./beacon endpoint integrations vscode validate --since 10m
+./beacon endpoint hooks install --harness vscode --level project
+```
+
+The opencode integration installs Beacon's owned local plugin at
+`~/.config/opencode/plugins/beacon.ts`. It captures prompts, completed assistant
+text/reasoning, model usage, correlated tool input/results, commands, file,
+web/MCP, approval, and lifecycle events through OpenCode's plugin hooks. Beacon
+handles normalization, retention, redaction, event-size controls, and JSONL
+output locally. For local troubleshooting, set `BEACON_OPENCODE_DEBUG=1` in the
+environment that launches opencode to emit best-effort plugin debug logs.
+
+Claude Code supports two Beacon setup paths. `beacon endpoint install --harness claude`
+configures Claude Code's local OpenTelemetry export to Beacon's collector.
+`beacon endpoint hooks install --harness claude` writes command hooks into
+`~/.claude/settings.json` or `.claude/settings.json` and sends normalized events
+directly to the local runtime JSONL log. The hook path is useful when an
+Anthropic organization policy blocks third-party telemetry export. Claude Code
+hooks are intentionally not included in `beacon endpoint hooks install --all` in
+this release; install them explicitly with `--harness claude`.
+
+The Grok Build integration writes Beacon's owned local hook file at
+`~/.grok/hooks/beacon-endpoint.json` for user-level installs or `.grok/hooks/beacon-endpoint.json`
+for project-level installs. Project hooks require trusting the project in Grok
+with `/hooks-trust` before they execute.
+
+The Muse Code integration writes Beacon's owned managed hooks file at
+`$XDG_CONFIG_HOME/muse/beacon-endpoint-hooks.json` (or `~/.config/muse/...`) and
+points Muse's own `settings.json` at it with the `managed_hooks_path` key. Both
+halves are required: a hooks file nothing points at is never read, and a
+`managed_hooks_path` with no file behind it registers nothing, so `status` checks
+and prints both. Muse reads exactly one managed hooks file, so install refuses
+rather than replacing a registration that is already somebody else's, and
+uninstall clears the key only while it still names Beacon's file. User scope
+only -- Muse's project `.muse/hooks.json` is ignored by the shipping build, so a
+project install would report success and collect nothing.
+
+The OpenHands integration merges Beacon's six hook commands into the
+`.openhands/hooks.json` the runtime already reads, at `<repo>/.openhands/hooks.json`
+for project-level installs or `$OH_PERSISTENCE_DIR`/`~/.openhands/hooks.json` for
+user-level ones. Hooks you already have are preserved, including their matchers,
+timeouts, and fields Beacon has no model for. Project scope is the one every host
+reads: OpenHands takes the first hooks file it finds rather than merging the two,
+so a repository file shadows the user-level one entirely, and the agent server
+behind the CLI and the GUI never consults the user-level file at all. The file has
+a closed schema that fails silently -- an unknown top-level key, a second spelling
+of one event, or a top-level event added beside a legacy `{"hooks": {...}}` wrapper
+all end with hooks not running and no error -- so install refuses a file that
+already breaks one of those rather than reporting a success that collects nothing.
+
+The Kiro integration writes one hook file of Beacon's own,
+`beacon-endpoint.json`, into the `.kiro/hooks/` directory Kiro scans -- at
+`<repo>/.kiro/hooks/` for project-level installs or `$KIRO_HOME`/`~/.kiro/hooks/`
+for user-level ones. Kiro loads every `.json` file in that directory, so the
+install is additive by construction: your own hook files are never read,
+rewritten or deleted, and uninstall removes only the file Beacon wrote. Beacon
+does claim that one filename -- a file at it holding a hook Beacon did not write
+is refused rather than overwritten, with an error naming the hook. Both scopes
+are live at once, because Kiro merges hook files across scopes rather than taking
+the first it finds, so one install covers the Kiro IDE and the Kiro CLI and a
+user-scope install keeps working inside a repository with hooks of its own.
+Kiro's hook contract is exit codes rather than response objects, so Beacon writes
+nothing to stdout there: on `SessionStart` and `UserPromptSubmit` Kiro adds a
+hook's stdout to the model's context, and an observing hook has nothing to say to
+the model. The one exception is the optional policy seam, whose deny is exit code
+2 with the reason on stderr -- Kiro's documented way to block a tool call.
+
+The DeepSeek Harness integration is the one install that takes two files,
+because `dsh` reads no hooks file until something mounts a reader at it: the
+harness composes itself from a plugin tree, and `@deepseek-ai/dsh-hooks-claude-code`
+-- the Claude Code hook bridge DeepSeek ships as a dependency of the CLI -- is not
+in the default tree. So Beacon writes `$DSH_HOME/beacon-endpoint-hooks.json`, a
+hooks file it owns outright, and adds one row to `$DSH_HOME/cordis.patch.yml`
+mounting the bridge at it. `$DSH_HOME` defaults to `~/.dsh`. The home-level patch
+layer applies over every profile, so one install covers the CLI, Web, ACP and SDK
+surfaces; there is no project scope, because the bridge's `configPath` is
+process-level and a repository has nowhere to mount from, so `--level project` is
+refused with that explanation rather than silently becoming a machine-wide
+install.
+
+Beacon also reads DeepSeek Harness' native committed session records from
+`$DSH_HOME/sessions` with `beacon endpoint dsh sync`. That poll path is local
+and offline; it backfills assistant text/reasoning, structured failed-tool
+status, and token usage that the hook bridge does not expose. Hook install also
+writes a Beacon-owned local skill at `$DSH_HOME/skills/beacon-endpoint/SKILL.md`
+so `dsh` can check `beacon endpoint dsh status` and run a workspace-scoped sync
+when asked.
+
+The patch file is the user's own, and is edited as a document rather than
+rewritten: parsed into a YAML node tree, one self-contained element appended or
+removed, re-encoded from the same tree, so comments, quoting and `!!js`
+expressions survive. Beacon refuses rather than rewriting a patch file it cannot
+parse, one that is not a list of entries, or an insert element carrying its row
+alongside rows it did not write. An uninstall that would leave the file empty
+removes it instead: an empty or comments-only patch file fails `dsh` boot, while
+an absent one is skipped cleanly. `hooks status` and `endpoint inventory` report
+both files, because installed is the conjunction of the two -- a hooks file with
+nothing mounted at it is a file nothing reads, and a mount pointing at a missing
+hooks file registers nothing.
+
+The Kimi Code integration registers in the `[[hooks]]` array of the runtime's
+own `$KIMI_CODE_HOME/config.toml` (default `~/.kimi-code`), which is the same
+file that holds `[providers.<name>].api_key` in plain text. Beacon is a guest in
+it, so it appends its entries to the end of the document and never re-serializes:
+every byte above the block is left exactly as it was found, which is what keeps a
+secret from being rewritten, re-quoted or reordered by a round trip. Appending is
+sound rather than convenient -- an array-of-tables header at the end of a TOML
+document opens a new table and cannot change what precedes it -- and every write
+is parsed back and compared against the intended result before it replaces the
+file, so a scanning or quoting mistake fails the install instead of damaging a
+config. Beacon refuses a config.toml it cannot parse, because Kimi Code will not
+start on one, and refuses one whose `hooks` key is an inline array, because TOML
+forbids appending `[[hooks]]` after that; `endpoint discover` reports the second
+case before an install meets it. There is no project scope: Kimi Code reads one
+user-level config file, so `--level project` is refused with that explanation
+rather than becoming a machine-wide install.
+
+Detection and removal go by the hook command rather than by the comment Beacon
+writes above its block, and that is a reachable case rather than caution: Kimi
+Code's legacy migration from `kimi-cli` rewrites config.toml by serializing the
+merged config, keeping the `[[hooks]]` entries and dropping every comment. Beacon
+writes nothing to a Kimi Code hook's stdout, because on `UserPromptSubmit` a
+hook's stdout is appended to the model's context -- the optional policy seam
+denies with exit code 2 and the reason on stderr, which the runtime checks before
+it parses stdout at all. Kimi Code is one of the few runtimes that reports real
+operator approval decisions, over a `PermissionRequest`/`PermissionResult` pair;
+a deny raised while answering the second cannot take effect, because that event
+is observation-only, so the seam declines to raise one there rather than writing
+denial telemetry for a call that was not denied.
+
+The Hermes Agent integration writes shell-hook entries into
+`~/.hermes/config.yaml`. Hermes prompts for first-use consent for each
+`(event, command)` pair; for non-interactive gateway, cron, or CI runs, set
+`HERMES_ACCEPT_HOOKS=1`, start Hermes with `--accept-hooks`, or configure
+`hooks_auto_accept: true` in the Hermes config.
+
+The Devin CLI integration writes Claude-compatible command hooks for Devin for
+Terminal. `devin` remains a legacy alias for `devin-cli`. Project-level installs
+use `.devin/hooks.v1.json`; user-level installs use
+`~/.config/devin/config.json` under the `hooks` key. The hooks invoke Beacon's
+local Go hook binary and write normalized prompt, tool, command, file, approval,
+and session events to the configured runtime JSONL log.
+
+Devin Desktop is exposed separately as `devin-desktop` and uses Devin
+Desktop-compatible Cascade/Windsurf hooks. User-level installs write
+`~/.codeium/windsurf/hooks.json`; project-level installs write
+`.windsurf/hooks.json`, which may also affect Windsurf/Cascade in that
+workspace. Beacon installs visibility-only hooks for prompt submission, file
+writes, command execution, MCP tool use, and file reads; the hooks do not block
+or enforce policy. After installation, generate a Devin Desktop event and check
+the Beacon runtime log to validate that the Desktop app executed the hook file.
+The main `beacon endpoint install --harness ...` path also handles hook-backed
+Devin targets, so `--harness claude,codex,devin-cli,devin-desktop` configures
+OTLP-backed Claude/Codex telemetry and Devin hook telemetry in one flow.
+
+Claude Cowork monitoring is configured in the Claude admin console at
+`https://claude.ai/admin-settings/cowork`. The OTLP endpoint must be reachable
+by Claude Cowork, so use a durable public HTTPS Collector endpoint for ongoing
+monitoring. The `--ngrok` mode is for short-lived local testing and prints an
+authenticated tunnel URL plus the matching `Authorization` header.
+Cowork uses the shared Claude normalizer for prompts, assistant responses,
+approvals, commands, files, MCP activity, session lifecycle, model usage,
+tokens, and runtime-reported cost. A Desktop-started task may still carry
+`origin=cloud` when `cowork.surface=remote`; endpoint hostname and OS identify
+the Beacon collector machine. Cowork may expose only an opaque `user.id`, which
+Beacon preserves without inventing a display identity.
+
+OpenClaw Gateway monitoring is configured in OpenClaw's local Gateway config
+with the `diagnostics-otel` plugin enabled. Beacon prints a local OTLP/HTTP
+configuration that points OpenClaw at the endpoint collector. OpenClaw does not
+export raw prompt, response, tool, or system-prompt content unless
+`diagnostics.otel.captureContent.*` is explicitly enabled.
+
+VS Code Copilot monitoring is configured in VS Code settings and exports
+OTLP/HTTP to Beacon's local collector. For a first-time local setup, install the
+endpoint collector with the VS Code harness, reload VS Code, and validate recent
+activity:
+
+```bash
+./beacon endpoint install --user --harness vscode
+./beacon endpoint integrations vscode validate --user --since 10m
+```
+
+VS Code hook support is optional and depends on the `Chat: Use Hooks` setting,
+which may be managed by the organization. When enabled, project-level hooks use
+`.github/hooks/beacon.json`:
+
+```bash
+cd /path/to/workspace
+beacon endpoint hooks install --harness vscode --level project --user
+```
+
+OTel-derived events use `harness.name=vscode_copilot`; hook-derived events use
+`harness.name=vscode`.
+
+## Test
+
+```bash
+go test ./...
+go test -race ./internal/endpoint/...
+```

@@ -1,0 +1,76 @@
+---
+title: "Install Beacon"
+description: "Install the Beacon CLI with Homebrew or platform archives"
+---
+
+## Choose your platform
+
+This page installs the **CLI**. Setting up the endpoint agent, the local collector that captures agent activity, differs by operating system, so start with your platform:
+
+<Columns cols={2}>
+  <Card title="macOS" icon="apple" href="/platforms/macos">
+    Homebrew for your own machine, or the signed `.pkg` for a managed fleet. launchd.
+  </Card>
+  <Card title="Linux" icon="linux" href="/platforms/linux">
+    A `.deb` or `.rpm` that installs and starts the endpoint for you. systemd.
+  </Card>
+</Columns>
+
+## Homebrew
+
+Install the Beacon CLI with Homebrew:
+
+```bash title="Install Beacon"
+brew update
+brew trust asymptote-labs/tap
+brew tap asymptote-labs/tap
+brew install beacon
+beacon version
+```
+
+`brew update` comes first: it brings Homebrew up to a release that has `brew trust`, and it refreshes a
+copy of `asymptote-labs/tap` the machine already has, which `brew tap` leaves as it is, so the install
+gets the latest Beacon rather than whatever release that copy last saw. `brew trust` is a one-time step
+for newer Homebrew releases before loading third-party formulae from the tap.
+
+On macOS the formula also depends on `asymptote-labs/tap/beacon-vector`, the tap's mirror of Vector's releases (Vector is not in homebrew-core), which runs the optional [Beacon Cloud forwarder](/cli/endpoint-connect); Homebrew installs it alongside Beacon so no second step is needed.
+
+The mirror is named `beacon-vector` rather than `vector` on purpose. Homebrew allows exactly one keg named `vector` no matter which tap it came from, so a mirror by that name could not be installed at all on a machine that already had Vector from `vectordotdev/brew`. Under its own name it coexists with any Vector you already run, and because it keeps its binary in `libexec` — which Homebrew never links — it stays off your PATH and never shadows one. Beacon finds it by path; you do not need to configure anything.
+
+<Accordion title="Example output">
+```bash title="beacon version output"
+$ beacon version
+beacon version 0.0.66
+```
+</Accordion>
+
+## Other install methods
+
+Beacon releases publish macOS and Linux archives for `amd64` and `arm64` alongside Homebrew builds. For archive-based installs or source builds, see [Manual CLI Installation](/cli/manual-install).
+
+Releases also attach native endpoint packages, which install the CLI, the collector, and the service
+together rather than leaving you a second step:
+
+| Platform | Package | Installs |
+|---|---|---|
+| macOS (Apple Silicon) | Signed, notarized, stapled `.pkg` | `/opt/beacon`, the collector LaunchDaemon, and the bundled Vector forwarder helpers |
+| Linux (amd64, arm64) | `.deb` and `.rpm` | `/opt/beacon`, the `beacon-collector` systemd unit, and your agent runtime configuration |
+
+## Next steps
+
+After installing Beacon, configure the workflow you need:
+
+<Columns cols={2}>
+  <Card title="Endpoint telemetry" icon="satellite-dish" href="/cli/endpoint-install">
+    Configure local agent harness telemetry.
+  </Card>
+  <Card title="Cloud agent telemetry" icon="cloud" href="/cli/cloud">
+    Configure provider-managed cloud agent telemetry setup helpers.
+  </Card>
+  <Card title="CI telemetry" icon="terminal" href="/cli/ci">
+    Run ephemeral AI runtime telemetry collection in CI.
+  </Card>
+  <Card title="Upgrade Beacon" icon="arrow-up" href="/cli/upgrade">
+    Keep the Beacon CLI up to date.
+  </Card>
+</Columns>

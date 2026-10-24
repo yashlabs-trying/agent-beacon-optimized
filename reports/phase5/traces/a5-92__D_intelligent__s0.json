@@ -1,0 +1,33 @@
+{
+  "task": "a5-92",
+  "suite": "A",
+  "category": "A5_long_session",
+  "difficulty": "hard",
+  "arm": "D_intelligent",
+  "seed": 0,
+  "retrieved_ids": [
+    "a5-92-gold",
+    "a5-92-n1",
+    "a5-92-n0",
+    "a5-92-n2",
+    "a5-92-n5",
+    "a5-92-n3",
+    "a5-92-n4"
+  ],
+  "required_evidence": [
+    "a5-92-gold"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The cart page size is 30 rows.",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.689,
+  "prompt_tokens": 210,
+  "gen_tokens": 11
+}

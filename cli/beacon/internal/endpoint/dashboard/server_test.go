@@ -1,0 +1,772 @@
+package dashboard
+
+import (
+	"encoding/json"
+	"math"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/diagnostics"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/testenv"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/tokens"
+	"github.com/asymptote-labs/agent-beacon/pkg/asymptoteobserve"
+)
+
+func TestStatusUsesExplicitRuntimeLogPath(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	handler, err := Handler(Options{UserMode: true, LogPath: logPath})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/status", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+
+	var status StatusResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &status); err != nil {
+		t.Fatalf("unmarshal status response: %v", err)
+	}
+	if status.LogPath != logPath {
+		t.Fatalf("LogPath = %q, want %q", status.LogPath, logPath)
+	}
+	if status.RuntimeLog.EffectiveLogPath != logPath {
+		t.Fatalf("RuntimeLog.EffectiveLogPath = %q, want %q", status.RuntimeLog.EffectiveLogPath, logPath)
+	}
+}
+
+func TestStatusUsesRequestedRuntimeLogSource(t *testing.T) {
+	oldResolveRuntimeLog := resolveRuntimeLog
+	oldGetEndpointStatus := getEndpointStatus
+	t.Cleanup(func() {
+		resolveRuntimeLog = oldResolveRuntimeLog
+		getEndpointStatus = oldGetEndpointStatus
+	})
+
+	dir := t.TempDir()
+	systemLog := filepath.Join(dir, "system-runtime.jsonl")
+	userLog := filepath.Join(dir, "user-runtime.jsonl")
+	warning := "system collector is writing OTLP events to " + systemLog
+	resolveRuntimeLog = func(userMode bool, logPath string) lifecycle.RuntimeLogSource {
+		if !userMode || logPath != "" {
+			t.Fatalf("ResolveRuntimeLog called with userMode=%t logPath=%q, want requested user mode with empty log path", userMode, logPath)
+		}
+		return lifecycle.RuntimeLogSource{
+			RequestedUserMode: true,
+			EffectiveUserMode: false,
+			RequestedLogPath:  userLog,
+			EffectiveLogPath:  systemLog,
+			Warning:           warning,
+		}
+	}
+	getEndpointStatus = func(userMode bool, logPath string) lifecycle.Status {
+		if !userMode || logPath != "" {
+			t.Fatalf("GetStatus called with userMode=%t logPath=%q, want requested user mode with empty log path", userMode, logPath)
+		}
+		return lifecycle.Status{
+			Version:    "test",
+			ConfigPath: "system-config.json",
+			LogPath:    systemLog,
+			Diagnostics: []diagnostics.Check{{
+				Name:     "runtime_log_source",
+				Status:   "warn",
+				Severity: "medium",
+				Message:  warning,
+			}},
+		}
+	}
+	if err := os.WriteFile(systemLog, []byte(`{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"test","category":"test"},"severity":"info","endpoint":{"os":"darwin"},"message":"system event"}`+"\n"), 0644); err != nil {
+		t.Fatalf("write system log: %v", err)
+	}
+
+	handler, err := Handler(Options{UserMode: true})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/status", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var status StatusResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &status); err != nil {
+		t.Fatalf("unmarshal status response: %v", err)
+	}
+	if status.LogPath != systemLog || status.RuntimeLog.EffectiveLogPath != systemLog || status.RuntimeLog.Warning != warning {
+		t.Fatalf("status runtime log = %#v log_path=%q, want effective system log with warning", status.RuntimeLog, status.LogPath)
+	}
+	if !strings.Contains(rec.Body.String(), "runtime_log_source") {
+		t.Fatalf("status body missing runtime log diagnostic: %s", rec.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/events", nil)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("events status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "system event") {
+		t.Fatalf("events body did not read effective system log: %s", rec.Body.String())
+	}
+}
+
+// TestSummaryEndpointAggregatesAllMatchedEvents guards /api/summary against
+// truncated aggregation: total_events comes from the full match count, so the
+// breakdown counts must be computed over the same full set even when the
+// request carries a small ?limit= from the Agent Activity Sessions view.
+func TestSummaryEndpointAggregatesAllMatchedEvents(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	mk := func(minute int) string {
+		return `{"timestamp":"2026-06-11T10:` + itoa2(minute) + `:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"command.executed","category":"command"},"severity":"info","endpoint":{"os":"darwin"},"harness":{"name":"cursor"},"session":{"id":"s1"},"command":{"command":"ls"},"message":"command.executed"}`
+	}
+	var lines []string
+	for i := 0; i < 12; i++ {
+		lines = append(lines, mk(i))
+	}
+	if err := os.WriteFile(logPath, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		t.Fatalf("write fixture log: %v", err)
+	}
+	handler, err := Handler(Options{UserMode: true, LogPath: logPath})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/summary?limit=5", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var summary Summary
+	if err := json.Unmarshal(rec.Body.Bytes(), &summary); err != nil {
+		t.Fatalf("unmarshal summary: %v", err)
+	}
+	if summary.TotalEvents != 12 {
+		t.Fatalf("total_events = %d, want 12", summary.TotalEvents)
+	}
+	if summary.CountsByHarness["cursor"] != 12 {
+		t.Fatalf("counts_by_harness[cursor] = %d, want 12 (must not be capped by ?limit=5)", summary.CountsByHarness["cursor"])
+	}
+	if summary.CommandEvents != 12 {
+		t.Fatalf("command_events = %d, want 12", summary.CommandEvents)
+	}
+	if len(summary.TopHarnesses) != 1 || summary.TopHarnesses[0].Count != 12 {
+		t.Fatalf("top_harnesses = %#v, want cursor with 12 events", summary.TopHarnesses)
+	}
+}
+
+func TestMemoryEndpointServesReadOnlyLearningState(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "endpoint", "logs", "runtime.jsonl")
+	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	store := learning.Open(learning.PathForRuntimeLog(logPath))
+	project := asymptoteobserve.LearningProjectV1{ID: "project-1"}
+	eval := asymptoteobserve.LearningEvaluationV1{
+		ID:            "eval-1",
+		Status:        asymptoteobserve.LearningEvaluationStatusCompleted,
+		Project:       project,
+		RubricVersion: "rubric",
+		RubricHash:    "sha256:rubric",
+		Evaluator:     "jev",
+		Trace:         asymptoteobserve.LearningTraceRefV1{ID: "trace-1", Title: "Fix package smoke"},
+		Score:         0.9,
+	}
+	if err := store.PutEvaluation(eval); err != nil {
+		t.Fatal(err)
+	}
+	candidate := asymptoteobserve.LearningCandidateV1{
+		ID:                 "candidate-1",
+		State:              asymptoteobserve.LearningCandidateStateApproved,
+		Kind:               asymptoteobserve.LearningMemoryKindDebuggingPattern,
+		Title:              "Fix package smoke",
+		Body:               "Rerun once after a transient failure.",
+		Project:            project,
+		SourceEvaluationID: "eval-1",
+		MemoryID:           "memory-1",
+	}
+	if err := store.PutCandidate(candidate); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
+		ID:          "memory-1",
+		CandidateID: candidate.ID,
+		Kind:        candidate.Kind,
+		Title:       candidate.Title,
+		Body:        candidate.Body,
+		Project:     project,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	handler, err := Handler(Options{UserMode: true, LogPath: logPath})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/memory", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("memory status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	var resp MemoryResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Status.Evaluations != 1 || len(resp.Evaluations) != 1 || len(resp.Candidates) != 1 || len(resp.Memories) != 1 {
+		t.Fatalf("memory response = %#v", resp)
+	}
+}
+
+func itoa2(v int) string {
+	if v < 10 {
+		return "0" + strconv.Itoa(v)
+	}
+	return strconv.Itoa(v)
+}
+
+func TestTokensEndpointAggregatesUsage(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	lines := []string{
+		`{"timestamp":"2026-06-11T09:59:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"session.context","category":"session"},"severity":"info","endpoint":{"os":"darwin"},"user":{"name":"alice","uid":"501"},"harness":{"name":"claude_code"},"session":{"id":"local-session"},"message":"Session context observed"}`,
+		// Claude Code metric datapoint events (delta temporality).
+		`{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"os":"darwin"},"harness":{"name":"claude_code"},"session":{"id":"local-session"},"model":"claude-sonnet-4-5","gen_ai":{"usage":{"input_tokens":100}},"message":"claude_code.token.usage","raw":{"metric_name":"claude_code.token.usage","metric_temporality":"Delta"}}`,
+		`{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"os":"darwin"},"harness":{"name":"claude_code"},"session":{"id":"local-session"},"model":"claude-sonnet-4-5","gen_ai":{"usage":{"output_tokens":40}},"message":"claude_code.token.usage","raw":{"metric_name":"claude_code.token.usage","metric_temporality":"Delta"}}`,
+		`{"timestamp":"2026-06-11T10:05:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"cost.usage","category":"metric"},"severity":"info","endpoint":{"os":"darwin"},"harness":{"name":"claude_code"},"session":{"id":"local-session"},"model":"claude-sonnet-4-5","gen_ai":{"usage":{"cost_usd":0.5}},"message":"claude_code.cost.usage","raw":{"metric_name":"claude_code.cost.usage","metric_temporality":"Delta"}}`,
+		// Cloud SDK span usage with trace identity.
+		`{"timestamp":"2026-06-11T11:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"tool.invoked","category":"tool"},"severity":"info","endpoint":{"os":"linux"},"harness":{"name":"asymptote_observe"},"origin":"cloud","session":{"id":"cloud-session"},"trace":{"id":"trace-1","span_id":"span-1"},"model":"gpt-4o-mini","gen_ai":{"usage":{"input_tokens":60,"output_tokens":20}},"message":"agent.step"}`,
+	}
+	if err := os.WriteFile(logPath, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		t.Fatalf("write fixture log: %v", err)
+	}
+	handler, err := Handler(Options{UserMode: true, LogPath: logPath})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/tokens?bucket=1h", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var report tokens.Report
+	if err := json.Unmarshal(rec.Body.Bytes(), &report); err != nil {
+		t.Fatalf("unmarshal tokens report: %v", err)
+	}
+	if report.Totals.InputTokens != 160 || report.Totals.OutputTokens != 60 || report.Totals.CostUSD != 0.5 {
+		t.Fatalf("totals = %#v", report.Totals)
+	}
+	// The list-price estimate rides beside the reported cost: claude-sonnet-4-5 100 x $3 + 40 x
+	// $15 per MTok, plus gpt-4o-mini 60 x $0.15 + 20 x $0.60 = $0.000921. The Claude session
+	// reported its cost, so its effective cost is that; the cloud session's is its estimate.
+	if report.Totals.EstimatedCostUSD != 0.000921 || report.Totals.CostSource != tokens.CostSourceMixed ||
+		math.Abs(report.Totals.EffectiveCostUSD-0.500021) > 1e-12 {
+		t.Fatalf("cost fields = %#v", report.Totals)
+	}
+	if report.Pricing == nil || report.Pricing.Catalog.Commit == "" || len(report.Pricing.Models) != 2 {
+		t.Fatalf("pricing = %#v", report.Pricing)
+	}
+	if len(report.ByModel) != 2 || report.ByModel[0].Key != "claude-sonnet-4-5" {
+		t.Fatalf("by_model = %#v", report.ByModel)
+	}
+	if len(report.BySession) != 2 {
+		t.Fatalf("by_session = %#v", report.BySession)
+	}
+	if len(report.ByUser) != 1 || report.ByUser[0].Key != "alice [501]" || report.ByUser[0].Usage.InputTokens != 100 {
+		t.Fatalf("by_user = %#v", report.ByUser)
+	}
+	if len(report.Series) != 2 {
+		t.Fatalf("series = %#v", report.Series)
+	}
+
+	// Session filter plus per-step detail for the cloud session.
+	req = httptest.NewRequest(http.MethodGet, "/api/tokens?session=cloud-session", nil)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	report = tokens.Report{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &report); err != nil {
+		t.Fatalf("unmarshal session tokens report: %v", err)
+	}
+	if report.Totals.InputTokens != 60 {
+		t.Fatalf("session totals = %#v", report.Totals)
+	}
+	if report.SessionDetail == nil || report.SessionDetail.SessionID != "cloud-session" || len(report.SessionDetail.Steps) != 1 {
+		t.Fatalf("session detail = %#v", report.SessionDetail)
+	}
+	if report.SessionDetail.Steps[0].SpanID != "span-1" || report.SessionDetail.Steps[0].Usage.InputTokens != 60 {
+		t.Fatalf("session step = %#v", report.SessionDetail.Steps[0])
+	}
+}
+
+// TestTokensEndpointDedupesCumulativeSameSecondDatapoints reproduces a real
+// Claude Code export: a batch of cumulative token.usage datapoints written to
+// the log within the same second. ReadEvents returns events newest-first, so
+// the token endpoint must still feed Aggregate in chronological order or the
+// cumulative dedup misreads each step-down as a counter reset and sums the raw
+// cumulative values instead of the per-interval deltas.
+func TestTokensEndpointDedupesCumulativeSameSecondDatapoints(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	mk := func(ts string, cumulative int64) string {
+		return `{"timestamp":"` + ts + `","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"os":"linux"},"harness":{"name":"claude_code"},"session":{"id":"s1"},"model":"claude-sonnet-4-5","gen_ai":{"usage":{"input_tokens":` +
+			itoa(cumulative) + `}},"message":"claude_code.token.usage","raw":{"metric_name":"claude_code.token.usage","metric_temporality":"Cumulative"}}`
+	}
+	// Append order is chronological; all three share the same second.
+	lines := []string{
+		mk("2026-06-11T10:00:00Z", 1200),
+		mk("2026-06-11T10:00:00Z", 2700),
+		mk("2026-06-11T10:00:00Z", 4500),
+	}
+	if err := os.WriteFile(logPath, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		t.Fatalf("write fixture log: %v", err)
+	}
+	handler, err := Handler(Options{UserMode: true, LogPath: logPath})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/tokens", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var report tokens.Report
+	if err := json.Unmarshal(rec.Body.Bytes(), &report); err != nil {
+		t.Fatalf("unmarshal tokens report: %v", err)
+	}
+	// Deltas 1200, 1500, 1800 -> 4500. Raw (broken) sum would be 8400.
+	if report.Totals.InputTokens != 4500 {
+		t.Fatalf("cumulative input tokens = %d, want 4500 (raw over-count is 8400)", report.Totals.InputTokens)
+	}
+}
+
+func itoa(v int64) string { return strconv.FormatInt(v, 10) }
+
+// TestTokensEndpointDedupesManySameSecondDatapoints uses more than nine
+// cumulative datapoints in the same second so line numbers reach two digits.
+// ReadEvents breaks same-timestamp ties on lexicographic line IDs (line-9 >
+// line-10), so the token path must reorder by numeric append order or the
+// cumulative dedup scrambles and inflates totals.
+func TestTokensEndpointDedupesManySameSecondDatapoints(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	var lines []string
+	for k := int64(1); k <= 12; k++ {
+		// Cumulative input k*100 -> per-interval delta of 100 each -> 1200 total.
+		lines = append(lines, `{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"os":"linux"},"harness":{"name":"claude_code"},"session":{"id":"s1"},"model":"claude-sonnet-4-5","gen_ai":{"usage":{"input_tokens":`+itoa(k*100)+`}},"message":"claude_code.token.usage","raw":{"metric_name":"claude_code.token.usage","metric_temporality":"Cumulative"}}`)
+	}
+	if err := os.WriteFile(logPath, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		t.Fatalf("write fixture log: %v", err)
+	}
+	handler, err := Handler(Options{UserMode: true, LogPath: logPath})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/tokens", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var report tokens.Report
+	if err := json.Unmarshal(rec.Body.Bytes(), &report); err != nil {
+		t.Fatalf("unmarshal tokens report: %v", err)
+	}
+	if report.Totals.InputTokens != 1200 {
+		t.Fatalf("cumulative input tokens = %d, want 1200", report.Totals.InputTokens)
+	}
+}
+
+// TestTokensEndpointSessionFilterIsExact guards against substring session
+// matching: filtering session-1 must not fold in session-10's usage.
+func TestTokensEndpointSessionFilterIsExact(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	mk := func(session string, input int64) string {
+		return `{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"os":"linux"},"harness":{"name":"claude_code"},"session":{"id":"` + session + `"},"model":"claude-sonnet-4-5","gen_ai":{"usage":{"input_tokens":` + itoa(input) + `}},"message":"claude_code.token.usage","raw":{"metric_name":"claude_code.token.usage","metric_temporality":"Delta"}}`
+	}
+	lines := []string{mk("session-1", 100), mk("session-10", 999)}
+	if err := os.WriteFile(logPath, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		t.Fatalf("write fixture log: %v", err)
+	}
+	handler, err := Handler(Options{UserMode: true, LogPath: logPath})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/tokens?session=session-1", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var report tokens.Report
+	if err := json.Unmarshal(rec.Body.Bytes(), &report); err != nil {
+		t.Fatalf("unmarshal tokens report: %v", err)
+	}
+	if report.Totals.InputTokens != 100 {
+		t.Fatalf("session-1 totals = %d, want 100 (session-10 must not fold in)", report.Totals.InputTokens)
+	}
+	if report.SessionDetail == nil || report.SessionDetail.Usage.InputTokens != 100 {
+		t.Fatalf("session detail = %#v, want exact session-1 usage", report.SessionDetail)
+	}
+}
+
+// TestTokensEndpointSessionFilterIsCaseInsensitive guards the token session
+// filter against case mismatches: the event query matches sessions
+// case-insensitively, so the post-filter and drilldown must too, or a
+// differently-cased filter value returns zero usage for matching events.
+func TestTokensEndpointSessionFilterIsCaseInsensitive(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	line := `{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"token.usage","category":"metric"},"severity":"info","endpoint":{"os":"linux"},"harness":{"name":"claude_code"},"session":{"id":"Session-ABC"},"model":"claude-sonnet-4-5","gen_ai":{"usage":{"input_tokens":123}},"message":"claude_code.token.usage","raw":{"metric_name":"claude_code.token.usage","metric_temporality":"Delta"}}`
+	if err := os.WriteFile(logPath, []byte(line+"\n"), 0644); err != nil {
+		t.Fatalf("write fixture log: %v", err)
+	}
+	handler, err := Handler(Options{UserMode: true, LogPath: logPath})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/tokens?session=session-abc", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var report tokens.Report
+	if err := json.Unmarshal(rec.Body.Bytes(), &report); err != nil {
+		t.Fatalf("unmarshal tokens report: %v", err)
+	}
+	if report.Totals.InputTokens != 123 {
+		t.Fatalf("totals = %d, want 123 for case-insensitive session match", report.Totals.InputTokens)
+	}
+	if report.SessionDetail == nil || report.SessionDetail.Usage.InputTokens != 123 {
+		t.Fatalf("session detail = %#v, want case-insensitive match", report.SessionDetail)
+	}
+}
+
+func TestDetectionsEndpointListsBaselineRules(t *testing.T) {
+	testenv.SetHome(t, t.TempDir()) // empty store -> embedded baseline
+	handler, err := Handler(Options{UserMode: true, LogPath: filepath.Join(t.TempDir(), "runtime.jsonl")})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/detections", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var resp DetectionsResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal detections: %v", err)
+	}
+	if resp.Count == 0 || resp.Count != len(resp.Rules) {
+		t.Fatalf("count = %d, rules = %d", resp.Count, len(resp.Rules))
+	}
+	for _, rule := range resp.Rules {
+		if rule.Source != "baseline" {
+			t.Fatalf("rule %q source = %q, want baseline", rule.ID, rule.Source)
+		}
+		if rule.ID == "" || rule.Severity == "" || rule.Kind == "" {
+			t.Fatalf("rule missing fields: %#v", rule)
+		}
+	}
+}
+
+func TestFindingsEndpointReturnsHitsLinkedToRules(t *testing.T) {
+	testenv.SetHome(t, t.TempDir()) // empty store -> embedded baseline
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	// A destructive command the baseline "recursive-root-delete" rule matches.
+	line := `{"timestamp":"2026-06-11T10:00:00Z","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"command.executed","category":"command"},"severity":"info","endpoint":{"os":"darwin"},"harness":{"name":"claude_code"},"session":{"id":"local-session"},"command":{"command":"rm -rf /"},"message":"command.executed"}`
+	if err := os.WriteFile(logPath, []byte(line+"\n"), 0644); err != nil {
+		t.Fatalf("write fixture log: %v", err)
+	}
+	handler, err := Handler(Options{UserMode: true, LogPath: logPath})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/findings", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var resp FindingsResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal findings: %v", err)
+	}
+	if resp.Scanned != 1 {
+		t.Fatalf("scanned = %d, want 1", resp.Scanned)
+	}
+	found := false
+	for _, f := range resp.Findings {
+		if f.RuleID == "recursive-root-delete" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a recursive-root-delete finding, got %#v", resp.Findings)
+	}
+
+	// An out-of-range min_severity is rejected.
+	bad := httptest.NewRequest(http.MethodGet, "/api/findings?min_severity=nope", nil)
+	badRec := httptest.NewRecorder()
+	handler.ServeHTTP(badRec, bad)
+	if badRec.Code != http.StatusBadRequest {
+		t.Fatalf("invalid min_severity status = %d, want 400", badRec.Code)
+	}
+}
+
+func TestRunScanRejectsEmptyRuleSet(t *testing.T) {
+	testenv.SetHome(t, t.TempDir())
+	_, err := RunScan(true, filepath.Join(t.TempDir(), "runtime.jsonl"), t.TempDir(), "", "")
+	if err == nil {
+		t.Fatal("expected empty rule set to be rejected")
+	}
+	if err.Error() != "no rules to run (store is empty and baseline missing)" {
+		t.Fatalf("error = %q, want the unchanged empty-store message", err)
+	}
+}
+
+func TestInventoryEndpointReturnsConfigsAndMCPServers(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	// A Claude Code user config declaring one MCP server, which the inventory
+	// scan should discover and surface.
+	claudeDir := filepath.Join(home, ".claude")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatalf("mkdir claude config dir: %v", err)
+	}
+	settings := `{"mcpServers":{"local-fs":{"command":"npx","args":["-y","server"],"env":{"FS_ROOT":"/tmp"}}}}`
+	if err := os.WriteFile(filepath.Join(claudeDir, "settings.json"), []byte(settings), 0644); err != nil {
+		t.Fatalf("write claude settings: %v", err)
+	}
+	skillDir := filepath.Join(claudeDir, "skills", "deploy")
+	if err := os.MkdirAll(skillDir, 0755); err != nil {
+		t.Fatalf("mkdir claude skill dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Deploy\nDo not retain this body."), 0644); err != nil {
+		t.Fatalf("write claude skill: %v", err)
+	}
+
+	handler, err := Handler(Options{UserMode: true, LogPath: filepath.Join(t.TempDir(), "runtime.jsonl")})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/inventory", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+
+	var resp InventoryResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal inventory response: %v", err)
+	}
+	if resp.GeneratedAt == "" {
+		t.Fatal("expected generated_at to be set")
+	}
+	if resp.UserScope.Mode == "" {
+		t.Fatalf("expected user scope mode, got %#v", resp.UserScope)
+	}
+
+	var claudeConfig *struct {
+		exists bool
+		mcp    int
+	}
+	for _, config := range resp.Configs {
+		if config.Runtime == "claude_code" && config.Scope == "user" && config.Exists {
+			claudeConfig = &struct {
+				exists bool
+				mcp    int
+			}{exists: true, mcp: config.MCPServerCount}
+		}
+	}
+	if claudeConfig == nil {
+		t.Fatalf("expected an existing claude_code user config in %#v", resp.Configs)
+	}
+	if claudeConfig.mcp != 1 {
+		t.Fatalf("claude config mcp_server_count = %d, want 1", claudeConfig.mcp)
+	}
+
+	found := false
+	for _, server := range resp.MCPServers {
+		if server.Runtime == "claude_code" && server.ServerName == "local-fs" {
+			found = true
+			if !server.CommandPresent || server.CommandName != "npx" {
+				t.Fatalf("server command = %#v, want npx command present", server)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("expected a local-fs MCP server, got %#v", resp.MCPServers)
+	}
+	foundSkill := false
+	for _, skill := range resp.Skills {
+		if skill.Runtime == "claude_code" && skill.SkillName == "deploy" {
+			foundSkill = true
+			if !skill.Exists || !skill.Readable || skill.FileSHA256 == "" {
+				t.Fatalf("skill metadata = %#v, want readable skill with hash", skill)
+			}
+		}
+	}
+	if !foundSkill {
+		t.Fatalf("expected deploy skill, got %#v", resp.Skills)
+	}
+	if strings.Contains(rec.Body.String(), "Do not retain this body") {
+		t.Fatalf("inventory response retained skill body: %s", rec.Body.String())
+	}
+}
+
+func TestStaticDashboardPagesServe(t *testing.T) {
+	handler, err := Handler(Options{UserMode: true, LogPath: filepath.Join(t.TempDir(), "runtime.jsonl")})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+
+	cases := []struct {
+		path string
+		want string
+	}{
+		{path: "/", want: "Beacon | Self‑improving memory for coding agents"},
+		{path: "/session.html", want: "Beacon | Self‑improving memory for coding agents"},
+		{path: "/overview.html", want: "Beacon | Self‑improving memory for coding agents"},
+		{path: "/tokens.html", want: "Beacon | Self‑improving memory for coding agents"},
+		{path: "/memory.html", want: "Beacon | Self‑improving memory for coding agents"},
+		{path: "/detections.html", want: "Beacon | Self‑improving memory for coding agents"},
+		{path: "/findings.html", want: "Beacon | Self‑improving memory for coding agents"},
+		{path: "/inventory.html", want: "Beacon | Self‑improving memory for coding agents"},
+		{path: "/inventory-hooks.html", want: "Beacon | Self‑improving memory for coding agents"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+			}
+			if !strings.Contains(rec.Body.String(), tc.want) {
+				t.Fatalf("body did not contain %q", tc.want)
+			}
+			if !strings.Contains(rec.Body.String(), `href="/favicon.svg"`) {
+				t.Fatal("body did not reference the Beacon favicon")
+			}
+			if count := strings.Count(rec.Body.String(), `href="/memory.html"`); count != 1 {
+				t.Fatalf("memory nav link count = %d, want 1", count)
+			}
+		})
+	}
+}
+
+func TestRequireLoopbackHostRejectsRebindingHosts(t *testing.T) {
+	handler := RequireLoopbackHost(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	for host, want := range map[string]int{
+		"127.0.0.1:8765":             http.StatusOK,
+		"127.0.0.1":                  http.StatusOK,
+		"localhost:8765":             http.StatusOK,
+		"LOCALHOST:8765":             http.StatusOK,
+		"[::1]:8766":                 http.StatusOK,
+		"[::1]":                      http.StatusOK,
+		"attacker.example:8765":      http.StatusForbidden,
+		"localhost.attacker.example": http.StatusForbidden,
+		"192.0.2.20:8765":          http.StatusForbidden,
+		"":                           http.StatusForbidden,
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/api/events", nil)
+		req.Host = host
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != want {
+			t.Errorf("Host %q: status = %d, want %d", host, rec.Code, want)
+		}
+	}
+}
+
+// TestTokensEndpointCountsALiveAndBackfilledRequestOnce reads a Claude Code session the way the
+// production readers hand it to the token report: matched events plus a reduced context set. The
+// live OTLP channel's first event is the user_prompt log; the transcript stamps the request as it
+// streamed, before the api_request log that reports the same usage lands. The cutover has to come
+// from that first live event, which is neither a session.context row nor a usage record, or the
+// backfilled copy of the session's first request is counted beside the live one.
+func TestTokensEndpointCountsALiveAndBackfilledRequestOnce(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	line := func(ts, method, action, usage string) string {
+		genAI := ""
+		if usage != "" {
+			genAI = `,"gen_ai":{"usage":` + usage + `}`
+		}
+		return `{"timestamp":"` + ts + `","vendor":"beacon","product":"endpoint-agent","schema_version":"1.0","event":{"kind":"agent_runtime","action":"` + action + `","category":"session"},"severity":"info","endpoint":{"os":"linux","hostname":"devbox"},"harness":{"name":"claude_code","collection_method":"` + method + `"},"session":{"id":"sess-live-poll"},"model":"claude-opus-4-6"` + genAI + `,"message":"` + action + `"}`
+	}
+	lines := []string{
+		line("2026-06-11T10:00:00Z", "otlp", "prompt.submitted", ""),
+		line("2026-06-11T10:00:02Z", "poll", "token.usage", `{"input_tokens":6,"output_tokens":120,"cache_read":{"input_tokens":40000}}`),
+		line("2026-06-11T10:00:06Z", "otlp", "token.usage", `{"input_tokens":6,"output_tokens":120,"cache_read":{"input_tokens":40000}}`),
+	}
+	if err := os.WriteFile(logPath, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		t.Fatalf("write fixture log: %v", err)
+	}
+
+	events, contexts, err := ReadTokenEventsAppendOrder(logPath, EventQuery{NoLimit: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := tokens.AggregateScopedWithContexts(events, contexts, "", tokens.Options{})
+	if report.Totals.OutputTokens != 120 || report.Totals.CacheReadInputTokens != 40000 || report.SuppressedPollEvents != 1 {
+		t.Fatalf("totals = %+v suppressed = %d, want one request (output 120, cache read 40000) and the backfill copy suppressed", report.Totals, report.SuppressedPollEvents)
+	}
+
+	// A window that starts after the live channel's first event must not move the cutover.
+	windowed, windowContexts, err := ReadTokenEventsAppendOrder(logPath, EventQuery{NoLimit: true, Since: mustParseTime(t, "2026-06-11T10:00:01Z")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	report = tokens.AggregateScopedWithContexts(windowed, windowContexts, "", tokens.Options{})
+	if report.Totals.OutputTokens != 120 || report.SuppressedPollEvents != 1 {
+		t.Fatalf("windowed totals = %+v suppressed = %d, want one request", report.Totals, report.SuppressedPollEvents)
+	}
+
+	handler, err := Handler(Options{UserMode: true, LogPath: logPath})
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/tokens", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var served tokens.Report
+	if err := json.Unmarshal(rec.Body.Bytes(), &served); err != nil {
+		t.Fatalf("unmarshal tokens report: %v", err)
+	}
+	if served.Totals.OutputTokens != 120 {
+		t.Fatalf("/api/tokens output = %d, want 120 (the backfill copy counted twice gives 240)", served.Totals.OutputTokens)
+	}
+}
+
+func mustParseTime(t *testing.T, value string) time.Time {
+	t.Helper()
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return parsed
+}

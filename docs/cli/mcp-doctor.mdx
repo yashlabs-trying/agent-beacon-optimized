@@ -1,0 +1,114 @@
+---
+title: "beacon mcp doctor"
+description: "Validate local Beacon MCP setup"
+---
+
+## Command overview
+
+`beacon mcp doctor` validates local Beacon MCP setup before you connect an MCP client.
+
+```bash title="Command syntax"
+beacon mcp doctor
+```
+
+Doctor resolves the effective runtime log path, checks transport settings, samples
+readable events and archives, and confirms that the expected MCP tools are
+registered. Those tools cover both local activity and approved project memory.
+
+## Checks
+
+Doctor reports:
+
+- MCP transport
+- Loopback HTTP address and bind check, when `--transport http` is used
+- Runtime log path and source
+- Runtime log warnings, when present
+- Content handling and readable event samples
+- Sampled event count
+- Malformed line count
+- Readable runtime archives
+- Registered MCP tools
+
+The expected tool set is `search_activity`, `summarize_activity`,
+`get_activity_event`, `list_activity_filters`, `search_memory`, `get_memory`, and
+`get_memory_context`.
+
+If the runtime log does not exist yet, doctor reports that Beacon MCP can still start, but activity answers will be empty until endpoint telemetry writes events.
+
+## Client configuration
+
+With the stdio transport, doctor prints the client configuration for the local server, named
+`beacon`:
+
+```json title="Local server entry"
+{
+  "mcpServers": {
+    "beacon": {
+      "command": "beacon",
+      "args": ["mcp", "serve", "--transport", "stdio"]
+    }
+  }
+}
+```
+
+This is not the Beacon Cloud server. The session history this endpoint forwards to Beacon
+Cloud is served by a separate server, registered as `beacon-managed` by
+[`beacon mcp connect`](/cli/mcp-connect). A harness can have both entries at once, because the
+names differ. Doctor checks only the local server; to see where `beacon-managed` is configured and
+whether its URL answers, run `beacon mcp status --check`.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--user` | Use per-user endpoint paths. Enabled by default |
+| `--system` | Use system endpoint paths |
+| `--log-path PATH` | Runtime JSONL log path |
+| `--transport stdio\|http` | MCP transport. Defaults to `stdio` |
+| `--addr ADDR` | Loopback HTTP JSON-RPC listen address for `--transport http`. Defaults to `127.0.0.1:8766` |
+
+## Examples
+
+Validate stdio MCP setup:
+
+```bash title="Validate stdio MCP setup"
+beacon mcp doctor
+```
+
+Validate loopback HTTP setup:
+
+```bash title="Validate loopback HTTP setup"
+beacon mcp doctor --transport http --addr 127.0.0.1:8766
+```
+
+Validate a specific runtime log:
+
+```bash title="Validate a specific runtime log"
+beacon mcp doctor --log-path /path/to/runtime.jsonl
+```
+
+Validate system-mode paths:
+
+```bash title="Validate system-mode paths"
+sudo beacon mcp doctor --system
+```
+
+## Related
+
+<Columns cols={2}>
+  <Card title="beacon mcp" icon="server" href="/cli/mcp">
+    Review MCP tools, filters, and command group behavior.
+  </Card>
+  <Card title="beacon mcp serve" icon="server" href="/cli/mcp-serve">
+    Run the local Beacon MCP server after validation.
+  </Card>
+  <Card title="beacon mcp connect" icon="plug" href="/cli/mcp-connect">
+    Register the separate Beacon Cloud MCP server, `beacon-managed`.
+  </Card>
+  <Card title="Test MCP Access" icon="server" href="/guides/local-testing/mcp">
+    Understand Beacon MCP and test local client access.
+  </Card>
+  <Card title="Connect Cursor and Claude Code" icon="plug" href="/guides/local-testing/mcp#4-connect-cursor-and-claude-code">
+    Install Beacon MCP in local assistant clients.
+  </Card>
+</Columns>

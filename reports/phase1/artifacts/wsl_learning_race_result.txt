@@ -1,0 +1,5 @@
+Ubuntu WSL2, Go 1.27.3, 2026-10-22.
+Command (from /home/<user>/work/phase1-v6/cli/beacon):
+go test -race -timeout 30m -count=1 ./internal/learning
+Unified exec session 17592 exit code: 0.
+The command's stdout was redirected to WSL /tmp, which was cleared when the WSL instance shut down; the elapsed time was not retained. The exit code records a successful full package race run. A separate targeted -race -count=10 concurrent-read/write test also passed.

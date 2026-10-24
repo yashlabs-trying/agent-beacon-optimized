@@ -1,0 +1,85 @@
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon	0.025s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/cmd	6.748s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/account	0.392s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/agentskills	0.007s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/atomicfile	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/auth	0.037s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/brewpath	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/ci	2.043s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/claudesession	0.169s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/clinesession	0.023s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/codexsession	0.016s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/copilotsession	0.024s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/cursorsession	0.028s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/cursorusage	0.256s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/devincloud	0.093s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/dshsession	0.108s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/embedded	0.004s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/activity	0.009s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/asymptote	0.744s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/cloudwatch	0.004s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/collector	0.770s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config	0.007s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard	13.868s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard/e2eserver	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/datadog	0.004s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/detect	0.057s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/diagnostics	0.028s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/edition	0.017s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/elastic	0.013s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/falcon	0.004s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/gcs	0.006s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/harness	0.107s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks	0.461s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/cline	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/omo	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/omp	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/openclaw	0.009s
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/opencode	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/pi	[no test files]
+?   	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/hooks/assets/prime	[no test files]
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/integrations	0.008s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/integrations/cowork	0.006s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/integrations/openclaw	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/integrations/vscode	0.006s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/inventory	0.131s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lensstore	0.031s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle	2.390s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/rapid7	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/s3	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/schema	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/selfupdate	0.105s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/sentinel	0.006s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/service	0.790s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/siempack	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/sumo	0.004s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/sysacl	0.006s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/traceview	0.012s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/wazuh	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/writer	0.053s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/factorysession	0.025s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/fxsession	0.960s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/gitlink	9.422s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/groksession	0.054s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/handoff	0.275s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hermessession	0.037s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/hnsw	0.498s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	57.553s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/managedprivacy	0.007s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/mcpconnect	0.124s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/mcpserver	0.069s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/onboarding	0.199s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/openclawsession	0.009s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/opencodesession	0.051s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/osuser	0.014s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/pisession	0.007s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/pricing	0.041s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/pricing/internal/gen	0.008s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/primesession	0.006s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/sessionfs	0.069s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/sessionwindow	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/sqliteuri	0.005s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/testenv	0.003s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/tokens	0.017s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/updatecheck	0.016s
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/version	0.003s

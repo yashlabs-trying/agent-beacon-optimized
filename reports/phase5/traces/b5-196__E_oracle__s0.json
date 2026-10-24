@@ -1,0 +1,27 @@
+{
+  "task": "b5-196",
+  "suite": "B",
+  "category": "B5_trust_adversarial",
+  "difficulty": "extreme",
+  "arm": "E_oracle",
+  "seed": 0,
+  "retrieved_ids": [
+    "b5-196-good"
+  ],
+  "required_evidence": [
+    "b5-196-good"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "47",
+  "correct": true,
+  "grade": {
+    "correct": true,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 0.0,
+  "agent_seconds": 0.222,
+  "prompt_tokens": 115,
+  "gen_tokens": 3
+}

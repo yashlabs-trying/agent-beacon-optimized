@@ -1,0 +1,265 @@
+---
+title: "beacon endpoint install"
+description: "Install or update the local Beacon endpoint collector and runtime telemetry"
+---
+
+## Command overview
+
+`beacon endpoint install` configures the local endpoint agent, writes the OpenTelemetry Collector configuration, installs the collector service, configures selected agent harnesses, and optionally adds Splunk HEC or Falcon LogScale HEC collector destinations.
+
+The service is a launchd job on macOS and a systemd unit on Linux. Where neither is available, Beacon runs a supervised collector instead and says so. See [macOS](/platforms/macos) or [Linux](/platforms/linux) for the platform setup, including the Linux packages and the `--service` flag.
+
+```bash title="Command syntax"
+beacon endpoint install
+```
+
+By default, Beacon discovers the runtimes installed for the invoking user and configures every integration it can safely install. This includes OTLP settings and supported hooks, plugins, or extensions; VS Code receives both its OTLP and hook configuration. An explicit `--harness` list disables automatic selection and configures only the runtimes it names: a hook-only list such as `--harness omp` leaves Claude Code's and Codex's settings untouched, and `--harness ""` installs the collector alone. If discovery finds no automatically installable runtime, Beacon installs the collector without changing any runtime configuration.
+
+Discovery can also find runtimes whose collection path cannot be enabled safely by a machine-wide default. Beacon reports these without treating them as install failures: GitHub Copilot CLI needs launch-environment settings, Claude Cowork needs admin configuration, poll-only fx needs `beacon endpoint fx sync`, and OpenHands CLI/GUI coverage requires project-level hooks installed from inside each repository. Factory Droid's hooks are installed automatically when Droid is detected, while its separate OTLP endpoint remains launch-environment managed.
+
+The `claude` harness writes both Claude Code's OpenTelemetry settings and its user-level hooks, because the OTLP export alone carries no session start or end, file activity, or subagent lifecycle; `beacon endpoint hooks uninstall --harness claude` removes the hooks again, and `beacon endpoint hooks install --harness claude --level project` adds project-level ones. A hook that cannot be written, for example into a settings file whose `hooks` key is not an object, is reported as a warning with the retry command; the endpoint itself is installed and `endpoint install` still exits 0. Codex uses OTLP logs plus one selective turn trace for tokens, and its required SessionStart hook adds local OS-user context. Beacon applies redaction, sanitization, truncation, and event-size limits before writing supported content fields.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--user` | Use per-user endpoint paths. Enabled by default |
+| `--system` | Use system endpoint paths and launch daemon. Requires root |
+| `--log-path <path>` | Runtime JSONL log path |
+| `--harness <selection>` | Harnesses to configure. Defaults to `auto`, which installs every detected integration Beacon can configure and reports detected manual or poll-only integrations. Use `all` to force every installable integration, or pass an exact comma-separated list such as `claude,codex,cursor,kimi`. DeepSeek Harness and Kimi Code are user-level only. An explicit list preserves exact-selection behavior |
+| `--otlp-grpc-port <port>` | Local OTLP gRPC port. Defaults to `4317` |
+| `--otlp-http-port <port>` | Local OTLP HTTP port. Defaults to `4318` |
+| `--health-port <port>` | Local collector health-check port. Defaults to `13133`, moved by the same amount as `--otlp-http-port` when that is changed (HTTP port `4328` gives `13143`), so a second collector on alternate OTLP ports does not collide with the first |
+| `--collector <path>` | Path to a `beacon-otelcol` binary |
+| `--no-start` | Write files without starting the collector service |
+| `--no-browser` | During interactive setup, print the sign-in URL instead of opening a browser, and do not open the hosted dashboard when setup finishes. Useful where no browser can be opened. Open the URL on this machine, or on another computer after forwarding the port it names over SSH |
+| `--service <kind>` | Service manager to use: `auto` (default), `launchd`, `systemd`, or `none` for a supervised collector process |
+| `--dry-run` | Print planned actions without changing endpoint files or services |
+| `--include-runtime-metrics` | Include generic process, runtime, and harness operational OTLP metrics in Beacon JSONL. By default, low-signal metrics such as process CPU, memory, Node.js event loop, V8 heap, GitHub Copilot CLI, and OpenClaw operational metrics are filtered out |
+| `--include-codex-spans` | Include every high-volume Codex OTLP span for troubleshooting. By default, Beacon keeps semantic logs and only the usage-bearing completed turn span |
+| `--claude-capture-model-context` | Record context Claude Code gives the model that no other event reports: the pages its WebFetch tool fetches, and the MCP tool descriptions it shows the model as `mcp.tool_listed`. Turns on Claude Code's API-body logs; the collector keeps only that context and drops every body. Off by default; an install without the flag turns it off. See [Claude Code: model context from API bodies](/runtimes/claude-code#model-context-from-api-bodies) |
+| `--splunk-hec-endpoint <url>` | Splunk HEC endpoint URL |
+| `--splunk-hec-token <token>` | Splunk HEC token |
+| `--splunk-index <index>` | Optional Splunk index |
+| `--splunk-source <source>` | Optional Splunk source |
+| `--splunk-sourcetype <type>` | Optional Splunk sourcetype |
+| `--splunk-insecure-skip-verify` | Skip Splunk HEC TLS certificate verification |
+| `--splunk-ca-file <path>` | Optional CA certificate path for Splunk HEC TLS verification |
+| `--falcon-hec-endpoint <url>` | Falcon LogScale HEC endpoint URL |
+| `--falcon-hec-token <token>` | Falcon LogScale ingest token |
+| `--falcon-index <repository>` | Optional Falcon LogScale repository for multi-repository tokens |
+| `--falcon-source <source>` | Optional Falcon LogScale source |
+| `--falcon-sourcetype <type>` | Optional Falcon LogScale parser or sourcetype |
+| `--falcon-insecure-skip-verify` | Skip Falcon LogScale HEC TLS certificate verification |
+| `--falcon-ca-file <path>` | Optional CA certificate path for Falcon LogScale HEC TLS verification |
+| `--no-backfill` | Skip the [session backfill](#session-backfill). `BEACON_BACKFILL=0` does the same |
+| `--connect` | After a successful install, attempt to connect this endpoint to Beacon Cloud ingest. User mode uses the signed-in CLI account; system mode opens browser approval. A connection failure does not roll back or fail the completed local install; verify with `beacon endpoint status --json` and retry with [`beacon endpoint connect`](/cli/endpoint-connect) |
+
+## Session backfill
+
+After a successful install, user or system mode, Beacon reads the last 30 days of agent sessions from each
+runtime's own session store into the runtime log, so the [local dashboard](/cli/dashboard) has
+your recent sessions before any agent runs again. It is the same sweep each runtime's sync command
+runs (`beacon endpoint claude sync`, `codex sync`, `cursor sync`, `opencode sync`, `copilot sync`,
+`cline sync`, `factory sync`, `pi sync`, `prime sync`, `hermes sync`, `dsh sync`, `fx sync`,
+`grok sync`, and `integrations openclaw sessions sync`), and its events carry
+`harness.collection_method=poll` like theirs. It is local only and never touches the network.
+
+The backfill is bounded so a machine with a lot of history cannot crowd live telemetry out of the
+runtime log's rotation window:
+
+- Only sessions modified in the last 30 days are read, newest first.
+- It writes at most 24 MiB in total, and no single runtime takes more than 12 MiB of that.
+
+Nothing past a limit is lost. The collector cursors move only past what was written, and sessions
+left out are not touched, so the runtime's sync command reads the rest; install names the command
+for each runtime that hit the limit. A runtime whose store cannot be read is reported as a warning
+and never fails the install. Re-running install reads only what changed since the last sweep.
+
+A system, package or MDM install runs as root, whose home holds no agent sessions, so it reads the
+session stores of the active console user instead: the same person system hook repair and the
+scheduled inventory resolve (`SUDO_USER` or the logind seat on Linux, the console owner on macOS,
+the active session on Windows). Its collector cursors stay under the system base directory. Because
+root is reading a home that user controls, the read is confined to that home: a link that leads out
+of it, a file the user does not own (including a hard link to someone else's), and a FIFO, socket or
+device are skipped rather than read, and install lists what it skipped. SQLite stores are read from
+a private copy under the system base directory, retaken if the runtime rewrites its write-ahead log
+mid-copy; a database larger than 512 MiB with its log is not copied, and install names the
+runtime's sync command to run as the user instead. A manual `beacon endpoint <runtime> sync` run as the user is not confined. When
+nobody is logged in, install says the backfill was skipped and the next connect or manual sync
+reads the sessions. `--dry-run` installs skip it, and `--no-backfill` or `BEACON_BACKFILL=0` turn it
+off. If this install also connects to Beacon Cloud, the same history is
+[uploaded by the connect](/cli/endpoint-connect#session-backfill).
+
+## Interactive onboarding wizard
+
+On a first interactive install the [onboarding wizard](/cli/endpoint-onboarding)
+signs in through beacon.sh, then asks where this machine's telemetry should go:
+
+| Answer | What happens |
+|--------|--------------|
+| Beacon Cloud (default) | Shows what will be sent, asks for Standard or Metadata-only capture, then installs Beacon and connects this endpoint. The confirm screen names the signed-in account and states that forwarding starts, then names the operator, the destination, and the capture mode, and says how to turn off research and AI training, change the mode, stop sending, or delete the data. It also says that the last 30 days of agent sessions are uploaded, before you accept. Once connected, the install ends on a [short summary](/cli/endpoint-onboarding#when-setup-finishes) and opens the hosted dashboard. An endpoint that is already enrolled keeps its device key and is not re-enrolled. |
+| Local only | Explicitly opts out of managed forwarding. Nothing is sent anywhere; the session backfill stays in the local log. |
+
+`--connect` presets Beacon Cloud and skips the destination question. Whether
+connect was chosen in the wizard or by the flag, a failed enrollment leaves the
+completed local install exiting successfully and prints `beacon endpoint connect` as
+the retry command. Automation should verify
+`.managed_ingest.connected` with `beacon endpoint status --json`.
+`BEACON_MANAGED_INGEST=0` hides the managed answer. The wizard is never shown
+for system/root, package, MDM, CI, dry-run, or redirected-input installs.
+Customer-managed destinations remain available through the
+[log forwarding packs](/log-forwarding) after choosing Local.
+
+## Examples
+
+Install with the default per-user paths:
+
+```bash title="Install with the default per-user paths"
+beacon endpoint install
+```
+
+Install without starting the collector service:
+
+```bash title="Install without starting the collector service"
+beacon endpoint install --no-start
+```
+
+Configure only one harness:
+
+```bash title="Configure only one harness"
+beacon endpoint install --harness claude
+```
+
+Override discovery with an exact harness list:
+
+```bash title="Configure an exact harness list"
+beacon endpoint install --harness claude,codex,gemini
+```
+
+Force every installable integration without checking whether its runtime is present:
+
+```bash title="Configure all supported integrations"
+beacon endpoint install --harness all
+```
+
+Configure VS Code Copilot telemetry:
+
+```bash title="Configure VS Code Copilot telemetry"
+beacon endpoint install --harness vscode
+```
+
+Configure Devin CLI and Devin Desktop hooks alongside the default OTLP harnesses:
+
+```bash title="Configure Devin CLI and Devin Desktop hooks alongside the default OTLP harnesses"
+beacon endpoint install --harness claude,codex,devin-cli,devin-desktop
+```
+
+Include low-level runtime OTLP metrics that are filtered from JSONL by default:
+
+```bash title="Include low-level runtime OTLP metrics that are filtered from JSONL by default"
+beacon endpoint install --include-runtime-metrics
+```
+
+Include raw Codex spans for troubleshooting:
+
+```bash title="Include raw Codex spans for troubleshooting"
+beacon endpoint install --include-codex-spans
+```
+
+Install with system paths for a root-managed package or MDM deployment:
+
+```bash title="Install with system paths for a root-managed package or MDM deployment"
+sudo beacon endpoint install --system --harness claude,codex
+```
+
+Install and forward to CrowdStrike Falcon LogScale HEC:
+
+```bash title="Install and forward to CrowdStrike Falcon LogScale HEC"
+sudo beacon endpoint install \
+  --system \
+  --falcon-hec-endpoint https://cloud.<region>.humio.com/api/v1/ingest/hec \
+  --falcon-hec-token "$FALCON_HEC_TOKEN" \
+  --falcon-index beacon
+```
+
+Configure Factory Droid's OTLP endpoint through MDM or another customer-owned launch policy:
+
+```bash title="Configure Factory Droid's OTLP endpoint through MDM or another customer-owned launch policy"
+export OTEL_TELEMETRY_ENDPOINT="http://127.0.0.1:4318"
+droid exec "review this repository"
+```
+
+Configure GitHub Copilot CLI's OTLP endpoint through MDM or another customer-owned launch policy:
+
+```bash title="Configure GitHub Copilot CLI's OTLP endpoint through MDM or another customer-owned launch policy"
+export COPILOT_OTEL_ENABLED="true"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://127.0.0.1:4318"
+```
+
+For richer hook telemetry, install runtime hooks after the endpoint configuration exists:
+
+```bash title="Install runtime hooks"
+beacon endpoint hooks install --harness antigravity,claude,cline,cursor,devin-cli,devin-desktop,factory,grok,hermes,opencode,qwen
+```
+
+Claude Code hooks are already installed at the user level by `endpoint install`. Add project-level hooks, or re-add user-level ones after removing them:
+
+```bash title="Add Claude Code hooks to a project"
+beacon endpoint hooks install --harness claude --level project
+```
+
+Install Grok Build hooks at the user level:
+
+```bash title="Install Grok Build hooks at the user level"
+beacon endpoint hooks install --harness grok
+```
+
+Install Hermes Agent hooks at the user level:
+
+```bash title="Install Hermes Agent hooks at the user level"
+beacon endpoint hooks install --harness hermes
+```
+
+Hermes hooks write `config.yaml` in the Hermes home directory, which follows `HERMES_HOME` and the active profile (default `~/.hermes/config.yaml`; see [Hermes home and profiles](/runtimes/hermes-agent#hermes-home-and-profiles)), and support user-level installs only.
+
+Install Qwen Code hooks at the user level:
+
+```bash title="Install Qwen Code hooks at the user level"
+beacon endpoint hooks install --harness qwen
+```
+
+Qwen Code hooks merge into `~/.qwen/settings.json`. Qwen Code has no OpenTelemetry export to configure, so `qwen` is a hook harness on this command too: `beacon endpoint install --harness qwen` installs the same hooks and writes `~/.qwen/settings.json`.
+
+Project-level Grok Build hooks write `./.grok/hooks/beacon-endpoint.json` and require `/hooks-trust` in Grok before they execute:
+
+```bash title="Install project-level Grok Build hooks"
+beacon endpoint hooks install --harness grok --level project
+```
+
+<Note>
+  System-mode install (`--system`) is supported on macOS and on Linux distributions that use systemd. Omit `--system` for the default non-root local install. GitHub Copilot CLI and Factory Droid OTLP use launch-environment settings rather tha Beacon-managed shell-profile edits.
+</Note>
+
+## Running user and system mode together
+
+A user-mode collector can run beside a system-mode one on the same machine when the two use different ports. Give the user install its own OTLP ports; its health-check port moves with them:
+
+```bash title="Install a user-mode endpoint beside the system one"
+beacon endpoint install --user --otlp-grpc-port 4327 --otlp-http-port 4328
+```
+
+That collector listens on `127.0.0.1:4327`, `127.0.0.1:4328`, and health check `127.0.0.1:13143`. Pass `--health-port` to choose the health-check port yourself. The port is recorded as `collector.health_port` in `config.json`, and `beacon endpoint status` checks the recorded port. A config written before the field existed has no `health_port` and keeps using `13133`.
+
+If a port the collector needs is already taken, the install stops before it writes anything and names that port. If the collector starts but exits before it is ready, the install error quotes the collector's last error line and gives the path of its log, then rolls back.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Endpoint status" icon="circle-info" href="/cli/endpoint-status">
+    Inspect collector health, runtime log state, harnesses, diagnostics, and forwarding readiness.
+  </Card>
+  <Card title="Runtime hooks" icon="plug" href="/cli/hooks">
+    Install hook-based telemetry after the endpoint collector is configured.
+  </Card>
+</Columns>

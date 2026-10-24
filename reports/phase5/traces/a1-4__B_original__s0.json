@@ -1,0 +1,28 @@
+{
+  "task": "a1-4",
+  "suite": "A",
+  "category": "A1_learning_from_failure",
+  "difficulty": "hard",
+  "arm": "B_original",
+  "seed": 0,
+  "retrieved_ids": [
+    "a1-4-fixed",
+    "a1-4-failed"
+  ],
+  "required_evidence": [
+    "a1-4-fixed"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "The scheduler cache TTL problem should be fixed by implementing a connection pool.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": false,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": 8.851,
+  "agent_seconds": 0.802,
+  "prompt_tokens": 153,
+  "gen_tokens": 15
+}

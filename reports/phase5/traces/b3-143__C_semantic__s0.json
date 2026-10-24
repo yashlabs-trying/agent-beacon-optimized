@@ -1,0 +1,30 @@
+{
+  "task": "b3-143",
+  "suite": "B",
+  "category": "B3_multi_hop",
+  "difficulty": "extreme",
+  "arm": "C_semantic",
+  "seed": 0,
+  "retrieved_ids": [
+    "b3-143-svc",
+    "b3-143-port",
+    "b3-143-decoy"
+  ],
+  "required_evidence": [
+    "b3-143-svc",
+    "b3-143-port"
+  ],
+  "evidence_recall": 1.0,
+  "answer": "Cannot determine from the provided notes.",
+  "correct": false,
+  "grade": {
+    "correct": false,
+    "abstained": true,
+    "leaked": []
+  },
+  "forbidden_leaked": [],
+  "retrieval_ms": -1.0,
+  "agent_seconds": 0.983,
+  "prompt_tokens": 153,
+  "gen_tokens": 8
+}

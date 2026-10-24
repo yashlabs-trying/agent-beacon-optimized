@@ -1,0 +1,9 @@
+=== RUN   TestPhase2TokenSelectionStrategies
+    phase2_token_ranking_test.go:415: TOKEN strategy=fixed_top5       cases=48 tokens=5674 tokens/case=118.2 relevant_retained=109/144 redundancy=0.569 latency_us/case=0.0
+    phase2_token_ranking_test.go:415: TOKEN strategy=token_budget     cases=48 tokens=3535 tokens/case=73.6 relevant_retained=100/144 redundancy=0.627 latency_us/case=14.7
+    phase2_token_ranking_test.go:415: TOKEN strategy=evidence_dedup   cases=48 tokens=5563 tokens/case=115.9 relevant_retained=112/144 redundancy=0.525 latency_us/case=0.9
+    phase2_token_ranking_test.go:415: TOKEN strategy=trust_aware      cases=48 tokens=5670 tokens/case=118.1 relevant_retained=109/144 redundancy=0.581 latency_us/case=154.0
+    phase2_token_ranking_test.go:415: TOKEN strategy=diversity_mmr    cases=48 tokens=5674 tokens/case=118.2 relevant_retained=109/144 redundancy=0.569 latency_us/case=5721.6
+--- PASS: TestPhase2TokenSelectionStrategies (0.59s)
+PASS
+ok  	github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning	0.971s

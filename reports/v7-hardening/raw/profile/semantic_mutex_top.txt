@@ -1,0 +1,23 @@
+File: learning.test
+Build ID: 22868944051ce04e68f79973bbe44b3b7067f03d
+Type: delay
+Time: 2026-10-23 16:39:11 UTC
+Showing nodes accounting for 43.84ms, 99.67% of 43.99ms total
+Dropped 102 nodes (cum <= 0.22ms)
+Showing top 15 nodes out of 45
+      flat  flat%   sum%        cum   cum%
+   43.52ms 98.94% 98.94%    43.52ms 98.94%  runtime.unlock (partial-inline)
+    0.32ms  0.73% 99.67%     0.32ms  0.73%  sync.(*Mutex).Unlock
+         0     0% 99.67%     0.28ms  0.63%  context.(*cancelCtx).Done
+         0     0% 99.67%     0.28ms  0.63%  database/sql.(*DB).queryDC
+         0     0% 99.67%     0.28ms  0.63%  database/sql.(*Rows).initContextClose
+         0     0% 99.67%     0.28ms  0.63%  database/sql.(*Tx).QueryContext
+         0     0% 99.67%     0.28ms  0.63%  database/sql.(*Tx).QueryRow
+         0     0% 99.67%     0.28ms  0.63%  database/sql.(*Tx).QueryRowContext (inline)
+         0     0% 99.67%     0.34ms  0.78%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.(*Store).PutMemory
+         0     0% 99.67%     0.44ms  0.99%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.BenchmarkProfileV7SemanticWarm
+         0     0% 99.67%     0.28ms  0.63%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.indexReadyTx (inline)
+         0     0% 99.67%     0.28ms  0.63%  github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning.metaValue
+         0     0% 99.67%     0.38ms  0.86%  runtime.(*scavengerState).wake
+         0     0% 99.67%     0.65ms  1.47%  runtime.asyncPreempt2.func1
+         0     0% 99.67%       25ms 56.84%  runtime.findRunnable

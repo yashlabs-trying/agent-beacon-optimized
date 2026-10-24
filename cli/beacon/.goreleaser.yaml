@@ -1,0 +1,333 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: beacon
+
+before:
+  hooks:
+    - go mod tidy
+    - bash -c 'cd ../beacon-hooks && go mod tidy'
+    - rm -rf ./release-collectors
+    - mkdir -p ./release-collectors/darwin_amd64 ./release-collectors/darwin_arm64 ./release-collectors/linux_amd64 ./release-collectors/linux_arm64 ./release-collectors/windows_amd64
+    - cp ../../collector-builder/dist/beacon-otelcol/darwin_amd64/beacon-otelcol ./release-collectors/darwin_amd64/beacon-otelcol
+    - cp ../../collector-builder/dist/beacon-otelcol/darwin_arm64/beacon-otelcol ./release-collectors/darwin_arm64/beacon-otelcol
+    - cp ../../collector-builder/dist/beacon-otelcol/linux_amd64/beacon-otelcol ./release-collectors/linux_amd64/beacon-otelcol
+    - cp ../../collector-builder/dist/beacon-otelcol/linux_arm64/beacon-otelcol ./release-collectors/linux_arm64/beacon-otelcol
+    # .exe because that is the name the target needs, which build-release-collectors.sh already
+    # stages -- the collector builder itself emits an extensionless PE binary.
+    - cp ../../collector-builder/dist/beacon-otelcol/windows_amd64/beacon-otelcol.exe ./release-collectors/windows_amd64/beacon-otelcol.exe
+    # Vector for the Linux packages and archives, staged by packaging/linux/fetch-vector.sh. Checked
+    # here so a missing download fails the release instead of shipping packages without Vector.
+    - bash -c 'for a in amd64 arm64; do test -x release-vector/linux_$a/beacon-vector || { echo "release-vector/linux_$a/beacon-vector is missing; run packaging/linux/fetch-vector.sh" >&2; exit 1; }; done'
+    # Package the external threat-rule pack (repo rules/, not embedded in the binary)
+    # as a release asset users install with `beacon rules pull <asset-url>`.
+    - bash -c 'mkdir -p release-rules && COPYFILE_DISABLE=1 tar --exclude="._*" --exclude=".DS_Store" -czf release-rules/threat-rules.tar.gz -C ../.. rules'
+    # GoReleaser v2 rejects release extra_files outside its working directory. Stage the
+    # repository-level one-line installer locally before attaching it to the release.
+    - bash -c 'mkdir -p release-install && cp ../../packaging/linux/install.sh release-install/install.sh'
+
+builds:
+  - id: beacon
+    main: .
+    binary: beacon
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -a
+    ldflags:
+      - -s -w
+      - -X github.com/asymptote-labs/agent-beacon/cli/beacon/internal/version.Version={{.Version}}
+      - -X github.com/asymptote-labs/agent-beacon/cli/beacon/internal/version.GitCommit={{.ShortCommit}}
+      - -X github.com/asymptote-labs/agent-beacon/cli/beacon/internal/version.BuildDate={{.Date}}
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      # No Windows ARM build, because there is no Windows ARM collector to put in the archive.
+      # build-release-collectors.sh builds windows/amd64 only, and an archive containing the CLI but
+      # not the collector is worse than no archive: `endpoint install` would report that no collector
+      # is installed, on a machine where the user had just installed Beacon.
+      - goos: windows
+        goarch: arm64
+    hooks:
+      pre:
+        # Build the hooks binary for this target platform and embed it.
+        # IMPORTANT: This writes to a shared hooks.bin file. Run GoReleaser with
+        # --parallelism 1 so target builds cannot race here. The -a flag above
+        # forces a full rebuild for each target so Go re-reads the freshly-built
+        # hooks.bin instead of serving a stale copy from cache.
+        # CGO_ENABLED=0 matters here as much as it does in the builds above. Releases are built on
+        # Linux, so a linux/amd64 target is a native build with a C toolchain present, and cgo
+        # would default on. beacon-hooks pulls in net, which selects the cgo resolver and links
+        # libc -- producing a dynamically linked hooks binary embedded inside a statically linked
+        # CLI, with a glibc version floor that only shows up on an older or stripped host.
+        - cmd: bash -c 'cd ../beacon-hooks && CGO_ENABLED=0 GOOS={{ .Os }} GOARCH={{ .Arch }} go build -ldflags "-s -w -X github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/version.Version={{ .Version }}" -o ../beacon/internal/embedded/hooks.bin .'
+          output: true
+  - id: beacon-hooks
+    dir: ../beacon-hooks
+    main: .
+    binary: beacon-hooks
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -a
+    ldflags:
+      - -s -w
+      - -X github.com/asymptote-labs/agent-beacon/cli/beacon-hooks/internal/version.Version={{.Version}}
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      # Matches the beacon build above. The two are packaged into one archive, so a target either
+      # has both or neither.
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - formats:
+      - tar.gz
+    # zip on Windows, which is what the platform can extract without installing anything. A tar.gz
+    # is a worse first impression than a missing build for someone who has to go find a tool to open
+    # it before they can run anything.
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    ids:
+      - beacon
+      - beacon-hooks
+    files:
+      - README*
+      # Globbed and flattened rather than named, because the collector is beacon-otelcol on POSIX and
+      # beacon-otelcol.exe on Windows, and a `dst` cannot vary by platform. strip_parent puts it at
+      # the archive root next to the two binaries, which is the layout DiscoverBinary looks for: a
+      # collector sitting beside the CLI that was run.
+      - src: release-collectors/{{ .Os }}_{{ .Arch }}/beacon-otelcol*
+        strip_parent: true
+      # Linux archives only: release-vector has no darwin or windows directory, so the glob matches
+      # nothing there. Named beacon-vector so that unpacking the archive into a directory on PATH
+      # does not shadow a Vector the user already has. FindVector looks for it beside the CLI.
+      - src: release-vector/{{ .Os }}_{{ .Arch }}/beacon-vector*
+        strip_parent: true
+
+nfpms:
+  # Native packages are the Linux counterpart of the signed macOS .pkg: installing one should
+  # produce a running system-mode endpoint, not a pile of binaries plus a manual step. The payload
+  # deliberately mirrors /opt/beacon so that selfupdate's classifyInstall recognises a package
+  # install and seamless updates work the same way on both platforms.
+  - id: beacon
+    package_name: beacon
+    ids:
+      - beacon
+      - beacon-hooks
+    vendor: Asymptote Labs
+    homepage: https://docs.asymptotelabs.ai
+    maintainer: Asymptote Labs <support@asymptotelabs.ai>
+    description: |-
+      Endpoint telemetry agent for AI coding agents.
+      Captures prompts, commands, file activity, tokens and approvals from local agent
+      runtimes and writes normalized events to local or customer-managed destinations.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    # Not FHS, and deliberately: /opt is the correct home for a self-contained vendor bundle,
+    # it matches the macOS package layout, and selfupdate keys off this path.
+    bindir: /opt/beacon/bin
+    contents:
+      - src: ../../collector-builder/dist/beacon-otelcol/linux_{{ .Arch }}/beacon-otelcol
+        dst: /opt/beacon/bin/beacon-otelcol
+        file_info:
+          mode: 0755
+      # Vector runs every forwarder Beacon renders (Beacon Cloud, S3, GCS, CloudWatch, Sumo Logic,
+      # Rapid7, Falcon). Same path as the macOS package, which is where FindVector looks. It does not
+      # run unless one of those is configured. /opt/beacon/bin is not on PATH, so it cannot shadow
+      # another Vector.
+      - src: release-vector/linux_{{ .Arch }}/beacon-vector
+        dst: /opt/beacon/bin/vector
+        file_info:
+          mode: 0755
+      - src: ../../packaging/linux/install-endpoint.sh
+        dst: /opt/beacon/scripts/install-endpoint.sh
+        file_info:
+          mode: 0755
+      - src: ../../packaging/linux/uninstall-endpoint.sh
+        dst: /opt/beacon/scripts/uninstall-endpoint.sh
+        file_info:
+          mode: 0755
+      # Without these the payload is unreachable by name and every documented command fails with
+      # "beacon: command not found" -- including the one this package's own postinstall prints.
+      # 103 documentation pages call the binary bare, so the package is the right place to make
+      # that true rather than rewriting them all to absolute paths.
+      #
+      # /usr/bin rather than /usr/local/bin for two reasons: Debian policy reserves /usr/local for
+      # the local administrator, and /usr/bin is in sudo's default secure_path, so `sudo beacon
+      # ...` -- which is most of the system-mode documentation -- resolves too. Google Chrome ships
+      # the same shape: an /opt payload with a /usr/bin symlink.
+      - src: /opt/beacon/bin/beacon
+        dst: /usr/bin/beacon
+        type: symlink
+      - src: /opt/beacon/bin/beacon-hooks
+        dst: /usr/bin/beacon-hooks
+        type: symlink
+    scripts:
+      postinstall: ../../packaging/linux/nfpm/postinstall.sh
+      preremove: ../../packaging/linux/nfpm/preremove.sh
+      postremove: ../../packaging/linux/nfpm/postremove.sh
+    # systemd is required for the service backend the package registers. Without it the endpoint
+    # falls back to a supervised collector that nothing restarts, which is not what a package
+    # install should silently deliver.
+    dependencies:
+      - systemd
+    rpm:
+      group: Applications/System
+      scripts:
+        # rpm runs the outgoing package's %preun after the incoming package's %post during an
+        # upgrade, so an older package can stop the service the new one just started -- and nothing
+        # in the new package can change what the old script does. %posttrans runs last in the
+        # transaction, which makes it the only place that can have the final say.
+        posttrans: ../../packaging/linux/nfpm/posttrans.sh
+    deb:
+      fields:
+        Bugs: https://github.com/asymptote-labs/agent-beacon/issues
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Other
+      order: 999
+
+brews:
+  - name: beacon
+    repository:
+      owner: asymptote-labs
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: https://asymptotelabs.ai
+    description: "Open-source endpoint agent for local AI runtime telemetry"
+    license: "MIT"
+    commit_author:
+      name: asymptote-bot
+      email: bot@asymptotelabs.ai
+    commit_msg_template: "Homebrew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    # Vector runs the optional Asymptote managed forwarder (`beacon endpoint connect`);
+    # pulling it in here means a Homebrew install can connect without a second step.
+    # Vector is not in homebrew-core (it ships from vectordotdev/brew, and Homebrew no
+    # longer taps third-party dependencies on its own), so the tap mirrors Vector's
+    # release tarballs itself.
+    #
+    # The mirror is named `beacon-vector`, NOT `vector`, and that name is load-bearing.
+    # Homebrew allows exactly one keg named `vector` no matter which tap it came from,
+    # so depending on a tap formula by that name made `brew install/upgrade beacon` fail
+    # outright for everyone who already had Vector from vectordotdev/brew -- the upstream
+    # tap, and the one vector.dev points at:
+    #   Error: vector is already installed from vectordotdev/brew!
+    #   Please `brew uninstall vector` first.
+    # No spelling of a `vector` dependency can be satisfied by both taps. Under its own
+    # name the keg coexists with any other Vector, and it keeps its binary in libexec --
+    # which Homebrew never links into the prefix -- so it cannot collide on a bin/vector
+    # symlink either. FindVector looks there first; see internal/endpoint/asymptote.
+    #
+    # os: mac because Linux needs no dependency: the Linux release archive already
+    # carries Vector as beacon-vector, and the install block below puts it beside
+    # beacon, where FindVector looks first. That is the same Vector build the .deb
+    # and .rpm ship. The mirror formula itself still carries Linux URLs so
+    # Homebrew's cross-platform tap validation can load it.
+    dependencies:
+      - name: asymptote-labs/tap/beacon-vector
+        os: mac
+    install: |
+      bin.install "beacon"
+      bin.install "beacon-hooks"
+      bin.install "beacon-otelcol"
+      bin.install "beacon-vector" if OS.linux?
+    caveats: |
+      Set up Beacon (sign in, choose where telemetry goes, install):
+        beacon endpoint install
+      Already installed? Send this machine's sessions to Beacon Cloud
+      (opt-in, revocable), then open https://beacon.sh/dashboard:
+        beacon endpoint connect
+      This formula installs its own Vector as beacon-vector, so it never
+      collides with a Vector you already have.
+    test: |
+      system "#{bin}/beacon", "version"
+
+release:
+  github:
+    owner: asymptote-labs
+    name: agent-beacon
+  draft: false
+  prerelease: auto
+  # The macOS package job in .github/workflows/release.yml attaches signed .pkg
+  # assets + update-manifest.json to the same release. append keeps reruns or
+  # future job ordering changes from failing on an existing release.
+  mode: append
+  name_template: "v{{.Version}}"
+  extra_files:
+    # The threat-rule pack ships as a separate asset, not embedded in the binary,
+    # so the rule corpus can grow without enlarging `beacon`.
+    - glob: ./release-rules/threat-rules.tar.gz
+    # The Linux one-line installer, served from releases/latest/download/install.sh.
+    - glob: ./release-install/install.sh
+  footer: |
+    ## Installation
+
+    ### Homebrew (macOS/Linux)
+    ```bash
+    brew update
+    brew trust asymptote-labs/tap
+    brew tap asymptote-labs/tap
+    brew install beacon
+    ```
+
+    ### Linux (Debian, Ubuntu, Fedora, RHEL)
+    ```bash
+    curl -fsSL https://github.com/asymptote-labs/agent-beacon/releases/download/v{{.Version}}/install.sh | BEACON_VERSION={{.Version}} bash
+    ```
+
+    ### Manual Download
+    Download the appropriate archive for your platform from the assets below, extract it, and add the binary to your PATH.
+
+    ## Quick Start
+    ```bash
+    beacon endpoint install
+    beacon endpoint status
+    beacon endpoint wazuh print-config
+    ```
+
+    ## Threat detection rules
+    `beacon` ships with a small built-in baseline. Install the full threat-rule
+    pack (attached as `threat-rules.tar.gz` below) and scan your local telemetry:
+    ```bash
+    beacon rules pull https://github.com/asymptote-labs/agent-beacon/releases/download/v{{.Version}}/threat-rules.tar.gz
+    beacon rules list
+    beacon scan
+    ```

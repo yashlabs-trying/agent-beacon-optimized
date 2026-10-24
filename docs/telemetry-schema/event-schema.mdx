@@ -1,0 +1,169 @@
+---
+title: "Unified Telemetry Schema"
+description: "A normalized telemetry contract for local, CI, and cloud agent activity"
+---
+
+## Why the schema exists
+
+AI agent activity is emitted from many places: local developer machines, CI jobs, cloud-hosted coding agents, SDK integrations, OpenTelemetry exporters, and runtime-specific hook systems. Each source has its own event names, payload shapes, identifiers, and ideas about what counts as a prompt, tool call, command, approval, file change, or policy decision.
+
+Beacon's unified telemetry schema turns those different signals into one normalized event model. The goal is to make agent activity searchable, detectable, and explainable across local, CI, and cloud environments without requiring every downstream rule, dashboard, or SIEM parser to understand each runtime's native format.
+
+## What normalization provides
+
+The schema gives every event a consistent backbone:
+
+| Schema concept | Purpose |
+|----------------|---------|
+| `event` | Describes what happened with normalized actions such as `prompt.submitted`, `tool.invoked`, `command.executed`, `file.modified`, `approval.requested`, or `mcp.tool_invoked` |
+| `harness` | Identifies the agent runtime or integration that produced the signal |
+| `origin` | Distinguishes local, CI, and cloud telemetry while preserving a shared event shape |
+| `run` and `session` | Connects activity to CI runs, cloud-agent jobs, local sessions, repositories, branches, and working directories |
+| `tool`, `command`, `file`, `mcp`, `approval`, and `policy` | Captures the entities analysts and detections need to understand agent behavior |
+| `content` | Records whether prompt or tool content was included, redacted, truncated, or omitted |
+| `harness.collection_method` and `event.fidelity` | Record how Beacon obtained the event and how sure it is of the action |
+
+## Provenance: how Beacon knows what it wrote
+
+Normalizing many runtimes into one event shape has a cost: a field that reads the same for every
+source hides how differently the sources behave. `event.action` is the field where that matters
+most. A Claude Code `PermissionRequest` hook hands Beacon a typed payload naming the operation. A
+Codex OTLP log record hands it a body string that Beacon classifies by pattern, with a fallback for
+records that match nothing. Both produce an `event.action`, and without a marker a detection cannot
+tell a report from a reading.
+
+Two optional fields carry that context.
+
+`harness.collection_method` describes the mechanism that carried the event off the runtime:
+
+| Value | Meaning |
+|-------|---------|
+| `hook` | A runtime-native hook the vendor exposes, which executes `beacon-hooks` with a structured payload |
+| `plugin` | A Beacon-managed plugin or extension file the runtime loads, which calls `beacon-hooks` from the runtime's own callbacks |
+| `otlp` | OpenTelemetry logs, traces, or metrics the runtime exported to Beacon's local collector |
+| `poll` | A periodic pull from a runtime's API, seen after the fact rather than as the agent works |
+
+`event.fidelity` describes the specific action on the event:
+
+| Value | Meaning |
+|-------|---------|
+| `observed` | The source named this action: a hook event name, a plugin event type, an explicit `event.action` attribute, or a structured attribute identifying the operation |
+| `inferred` | Beacon derived the action: a pattern match over free text, a fallback for an unrecognized event, or an action synthesized from an adjacent observation |
+
+The two are independent. One OTLP stream carries both kinds: a record that declares its
+`event.name` is `observed`, while a record carrying only prose is `inferred`. Both are
+`collection_method: otlp`.
+
+Both fields are optional, and omitted rather than written empty. Events Beacon emits about itself, such as health heartbeats and self-update results, have no collecting harness and no source action to be faithful to, so they carry neither.
+
+Rules can match on both, so a detection that needs certainty can require it:
+
+```
+e.event.action == "approval.allowed" && e.event.fidelity == "observed"
+```
+
+Approvals are the clearest case for that. Several runtimes expose a pre-tool notification but no
+approval hook, and Beacon turns the former into an `approval.allowed` event so approval-shaped
+detections still have something to match. Those events are `inferred`: nothing was gated, a tool
+call was seen. Anything counting real operator decisions should exclude them.
+
+## Required fields
+
+| Field | Meaning |
+|-------|---------|
+| `timestamp` | UTC event time, RFC3339 with nanosecond precision (`2026-08-21T09:14:03.123456789Z`) |
+| `vendor` | Always `beacon` |
+| `product` | Current product identifier, `endpoint-agent` |
+| `schema_version` | Current public schema version, `1.0` |
+| `event.kind` | Event family, currently `agent_runtime` |
+| `event.action` | Normalized action such as `command.executed` or `tool.invoked` |
+| `event.category` | Event category, provided by the runtime or inferred from `event.action` when possible |
+| `event.fidelity` | Optional. `observed` or `inferred`. See [Provenance](#provenance-how-beacon-knows-what-it-wrote) |
+| `severity` | `info`, `low`, `medium`, `high`, or `critical` |
+| `endpoint` | Host and operating system context |
+| `harness` | Runtime that produced the signal |
+| `harness.collection_method` | Optional. `hook`, `plugin`, `otlp`, or `poll`. See [Provenance](#provenance-how-beacon-knows-what-it-wrote) |
+
+`event.id` is written alongside these: a deterministic UUID identifying the event, described under
+[event identity](/telemetry-schema/normalization#event-identity). It is not required, so events
+written by earlier agent versions remain valid.
+
+## Event ordering
+
+Two events can only be reasoned about together if you can tell which came first, so the
+schema carries two ordering fields.
+
+| Field | Meaning |
+|-------|---------|
+| `timestamp` | The cross-source ordering key. Both capture paths stamp it from the same clock at nanosecond precision and at a fixed width, so two UTC timestamps compare the same way as strings and as instants. |
+| `sequence` | Optional. The emitting writer's monotonic emission counter for the event, starting at 1; absent means unsequenced. It breaks ties between events that share a timestamp. |
+
+`sequence` numbers one writer's stream, not the log as a whole. The hook adapter runs as a
+fresh short-lived process per hook and the collector exporter runs as one long-lived export
+loop, so neither can see the other's counter, and a hook event numbered 1 may well have
+happened after an exporter event numbered 900. Order by `timestamp` first and use
+`sequence` only to separate events that tie on it, most often the datapoints of a single
+metric export, which all carry that export's collection instant.
+
+Do not order events by their position in the log. Append order is not emission order: a
+hook writes synchronously the moment it intercepts a tool call, while the exporter writes
+on its export interval, so an event that happened earlier routinely lands in the file
+later. `beacon scan` and the dashboard's detection view sort the log by `(timestamp,
+sequence)` before evaluating correlation rules for exactly this reason.
+
+## How it extends OpenTelemetry
+
+Beacon accepts OpenTelemetry attributes, including the GenAI semantic conventions, and projects them into fields that are easier to query across agent runtimes. OpenTelemetry context is preserved under `gen_ai` where available, while commonly investigated values are also normalized into Beacon fields such as `model`, `tool.name`, `prompt.text`, `command.command`, `file.path`, and `gen_ai.usage`.
+
+This lets teams use OpenTelemetry-native data without giving up a security-focused vocabulary for agent behavior. A detection can ask for a normalized command, MCP tool, approval decision, or file operation instead of branching on every source runtime's attribute names.
+
+## Why it matters
+
+The normalized schema is the contract between collection, detection, investigation, and forwarding. It lets Beacon:
+
+- Correlate agent activity across local endpoints, ephemeral CI jobs, and cloud agent sessions.
+- Write detections once against stable fields instead of per-runtime payloads.
+- Preserve source-specific OpenTelemetry and GenAI context without forcing downstream tools to parse raw traces.
+- Keep prompt, tool, command, file, approval, policy, and token-usage telemetry comparable across supported harnesses.
+- Say how each event was collected and how sure Beacon is of its action, so a consumer can weigh a runtime-reported fact differently from a derived one.
+- Forward one predictable JSONL shape into customer-managed analytics, SIEM, object-storage, and review workflows.
+
+## Read next
+
+<Columns cols={2}>
+  <Card title="Schema normalization" icon="arrows-rotate" href="/telemetry-schema/normalization">
+    See how OTLP attributes and hook payloads map into Beacon fields and actions.
+  </Card>
+  <Card title="Schema fields" icon="table-list" href="/telemetry-schema/fields">
+    Review entities, optional context, and shared top-level fields.
+  </Card>
+  <Card title="Schema examples" icon="code" href="/telemetry-schema/examples">
+    Inspect example events and content handling behavior.
+  </Card>
+  <Card title="Data inventory" icon="table-list" href="/security/data-inventory">
+    Review runtime coverage and the event fields Beacon can write when a source provides them.
+  </Card>
+</Columns>
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Core Concepts" icon="book-open" href="/concepts/core-concepts">
+    Review the glossary behind events and entities.
+  </Card>
+  <Card title="Open Source Architecture" icon="diagram-project" href="/architecture/architecture">
+    See how runtime telemetry becomes normalized JSONL.
+  </Card>
+  <Card title="Detections" icon="shield-halved" href="/detections">
+    See how events are evaluated by threat rules.
+  </Card>
+  <Card title="Wazuh" icon="shield" href="/cli/wazuh">
+    Configure Wazuh ingestion for Beacon events.
+  </Card>
+  <Card title="Datadog" icon="chart-line" href="/cli/datadog">
+    Configure Datadog Agent custom log collection for Beacon events.
+  </Card>
+  <Card title="Sumo Logic" icon="chart-line" href="/cli/sumo">
+    Configure Sumo Logic HTTP Source forwarding for Beacon events.
+  </Card>
+</Columns>

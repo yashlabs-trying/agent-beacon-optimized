@@ -1,0 +1,2529 @@
+package cmd
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
+
+	endpointconfig "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/config"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/diagnostics"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/harness"
+	endpointinventory "github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/inventory"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/selfupdate"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/service"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/testenv"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/updatecheck"
+
+	"github.com/spf13/cobra"
+)
+
+func TestSplitCSV(t *testing.T) {
+	got := splitCSV("cursor, claude-cowork,,codex")
+	want := []string{"cursor", "claude-cowork", "codex"}
+	if len(got) != len(want) {
+		t.Fatalf("splitCSV length = %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("splitCSV[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestSplitHarnessCSVAllowsCollectorOnly(t *testing.T) {
+	got := splitHarnessCSV("")
+	if len(got) != 0 {
+		t.Fatalf("splitHarnessCSV empty = %#v, want empty slice", got)
+	}
+	got = splitHarnessCSV("claude,codex")
+	if len(got) != 2 || got[0] != "claude" || got[1] != "codex" {
+		t.Fatalf("splitHarnessCSV populated = %#v, want claude/codex", got)
+	}
+}
+
+func TestSplitEndpointTargetsDedupesHookAliases(t *testing.T) {
+	otlp, hooks, err := splitEndpointTargets([]string{"claude", "codex", "devin", "devin-cli", "devin_desktop", "hermes-agent"})
+	if err != nil {
+		t.Fatalf("splitEndpointTargets returned error: %v", err)
+	}
+	if got, want := strings.Join(otlp, ","), "claude,codex"; got != want {
+		t.Fatalf("otlp targets = %q, want %q", got, want)
+	}
+	if got, want := strings.Join(hooks, ","), "claude,codex,devin-cli,devin-desktop,hermes"; got != want {
+		t.Fatalf("hook targets = %q, want %q", got, want)
+	}
+}
+
+// The default install list must carry the Claude Code and Codex hooks with their OTLP
+// settings: a fresh `beacon endpoint install` otherwise records Claude sessions with no
+// start, end, file activity, or subagent lifecycle, since Claude's OTLP export has none.
+func TestDefaultInstallHarnessesCarryClaudeAndCodexHooks(t *testing.T) {
+	defaultList := endpointInstallCmd.Flags().Lookup("harness").DefValue
+	selection, err := resolveEndpointTargets(defaultList, []harness.Harness{
+		{Name: "claude_code", DisplayName: "Claude Code", Detected: true},
+		{Name: "codex_cli", DisplayName: "Codex CLI", Detected: true},
+	})
+	if err != nil {
+		t.Fatalf("resolveEndpointTargets(%q) returned error: %v", defaultList, err)
+	}
+	if got, want := strings.Join(selection.OTLP, ","), "claude,codex"; got != want {
+		t.Fatalf("default otlp targets = %q, want %q", got, want)
+	}
+	if got, want := strings.Join(selection.Hooks, ","), "claude,codex"; got != want {
+		t.Fatalf("default hook targets = %q, want %q", got, want)
+	}
+	// Listing the explicit hook alias as well must not install Claude hooks twice.
+	_, hooks, err := splitEndpointTargets([]string{"claude", "claude-hooks", "codex"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := strings.Join(hooks, ","), "claude,codex"; got != want {
+		t.Fatalf("hook targets with explicit alias = %q, want %q", got, want)
+	}
+}
+
+func TestResolveEndpointTargetsAutoInstallsEveryDetectedInstallableRuntime(t *testing.T) {
+	selection, err := resolveEndpointTargets("auto", []harness.Harness{
+		{Name: "claude_code", DisplayName: "Claude Code", Detected: true},
+		{Name: "vscode", DisplayName: "VS Code", Detected: true},
+		{Name: "opencode", DisplayName: "opencode", Detected: true},
+		{Name: "vercel_fx", DisplayName: "fx", Detected: true},
+		{Name: "cursor", DisplayName: "Cursor", Detected: false},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := strings.Join(selection.OTLP, ","), "claude,vscode"; got != want {
+		t.Fatalf("auto OTLP targets = %q, want %q", got, want)
+	}
+	if got, want := strings.Join(selection.Hooks, ","), "claude,vscode,opencode"; got != want {
+		t.Fatalf("auto hook targets = %q, want %q", got, want)
+	}
+	if len(selection.Skipped) != 1 || selection.Skipped[0].Name != "fx" {
+		t.Fatalf("auto skipped targets = %#v, want fx", selection.Skipped)
+	}
+}
+
+func TestResolveEndpointTargetsAutoSelectsNothingWhenNoInstallableRuntimeDetected(t *testing.T) {
+	selection, err := resolveEndpointTargets("auto", []harness.Harness{
+		{Name: "vercel_fx", DisplayName: "fx", Detected: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(selection.OTLP) != 0 {
+		t.Fatalf("auto OTLP targets = %#v, want none", selection.OTLP)
+	}
+	if len(selection.Hooks) != 0 {
+		t.Fatalf("auto hook targets = %#v, want none", selection.Hooks)
+	}
+	if len(selection.Skipped) != 1 || selection.Skipped[0].Name != "fx" {
+		t.Fatalf("auto skipped targets = %#v, want fx", selection.Skipped)
+	}
+}
+
+func TestResolveEndpointTargetsExplicitListDoesNotAutoDetect(t *testing.T) {
+	selection, err := resolveEndpointTargets("gemini,cursor", []harness.Harness{
+		{Name: "opencode", DisplayName: "opencode", Detected: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := strings.Join(selection.OTLP, ","), "gemini"; got != want {
+		t.Fatalf("explicit OTLP targets = %q, want %q", got, want)
+	}
+	if got, want := strings.Join(selection.Hooks, ","), "cursor"; got != want {
+		t.Fatalf("explicit hook targets = %q, want %q", got, want)
+	}
+	if selection.Automatic {
+		t.Fatal("explicit selection marked automatic")
+	}
+}
+
+func TestResolveEndpointTargetsAllIncludesOTLPAndHookVariants(t *testing.T) {
+	selection, err := resolveEndpointTargets("all", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(selection.OTLP, ","); !strings.Contains(got, "claude") || !strings.Contains(got, "vscode") {
+		t.Fatalf("all OTLP targets = %q, want Claude and VS Code", got)
+	}
+	if got := strings.Join(selection.Hooks, ","); !strings.Contains(got, "openhands") || !strings.Contains(got, "muse") || !strings.Contains(got, "vscode") {
+		t.Fatalf("all hook targets = %q, want OpenHands, Muse, and VS Code", got)
+	}
+}
+
+func TestAutoEndpointTargetsCoversDiscoveryRegistry(t *testing.T) {
+	for _, discovered := range harness.DiscoverAll() {
+		if _, ok := autoEndpointTargets[discovered.Name]; !ok {
+			t.Errorf("discovery target %q (%s) has no automatic install or skip rule", discovered.Name, discovered.DisplayName)
+		}
+	}
+}
+
+func TestCanonicalHookTargetsNormalizesAliasesToSwitchNames(t *testing.T) {
+	got, err := canonicalHookTargets([]string{"claude_code", "codex_cli", "vs_code", "droid", "devin", "devin_desktop", "antigravity_cli", "hermes-agent"})
+	if err != nil {
+		t.Fatalf("canonicalHookTargets returned error: %v", err)
+	}
+	want := []string{"claude", "codex", "vscode", "factory", "devin-cli", "devin-desktop", "antigravity", "hermes"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("canonicalHookTargets = %#v, want %#v", got, want)
+	}
+}
+
+func TestPlannedInstallActionsSeparatesHookHarnesses(t *testing.T) {
+	old := endpointOpts
+	t.Cleanup(func() { endpointOpts = old })
+	endpointOpts.userMode = true
+	endpointOpts.harnesses = "claude,devin,devin-cli,devin-desktop"
+	endpointOpts.logPath = filepath.Join(t.TempDir(), "runtime.jsonl")
+	endpointOpts.noStart = true
+
+	otlp, hooks, err := splitEndpointTargets(splitHarnessCSV(endpointOpts.harnesses))
+	if err != nil {
+		t.Fatal(err)
+	}
+	actions := plannedInstallActions(false, service.KindAuto, otlp, hooks)
+	counts := map[string]int{}
+	hookRows := map[string]int{}
+	for _, action := range actions {
+		if action.Action == "configure_harness" {
+			counts[action.Target]++
+			if action.Message != "" {
+				hookRows[action.Target]++
+			}
+		}
+	}
+	// claude is planned twice on purpose: its OTLP settings and its hooks are two
+	// separate writes, and the plan names each of them.
+	if counts["claude"] != 2 || hookRows["claude"] != 1 || counts["devin-cli"] != 1 || counts["devin-desktop"] != 1 {
+		t.Fatalf("configure_harness counts = %#v (hook rows %#v), want claude OTLP+hook, devin-cli/devin-desktop once", counts, hookRows)
+	}
+	if counts["devin"] != 0 {
+		t.Fatalf("legacy devin alias should be deduped, counts=%#v", counts)
+	}
+	inventoryUnits := 0
+	for _, action := range actions {
+		if action.Action == "write_unit" && action.Message == "scheduled inventory heartbeat job" {
+			inventoryUnits++
+		}
+		if action.Action == "load_service" {
+			t.Fatalf("--no-start plan must not load anything: %+v", action)
+		}
+	}
+	if inventoryUnits != 1 {
+		t.Fatalf("plan should write the scheduled inventory job once, got %d in %+v", inventoryUnits, actions)
+	}
+}
+
+// writeNativeConfigInProcess runs native config repair in this process, the non-root path, so a
+// test that checks what the writers produce does not depend on whether the suite runs as root.
+func writeNativeConfigInProcess(t *testing.T) {
+	t.Helper()
+	old := writeAsConsoleUser
+	t.Cleanup(func() { writeAsConsoleUser = old })
+	writeAsConsoleUser = func() bool { return false }
+}
+
+func TestRepairInstalledEndpointUserConfigConfiguresNativeAndHooks(t *testing.T) {
+	writeNativeConfigInProcess(t)
+	oldOpts := endpointOpts
+	oldActiveConsoleUser := activeConsoleUser
+	oldRunHookRepairAsUser := runHookRepairAsUser
+	oldLoadConfigForUserRepair := loadConfigForUserRepair
+	t.Cleanup(func() {
+		endpointOpts = oldOpts
+		activeConsoleUser = oldActiveConsoleUser
+		runHookRepairAsUser = oldRunHookRepairAsUser
+		loadConfigForUserRepair = oldLoadConfigForUserRepair
+	})
+
+	home := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	claudeSettingsPath := filepath.Join(home, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(claudeSettingsPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(claudeSettingsPath, []byte(`{"env":{"KEEP_ME":"yes"}}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	endpointOpts.userMode = true
+	endpointOpts.systemMode = true
+	endpointOpts.logPath = logPath
+	endpointOpts.hookHarnesses = "claude,codex,cursor,gemini"
+	endpointOpts.hookLevel = "user"
+	loadConfigForUserRepair = func(userMode bool, logPath string) endpointconfig.Config {
+		return endpointconfig.Default(userMode, logPath)
+	}
+	activeConsoleUser = func() (consoleUserInfo, bool, error) {
+		return consoleUserInfo{Username: "alice", HomeDir: home}, true, nil
+	}
+	var repairArgs []string
+	runHookRepairAsUser = func(info consoleUserInfo, args ...string) error {
+		if info.Username != "alice" || info.HomeDir != home {
+			t.Fatalf("repair user = %#v, want alice/%s", info, home)
+		}
+		repairArgs = append([]string(nil), args...)
+		return nil
+	}
+
+	result, err := repairInstalledEndpointUserConfig()
+	if err != nil {
+		t.Fatalf("repairInstalledEndpointUserConfig returned error: %v", err)
+	}
+	if got, want := strings.Join(result.NativeConfigTargets, ","), "claude,codex,gemini"; got != want {
+		t.Fatalf("native targets = %q, want %q", got, want)
+	}
+	if got, want := strings.Join(result.HookTargets, ","), "claude,codex,cursor"; got != want {
+		t.Fatalf("hook targets = %q, want %q", got, want)
+	}
+	if got := strings.Join(repairArgs, " "); !strings.Contains(got, "endpoint hooks install") ||
+		!strings.Contains(got, "--harness claude,codex,cursor") ||
+		!strings.Contains(got, "--log-path "+logPath) {
+		t.Fatalf("hook repair args = %q, want endpoint hooks install for requested targets", got)
+	}
+	claudeSettings, err := os.ReadFile(claudeSettingsPath)
+	if err != nil {
+		t.Fatalf("read Claude settings: %v", err)
+	}
+	for _, want := range []string{
+		`"CLAUDE_CODE_ENABLE_TELEMETRY": "1"`,
+		`"OTEL_EXPORTER_OTLP_ENDPOINT": "http://127.0.0.1:4317"`,
+		`"OTEL_LOG_TOOL_DETAILS": "1"`,
+	} {
+		if !strings.Contains(string(claudeSettings), want) {
+			t.Fatalf("Claude settings missing %q:\n%s", want, claudeSettings)
+		}
+	}
+	if !strings.Contains(string(claudeSettings), `"KEEP_ME": "yes"`) {
+		t.Fatalf("Claude settings did not preserve existing env:\n%s", claudeSettings)
+	}
+	claudeBackup, err := os.ReadFile(claudeSettingsPath + ".beacon.bak")
+	if err != nil {
+		t.Fatalf("read rolling Claude backup: %v", err)
+	}
+	if !strings.Contains(string(claudeBackup), `"KEEP_ME":"yes"`) {
+		t.Fatalf("rolling Claude backup did not preserve original config: %s", claudeBackup)
+	}
+	timestampedBackups, err := filepath.Glob(claudeSettingsPath + ".beacon.*.bak")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(timestampedBackups) != 0 {
+		t.Fatalf("timestamped Claude backups = %v, want collapsed rolling backup only", timestampedBackups)
+	}
+	codexConfig, err := os.ReadFile(filepath.Join(home, ".codex", "config.toml"))
+	if err != nil {
+		t.Fatalf("read Codex config: %v", err)
+	}
+	for _, want := range []string{
+		"[otel]",
+		`endpoint = "http://127.0.0.1:4317"`,
+		"[otel.trace_exporter.\"otlp-grpc\"]",
+	} {
+		if !strings.Contains(string(codexConfig), want) {
+			t.Fatalf("Codex config missing %q:\n%s", want, codexConfig)
+		}
+	}
+	geminiSettings, err := os.ReadFile(filepath.Join(home, ".gemini", "settings.json"))
+	if err != nil {
+		t.Fatalf("read Gemini settings: %v", err)
+	}
+	for _, want := range []string{
+		`"enabled": true`,
+		`"otlpEndpoint": "http://127.0.0.1:4317"`,
+	} {
+		if !strings.Contains(string(geminiSettings), want) {
+			t.Fatalf("Gemini settings missing %q:\n%s", want, geminiSettings)
+		}
+	}
+}
+
+func TestRepairInstalledEndpointUserConfigAllowsNativeOnlyHarness(t *testing.T) {
+	writeNativeConfigInProcess(t)
+	oldOpts := endpointOpts
+	oldActiveConsoleUser := activeConsoleUser
+	oldRunHookRepairAsUser := runHookRepairAsUser
+	t.Cleanup(func() {
+		endpointOpts = oldOpts
+		activeConsoleUser = oldActiveConsoleUser
+		runHookRepairAsUser = oldRunHookRepairAsUser
+	})
+
+	home := t.TempDir()
+	endpointOpts.userMode = true
+	endpointOpts.systemMode = true
+	endpointOpts.hookHarnesses = "gemini"
+	activeConsoleUser = func() (consoleUserInfo, bool, error) {
+		return consoleUserInfo{Username: "alice", HomeDir: home}, true, nil
+	}
+	runHookRepairAsUser = func(info consoleUserInfo, args ...string) error {
+		t.Fatalf("native-only Gemini repair should not invoke hook repair, args=%v", args)
+		return nil
+	}
+
+	result, err := repairInstalledEndpointUserConfig()
+	if err != nil {
+		t.Fatalf("repairInstalledEndpointUserConfig returned error: %v", err)
+	}
+	if got, want := strings.Join(result.NativeConfigTargets, ","), "gemini"; got != want {
+		t.Fatalf("native targets = %q, want %q", got, want)
+	}
+	if len(result.HookTargets) != 0 {
+		t.Fatalf("hook targets = %#v, want none", result.HookTargets)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".gemini", "settings.json")); err != nil {
+		t.Fatalf("Gemini settings not written: %v", err)
+	}
+}
+
+func TestRepairInstalledEndpointUserConfigHonorsHookOnlyAliases(t *testing.T) {
+	writeNativeConfigInProcess(t)
+	oldOpts := endpointOpts
+	oldActiveConsoleUser := activeConsoleUser
+	oldRunHookRepairAsUser := runHookRepairAsUser
+	t.Cleanup(func() {
+		endpointOpts = oldOpts
+		activeConsoleUser = oldActiveConsoleUser
+		runHookRepairAsUser = oldRunHookRepairAsUser
+	})
+
+	home := t.TempDir()
+	endpointOpts.userMode = true
+	endpointOpts.systemMode = true
+	endpointOpts.hookHarnesses = "claude-hooks"
+	activeConsoleUser = func() (consoleUserInfo, bool, error) {
+		return consoleUserInfo{Username: "alice", HomeDir: home}, true, nil
+	}
+	var repairArgs []string
+	runHookRepairAsUser = func(info consoleUserInfo, args ...string) error {
+		repairArgs = append([]string(nil), args...)
+		return nil
+	}
+
+	result, err := repairInstalledEndpointUserConfig()
+	if err != nil {
+		t.Fatalf("repairInstalledEndpointUserConfig returned error: %v", err)
+	}
+	if len(result.NativeConfigTargets) != 0 || len(result.NativeConfigPaths) != 0 {
+		t.Fatalf("native config = %v %v, want none for hook-only alias", result.NativeConfigTargets, result.NativeConfigPaths)
+	}
+	if got, want := strings.Join(result.HookTargets, ","), "claude"; got != want {
+		t.Fatalf("hook targets = %q, want %q", got, want)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); !os.IsNotExist(err) {
+		t.Fatalf("Claude native settings should not be written for hook-only alias, err=%v", err)
+	}
+	if got := strings.Join(repairArgs, " "); !strings.Contains(got, "--harness claude") {
+		t.Fatalf("hook repair args = %q, want claude hook install", got)
+	}
+}
+
+func TestEndpointDashboardCommandRegistered(t *testing.T) {
+	cmd, _, err := endpointCmd.Find([]string{"dashboard"})
+	if err != nil {
+		t.Fatalf("Find dashboard returned error: %v", err)
+	}
+	if cmd == nil || cmd.Use != "dashboard" {
+		t.Fatalf("dashboard command not registered: %#v", cmd)
+	}
+	if cmd.Flags().Lookup("addr") == nil {
+		t.Fatal("dashboard command missing --addr flag")
+	}
+	if cmd.Flags().Lookup("open") == nil {
+		t.Fatal("dashboard command missing --open flag")
+	}
+}
+
+func TestEndpointInstallAndRepairRegisterFalconFlags(t *testing.T) {
+	for _, cmd := range []*cobra.Command{endpointInstallCmd, endpointRepairCmd} {
+		for _, name := range []string{
+			"falcon-hec-endpoint",
+			"falcon-hec-token",
+			"falcon-index",
+			"falcon-source",
+			"falcon-sourcetype",
+			"falcon-insecure-skip-verify",
+			"falcon-ca-file",
+		} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("%s missing --%s flag", cmd.Use, name)
+			}
+		}
+	}
+}
+
+func TestFalconHECOptionsDefaultIsNil(t *testing.T) {
+	old := endpointOpts
+	t.Cleanup(func() { endpointOpts = old })
+	endpointOpts.falconSource = endpointconfig.DefaultFalconSource
+	endpointOpts.falconSourcetype = endpointconfig.DefaultFalconSourcetype
+	if got := falconHECOptions(); got != nil {
+		t.Fatalf("falconHECOptions() = %#v, want nil", got)
+	}
+}
+
+func TestRepairCollectorServiceRollsBackWhenReadinessFails(t *testing.T) {
+	oldOpts := endpointOpts
+	oldLoadConfig := repairLoadEndpointConfig
+	oldSaveConfig := repairSaveEndpointConfig
+	oldResolveBinary := repairResolveCollectorBinary
+	oldWriteConfig := repairWriteCollectorConfig
+	oldWaitReady := repairWaitCollectorReady
+	oldNewManager := newRepairServiceManager
+	t.Cleanup(func() {
+		endpointOpts = oldOpts
+		repairLoadEndpointConfig = oldLoadConfig
+		repairSaveEndpointConfig = oldSaveConfig
+		repairResolveCollectorBinary = oldResolveBinary
+		repairWriteCollectorConfig = oldWriteConfig
+		repairWaitCollectorReady = oldWaitReady
+		newRepairServiceManager = oldNewManager
+	})
+
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	collectorConfigPath := filepath.Join(home, "otelcol.yaml")
+	plistPath := filepath.Join(home, "agent.plist")
+	cfg := endpointconfig.Config{
+		UserMode: true,
+		LogPath:  filepath.Join(home, "old-runtime.jsonl"),
+		Collector: endpointconfig.Collector{
+			ConfigPath: collectorConfigPath,
+			SpoolPath:  filepath.Join(home, "spool", "otlp.jsonl"),
+			GRPCPort:   endpointconfig.DefaultGRPCPort,
+			HTTPPort:   endpointconfig.DefaultHTTPPort,
+		},
+	}
+	if _, err := endpointconfig.Save(cfg); err != nil {
+		t.Fatalf("save original config: %v", err)
+	}
+	if err := os.WriteFile(collectorConfigPath, []byte("old collector config"), 0644); err != nil {
+		t.Fatalf("write original collector config: %v", err)
+	}
+	if err := os.WriteFile(plistPath, []byte("old plist"), 0644); err != nil {
+		t.Fatalf("write original plist: %v", err)
+	}
+	originalConfig, err := os.ReadFile(endpointconfig.ConfigPath(true))
+	if err != nil {
+		t.Fatalf("read original config: %v", err)
+	}
+
+	fakeManager := &fakeRepairServiceManager{plistPath: plistPath}
+	newRepairServiceManager = func(userMode bool) repairServiceManager {
+		if !userMode {
+			t.Fatal("repair should use effective user mode")
+		}
+		return fakeManager
+	}
+	repairResolveCollectorBinary = func(configured string) (string, error) {
+		return filepath.Join(home, "beacon-otelcol"), nil
+	}
+	repairWriteCollectorConfig = func(cfg endpointconfig.Config) error {
+		return os.WriteFile(cfg.Collector.ConfigPath, []byte("new collector config"), 0644)
+	}
+	repairWaitCollectorReady = func(cfg endpointconfig.Config, timeout time.Duration) error {
+		return errors.New("collector did not become ready before timeout")
+	}
+	endpointOpts.logPath = filepath.Join(home, "new-runtime.jsonl")
+
+	err = repairCollectorServiceFromStatus(lifecycle.Status{
+		RuntimeLog: lifecycle.RuntimeLogSource{EffectiveUserMode: true},
+		Service:    service.Status{Loaded: true, Running: true},
+	})
+	if err == nil || !strings.Contains(err.Error(), "collector did not become ready") {
+		t.Fatalf("repairCollectorServiceFromStatus error = %v, want readiness failure", err)
+	}
+	if fakeManager.loads != 2 {
+		t.Fatalf("Load calls = %d, want repair load plus rollback reload", fakeManager.loads)
+	}
+	if fakeManager.unloads != 1 {
+		t.Fatalf("Unload calls = %d, want rollback unload", fakeManager.unloads)
+	}
+	assertFileContent(t, endpointconfig.ConfigPath(true), string(originalConfig))
+	assertFileContent(t, collectorConfigPath, "old collector config")
+	assertFileContent(t, plistPath, "old plist")
+}
+
+type fakeRepairServiceManager struct {
+	plistPath string
+	loads     int
+	unloads   int
+}
+
+func (m *fakeRepairServiceManager) UnitPath() (string, error) {
+	return m.plistPath, nil
+}
+
+func (m *fakeRepairServiceManager) WriteUnit(program, configPath string) (string, error) {
+	return m.plistPath, os.WriteFile(m.plistPath, []byte("new plist"), 0644)
+}
+
+func (m *fakeRepairServiceManager) Load() error {
+	m.loads++
+	return nil
+}
+
+func (m *fakeRepairServiceManager) Unload() error {
+	m.unloads++
+	return nil
+}
+
+func assertFileContent(t *testing.T, path, want string) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	if string(data) != want {
+		t.Fatalf("%s = %q, want %q", path, string(data), want)
+	}
+}
+
+func TestEndpointCoworkSetupCommandRegistered(t *testing.T) {
+	cmd, _, err := endpointCmd.Find([]string{"integrations", "claude-cowork", "setup"})
+	if err != nil {
+		t.Fatalf("Find cowork setup returned error: %v", err)
+	}
+	if cmd == nil || cmd.Use != "setup" {
+		t.Fatalf("cowork setup command not registered: %#v", cmd)
+	}
+	for _, name := range []string{"endpoint", "headers", "resource-attributes", "ngrok", "open"} {
+		if cmd.Flags().Lookup(name) == nil {
+			t.Fatalf("cowork setup command missing --%s flag", name)
+		}
+	}
+}
+
+func TestEndpointOpenClawCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"integrations", "openclaw", "print-config"},
+		{"integrations", "openclaw", "status"},
+		{"integrations", "openclaw", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("openclaw command %v not registered: %#v", path, cmd)
+		}
+	}
+	if endpointOpenClawPrintConfigCmd.Flags().Lookup("endpoint") == nil {
+		t.Fatal("openclaw print-config command missing --endpoint flag")
+	}
+	if endpointOpenClawStatusCmd.Flags().Lookup("json") == nil {
+		t.Fatal("openclaw status command missing --json flag")
+	}
+	if endpointOpenClawValidateCmd.Flags().Lookup("since") == nil {
+		t.Fatal("openclaw validate command missing --since flag")
+	}
+}
+
+func TestEndpointVSCodeCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"integrations", "vscode", "print-config"},
+		{"integrations", "vscode", "setup"},
+		{"integrations", "vscode", "status"},
+		{"integrations", "vscode", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("vscode command %v not registered: %#v", path, cmd)
+		}
+	}
+	for _, name := range []string{"endpoint", "workspace", "capture-content"} {
+		if endpointVSCodeSetupCmd.Flags().Lookup(name) == nil {
+			t.Fatalf("vscode setup command missing --%s flag", name)
+		}
+	}
+	if endpointVSCodeSetupCmd.Flags().Lookup("dry-run") == nil {
+		t.Fatal("vscode setup command missing --dry-run flag")
+	}
+	if endpointVSCodeStatusCmd.Flags().Lookup("json") == nil {
+		t.Fatal("vscode status command missing --json flag")
+	}
+	if endpointVSCodeValidateCmd.Flags().Lookup("since") == nil {
+		t.Fatal("vscode validate command missing --since flag")
+	}
+}
+
+func TestEndpointElasticCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"elastic", "print-config"},
+		{"elastic", "install-pack"},
+		{"elastic", "up"},
+		{"elastic", "down"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("elastic command %v not registered: %#v", path, cmd)
+		}
+	}
+	if findEndpointLeaf("elastic", "install-pack").Flags().Lookup("output") == nil {
+		t.Fatal("elastic install-pack command missing --output flag")
+	}
+	if findEndpointLeaf("elastic", "up").Flags().Lookup("pack-dir") == nil {
+		t.Fatal("elastic up command missing --pack-dir flag")
+	}
+	if findEndpointLeaf("elastic", "down").Flags().Lookup("pack-dir") == nil {
+		t.Fatal("elastic down command missing --pack-dir flag")
+	}
+	for _, name := range []string{"user", "system", "log-path"} {
+		if findEndpointLeaf("elastic", "down").Flags().Lookup(name) == nil {
+			t.Fatalf("elastic down command missing --%s flag", name)
+		}
+	}
+}
+
+func TestEndpointDatadogCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"datadog", "print-config"},
+		{"datadog", "install-pack"},
+		{"datadog", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("datadog command %v not registered: %#v", path, cmd)
+		}
+		for _, name := range []string{"user", "system", "log-path"} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("datadog command %v missing --%s flag", path, name)
+			}
+		}
+	}
+	if findEndpointLeaf("datadog", "install-pack").Flags().Lookup("output") == nil {
+		t.Fatal("datadog install-pack command missing --output flag")
+	}
+}
+
+func TestEndpointSumoCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"sumo", "print-config"},
+		{"sumo", "install-pack"},
+		{"sumo", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("sumo command %v not registered: %#v", path, cmd)
+		}
+		for _, name := range []string{"user", "system", "log-path"} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("sumo command %v missing --%s flag", path, name)
+			}
+		}
+	}
+	if findEndpointLeaf("sumo", "install-pack").Flags().Lookup("output") == nil {
+		t.Fatal("sumo install-pack command missing --output flag")
+	}
+}
+
+func TestEndpointRapid7CommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"rapid7", "print-config"},
+		{"rapid7", "install-pack"},
+		{"rapid7", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("rapid7 command %v not registered: %#v", path, cmd)
+		}
+		for _, name := range []string{"user", "system", "log-path"} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("rapid7 command %v missing --%s flag", path, name)
+			}
+		}
+	}
+	if findEndpointLeaf("rapid7", "install-pack").Flags().Lookup("output") == nil {
+		t.Fatal("rapid7 install-pack command missing --output flag")
+	}
+}
+
+func TestEndpointS3CommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"s3", "print-config"},
+		{"s3", "install-pack"},
+		{"s3", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("s3 command %v not registered: %#v", path, cmd)
+		}
+		for _, name := range []string{"user", "system", "log-path"} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("s3 command %v missing --%s flag", path, name)
+			}
+		}
+	}
+	if findEndpointLeaf("s3", "install-pack").Flags().Lookup("output") == nil {
+		t.Fatal("s3 install-pack command missing --output flag")
+	}
+}
+
+func TestEndpointCloudWatchCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"cloudwatch", "print-config"},
+		{"cloudwatch", "install-pack"},
+		{"cloudwatch", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("cloudwatch command %v not registered: %#v", path, cmd)
+		}
+		for _, name := range []string{"user", "system", "log-path"} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("cloudwatch command %v missing --%s flag", path, name)
+			}
+		}
+	}
+	if findEndpointLeaf("cloudwatch", "install-pack").Flags().Lookup("output") == nil {
+		t.Fatal("cloudwatch install-pack command missing --output flag")
+	}
+}
+
+func TestEndpointGCSCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"gcs", "print-config"},
+		{"gcs", "install-pack"},
+		{"gcs", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("gcs command %v not registered: %#v", path, cmd)
+		}
+		for _, name := range []string{"user", "system", "log-path"} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("gcs command %v missing --%s flag", path, name)
+			}
+		}
+	}
+	if findEndpointLeaf("gcs", "install-pack").Flags().Lookup("output") == nil {
+		t.Fatal("gcs install-pack command missing --output flag")
+	}
+}
+
+func TestEndpointAsymptoteCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"asymptote", "print-config"},
+		{"asymptote", "install-pack"},
+		{"asymptote", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("asymptote command %v not registered: %#v", path, cmd)
+		}
+		for _, name := range []string{"user", "system", "log-path"} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("asymptote command %v missing --%s flag", path, name)
+			}
+		}
+	}
+	if findEndpointLeaf("asymptote", "install-pack").Flags().Lookup("output") == nil {
+		t.Fatal("asymptote install-pack command missing --output flag")
+	}
+}
+
+func TestEndpointSentinelCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"sentinel", "print-config"},
+		{"sentinel", "install-pack"},
+		{"sentinel", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil || cmd.Use != path[len(path)-1] {
+			t.Fatalf("sentinel command %v not registered: %#v", path, cmd)
+		}
+		for _, name := range []string{"user", "system", "log-path"} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("sentinel command %v missing --%s flag", path, name)
+			}
+		}
+	}
+	if findEndpointLeaf("sentinel", "install-pack").Flags().Lookup("output") == nil {
+		t.Fatal("sentinel install-pack command missing --output flag")
+	}
+}
+
+func TestEnsureElasticPackDoesNotOverwriteExistingPack(t *testing.T) {
+	dir := t.TempDir()
+	composePath := filepath.Join(dir, "docker-compose.yml")
+	if err := os.WriteFile(composePath, []byte("custom compose"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureElasticPack(dir, "/tmp/beacon/runtime.jsonl"); err != nil {
+		t.Fatalf("ensureElasticPack returned error: %v", err)
+	}
+	got, err := os.ReadFile(composePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "custom compose" {
+		t.Fatalf("ensureElasticPack overwrote existing pack: %s", got)
+	}
+}
+
+func TestRunEndpointElasticDownIgnoresMissingPack(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("elastic down is currently macOS-only")
+	}
+	oldPackDir := endpointOpts.elasticPackDir
+	endpointOpts.elasticPackDir = filepath.Join(t.TempDir(), "missing-pack")
+	t.Cleanup(func() {
+		endpointOpts.elasticPackDir = oldPackDir
+	})
+	if err := runEndpointElasticDown(t.Context()); err != nil {
+		t.Fatalf("runEndpointElasticDown returned error for missing pack: %v", err)
+	}
+}
+
+func TestEnvDefault(t *testing.T) {
+	t.Setenv("BEACON_TEST_VALUE", "")
+	if got := envDefault("BEACON_TEST_VALUE", "fallback"); got != "fallback" {
+		t.Fatalf("envDefault empty = %q", got)
+	}
+	t.Setenv("BEACON_TEST_VALUE", "  12345  ")
+	if got := envDefault("BEACON_TEST_VALUE", "fallback"); got != "12345" {
+		t.Fatalf("envDefault value = %q", got)
+	}
+}
+
+func TestEndpointCoworkValidateSinceFlagRegistered(t *testing.T) {
+	cmd, _, err := endpointCmd.Find([]string{"integrations", "claude-cowork", "validate"})
+	if err != nil {
+		t.Fatalf("Find cowork validate returned error: %v", err)
+	}
+	if cmd.Flags().Lookup("since") == nil {
+		t.Fatal("cowork validate command missing --since flag")
+	}
+}
+
+func TestParseNgrokURL(t *testing.T) {
+	line := `lvl=info msg="started tunnel" obj=tunnels name=command_line addr=http://localhost:4318 url=https://abc-123.ngrok-free.app`
+	if got, want := parseNgrokURL(line), "https://abc-123.ngrok-free.app"; got != want {
+		t.Fatalf("parseNgrokURL = %q, want %q", got, want)
+	}
+}
+
+func TestBasicAuthHeader(t *testing.T) {
+	got := basicAuthHeader("beacon", "secret")
+	if got != "Authorization=Basic YmVhY29uOnNlY3JldA==" {
+		t.Fatalf("basicAuthHeader = %q", got)
+	}
+}
+
+func TestEndpointHarnessDefaults(t *testing.T) {
+	installFlag := endpointInstallCmd.Flags().Lookup("harness")
+	if installFlag == nil {
+		t.Fatal("install command missing --harness flag")
+	}
+	if got, want := installFlag.DefValue, "auto"; got != want {
+		t.Fatalf("install --harness default = %q, want %q", got, want)
+	}
+
+	hooksFlag := endpointHooksInstallCmd.Flags().Lookup("harness")
+	if hooksFlag == nil {
+		t.Fatal("hooks install command missing --harness flag")
+	}
+	if got, want := hooksFlag.DefValue, "cursor"; got != want {
+		t.Fatalf("hooks install --harness default = %q, want %q", got, want)
+	}
+}
+
+func TestEndpointRepairSupportsNoStart(t *testing.T) {
+	if endpointRepairCmd.Flags().Lookup("no-start") == nil {
+		t.Fatal("repair command missing --no-start flag")
+	}
+}
+
+func TestEndpointInstallAndRepairSupportSplunkFlags(t *testing.T) {
+	for _, cmd := range []*cobra.Command{endpointInstallCmd, endpointRepairCmd} {
+		for _, name := range []string{
+			"splunk-hec-endpoint",
+			"splunk-hec-token",
+			"splunk-index",
+			"splunk-source",
+			"splunk-sourcetype",
+			"splunk-insecure-skip-verify",
+			"splunk-ca-file",
+		} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("%s command missing --%s flag", cmd.Use, name)
+			}
+		}
+	}
+}
+
+func TestEndpointInstallAndRepairSupportDebugTelemetryFlags(t *testing.T) {
+	for _, cmd := range []*cobra.Command{endpointInstallCmd, endpointRepairCmd} {
+		if cmd.Flags().Lookup("include-runtime-metrics") == nil {
+			t.Fatalf("%s command missing --include-runtime-metrics flag", cmd.Use)
+		}
+		if cmd.Flags().Lookup("include-codex-spans") == nil {
+			t.Fatalf("%s command missing --include-codex-spans flag", cmd.Use)
+		}
+	}
+}
+
+func TestEndpointCommandsDefaultToUserMode(t *testing.T) {
+	for _, cmd := range []*cobra.Command{endpointInstallCmd, endpointStatusCmd, endpointDashboardCmd, endpointHooksInstallCmd} {
+		userFlag := cmd.Flags().Lookup("user")
+		if userFlag == nil {
+			t.Fatalf("%s missing --user flag", cmd.Use)
+		}
+		if userFlag.DefValue != "true" {
+			t.Fatalf("%s --user default = %q, want true", cmd.Use, userFlag.DefValue)
+		}
+		if cmd.Flags().Lookup("system") == nil {
+			t.Fatalf("%s missing --system flag", cmd.Use)
+		}
+	}
+}
+
+func TestRunEndpointDashboardPassesRequestedLogPathToHandler(t *testing.T) {
+	oldOpts := endpointOpts
+	oldListen := dashboardListenAndServe
+	t.Cleanup(func() {
+		endpointOpts = oldOpts
+		dashboardListenAndServe = oldListen
+	})
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	configuredLog := filepath.Join(home, ".beacon", "endpoint", "logs", "runtime.jsonl")
+	if _, err := endpointconfig.Save(endpointconfig.Default(true, configuredLog)); err != nil {
+		t.Fatalf("save endpoint config: %v", err)
+	}
+
+	var got dashboard.Options
+	dashboardListenAndServe = func(opts dashboard.Options) error {
+		got = opts
+		return nil
+	}
+	endpointOpts.userMode = true
+	endpointOpts.systemMode = false
+	endpointOpts.logPath = ""
+	endpointOpts.dashboardAddr = "127.0.0.1:0"
+
+	if err := runEndpointDashboard(nil, nil); err != nil {
+		t.Fatalf("runEndpointDashboard returned error: %v", err)
+	}
+	if got.LogPath != "" {
+		t.Fatalf("dashboard LogPath = %q, want empty requested log path so Handler can resolve runtime source", got.LogPath)
+	}
+	if !got.UserMode {
+		t.Fatal("dashboard UserMode = false, want requested user mode")
+	}
+}
+
+func TestRobustEndpointCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"doctor"},
+		{"inventory"},
+		{"test-event"},
+		{"bundle-diagnostics"},
+		{"config", "show"},
+		{"config", "validate"},
+		{"integrations", "validate"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("Find %v returned error: %v", path, err)
+		}
+		if cmd == nil {
+			t.Fatalf("command %v not registered", path)
+		}
+	}
+}
+
+func TestWriteInventoryEventsAppendsInventorySnapshot(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	cfg := endpointconfig.Default(true, logPath)
+	result := endpointinventory.Result{
+		Configs: []endpointinventory.Config{
+			{
+				Runtime:      "claude_code",
+				Path:         filepath.Join(t.TempDir(), ".claude", "settings.json"),
+				PathHash:     "sha256:path",
+				Scope:        endpointinventory.ScopeUser,
+				Exists:       true,
+				Readable:     true,
+				ParserStatus: endpointinventory.StatusOK,
+				Redaction:    endpointinventory.RedactionFull,
+			},
+			{
+				Runtime:      "cursor",
+				PathHash:     "sha256:missing",
+				Scope:        endpointinventory.ScopeUser,
+				Exists:       false,
+				ParserStatus: endpointinventory.StatusNotFound,
+				Redaction:    endpointinventory.RedactionFull,
+			},
+		},
+		MCPServers: []endpointinventory.MCPServer{
+			{
+				Runtime:        "claude_code",
+				ServerName:     "filesystem",
+				SourcePathHash: "sha256:path",
+				SourceScope:    endpointinventory.ScopeUser,
+				Transport:      endpointinventory.TransportStdio,
+				DefinitionHash: "sha256:def",
+				ParserStatus:   endpointinventory.StatusOK,
+				Redaction:      endpointinventory.RedactionFull,
+			},
+		},
+		Skills: []endpointinventory.Skill{
+			{
+				Runtime:          "claude_code",
+				SkillName:        "deploy",
+				SkillNameHash:    "sha256:skill",
+				RootPathHash:     "sha256:root",
+				SourceScope:      endpointinventory.ScopeUser,
+				ManifestPath:     filepath.Join(t.TempDir(), ".claude", "skills", "deploy", "SKILL.md"),
+				ManifestPathHash: "sha256:manifest",
+				Exists:           true,
+				Readable:         true,
+				ParserStatus:     endpointinventory.StatusOK,
+				FileSHA256:       "sha256:body",
+				Redaction:        endpointinventory.RedactionFull,
+			},
+			{
+				Runtime:      "cursor",
+				RootPathHash: "sha256:missing-skill-root",
+				SourceScope:  endpointinventory.ScopeUser,
+				Exists:       false,
+				ParserStatus: endpointinventory.StatusNotFound,
+				Redaction:    endpointinventory.RedactionFull,
+			},
+		},
+	}
+
+	if err := writeInventoryEvents(cfg, result); err != nil {
+		t.Fatalf("writeInventoryEvents returned error: %v", err)
+	}
+	if data, err := os.ReadFile(logPath); err == nil && strings.Contains(string(data), "inventory.") {
+		t.Fatalf("runtime log should not contain inventory events: %s", string(data))
+	}
+	inventoryLogPath := endpointinventory.LogPath(logPath, cfg.UserMode)
+	data, err := os.ReadFile(inventoryLogPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	if strings.Count(text, "inventory.heartbeat") != 1 {
+		t.Fatalf("heartbeat events = %d, want 1; log=%s", strings.Count(text, "inventory.heartbeat"), text)
+	}
+	if strings.Count(text, "inventory.snapshot") != 1 {
+		t.Fatalf("snapshot events = %d, want 1; log=%s", strings.Count(text, "inventory.snapshot"), text)
+	}
+	if !strings.Contains(text, "filesystem") {
+		t.Fatalf("inventory log missing MCP server summary: %s", text)
+	}
+	if !strings.Contains(text, "deploy") {
+		t.Fatalf("inventory log missing skill summary: %s", text)
+	}
+	if strings.Contains(text, "missing-skill-root") {
+		t.Fatalf("inventory log should not include missing skill roots: %s", text)
+	}
+}
+
+func TestWriteInventoryEventsHonorsConfiguredRuntimes(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	cfg := endpointconfig.Default(true, logPath)
+	cfg.Inventory = &endpointconfig.Inventory{Runtimes: []string{"cursor"}}
+	result := endpointinventory.Result{
+		Configs: []endpointinventory.Config{
+			{Runtime: "cursor", PathHash: "sha256:cursor", Exists: true, ParserStatus: endpointinventory.StatusOK, Redaction: endpointinventory.RedactionFull},
+			{Runtime: "claude_code", PathHash: "sha256:claude", Exists: true, ParserStatus: endpointinventory.StatusOK, Redaction: endpointinventory.RedactionFull},
+		},
+		MCPServers: []endpointinventory.MCPServer{
+			{Runtime: "cursor", ServerName: "cursor-server", SourcePathHash: "sha256:cursor", DefinitionHash: "sha256:cursor-def", ParserStatus: endpointinventory.StatusOK, Redaction: endpointinventory.RedactionFull},
+			{Runtime: "claude_code", ServerName: "claude-server", SourcePathHash: "sha256:claude", DefinitionHash: "sha256:claude-def", ParserStatus: endpointinventory.StatusOK, Redaction: endpointinventory.RedactionFull},
+		},
+		Skills: []endpointinventory.Skill{
+			{Runtime: "cursor", SkillName: "cursor-skill", Exists: true, ParserStatus: endpointinventory.StatusOK, Redaction: endpointinventory.RedactionFull},
+			{Runtime: "claude_code", SkillName: "claude-skill", Exists: true, ParserStatus: endpointinventory.StatusOK, Redaction: endpointinventory.RedactionFull},
+		},
+	}
+
+	if err := writeInventoryEvents(cfg, result); err != nil {
+		t.Fatalf("writeInventoryEvents returned error: %v", err)
+	}
+	data, err := os.ReadFile(endpointinventory.LogPath(logPath, cfg.UserMode))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	for _, want := range []string{"cursor-server", "cursor-skill"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("inventory log missing %q: %s", want, text)
+		}
+	}
+	for _, forbidden := range []string{"claude-server", "claude-skill"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("inventory log should not include filtered runtime %q: %s", forbidden, text)
+		}
+	}
+}
+
+func TestScheduledInventoryHeartbeatAlwaysWritesAndSnapshotsOnChange(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeTestFile(t, filepath.Join(home, ".cursor", "mcp.json"), `{"mcpServers":{"one":{"command":"npx"}}}`)
+	writeTestFile(t, filepath.Join(home, ".codex", "config.toml"), `[mcp_servers.github]
+command = "gh"
+`)
+	cfg := endpointconfig.Default(true, logPath)
+	settings := endpointconfig.InventoryConfig(cfg)
+
+	first, err := writeInventoryHeartbeat(cfg, settings, false, inventoryTriggerScheduled, heartbeatScope{})
+	if err != nil {
+		t.Fatalf("first heartbeat returned error: %v", err)
+	}
+	if !first.Written || !first.SnapshotWritten || first.SnapshotDigest == "" {
+		t.Fatalf("first heartbeat = %#v, want heartbeat and snapshot", first)
+	}
+	// Nothing changed: the heartbeat (liveness) is still written, the snapshot is not. No TTL.
+	second, err := writeInventoryHeartbeat(cfg, settings, false, inventoryTriggerScheduled, heartbeatScope{})
+	if err != nil {
+		t.Fatalf("second heartbeat returned error: %v", err)
+	}
+	if !second.Written || second.SnapshotWritten || second.SkippedReason != "" {
+		t.Fatalf("unchanged heartbeat = %#v, want heartbeat only", second)
+	}
+
+	writeTestFile(t, filepath.Join(home, ".cursor", "mcp.json"), `{"mcpServers":{"one":{"command":"npx"},"two":{"command":"uvx"}}}`)
+	changed, err := writeInventoryHeartbeat(cfg, settings, false, inventoryTriggerScheduled, heartbeatScope{})
+	if err != nil {
+		t.Fatalf("changed heartbeat returned error: %v", err)
+	}
+	if !changed.Written || !changed.SnapshotWritten || changed.SnapshotDigest == second.SnapshotDigest {
+		t.Fatalf("changed heartbeat = %#v, want new snapshot digest", changed)
+	}
+
+	if data, err := os.ReadFile(logPath); err == nil && strings.Contains(string(data), "inventory.") {
+		t.Fatalf("runtime log should not contain inventory events: %s", string(data))
+	}
+	inventoryLogPath := endpointinventory.LogPath(logPath, cfg.UserMode)
+	data, err := os.ReadFile(inventoryLogPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	if strings.Count(text, "inventory.heartbeat") != 3 {
+		t.Fatalf("heartbeat count = %d, want 3; log=%s", strings.Count(text, "inventory.heartbeat"), text)
+	}
+	if strings.Count(text, "inventory.snapshot") != 2 {
+		t.Fatalf("snapshot count = %d, want 2; log=%s", strings.Count(text, "inventory.snapshot"), text)
+	}
+	for _, want := range []string{`"trigger":"scheduled"`, `"server_name":"two"`, `"server_name":"github"`} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("inventory log missing %q: %s", want, text)
+		}
+	}
+	for _, forbidden := range []string{"ttl_seconds", "trigger_harness", `"scope":"project"`} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("inventory log must not contain %q: %s", forbidden, text)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(logPath), "inventory-state.json")); err != nil {
+		t.Fatalf("inventory state should live beside inventory log: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".beacon", "endpoint", "inventory-state.json")); !os.IsNotExist(err) {
+		t.Fatalf("inventory state should not use endpoint config base, err=%v", err)
+	}
+}
+
+func TestInventoryHeartbeatAppendFailureLeavesStateUntouched(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	logDir := t.TempDir()
+	logPath := filepath.Join(logDir, "runtime.jsonl")
+	inventoryLogPath := endpointinventory.LogPath(logPath, true)
+	if err := os.MkdirAll(inventoryLogPath, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(home, ".cursor", "mcp.json"), `{"mcpServers":{"one":{"command":"npx"}}}`)
+	cfg := endpointconfig.Default(true, logPath)
+	cfg.Inventory = &endpointconfig.Inventory{Runtimes: []string{"cursor"}}
+	settings := endpointconfig.InventoryConfig(cfg)
+
+	first, err := writeInventoryHeartbeat(cfg, settings, false, inventoryTriggerScheduled, heartbeatScope{})
+	if err == nil {
+		t.Fatal("writeInventoryHeartbeat should fail when inventory log path is a directory")
+	}
+	if first.SnapshotDigest == "" {
+		t.Fatalf("failed heartbeat should still report snapshot digest: %#v", first)
+	}
+	state, err := endpointinventory.ReadState(endpointinventory.StatePathForLog(logPath, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.LastEmittedAt != "" || state.LastSnapshotDigest != "" {
+		t.Fatalf("failed append must leave the state untouched: %#v", state)
+	}
+	// No backoff: the next scheduled run is a plain retry.
+	if _, err := writeInventoryHeartbeat(cfg, settings, false, inventoryTriggerScheduled, heartbeatScope{}); err == nil {
+		t.Fatal("second run should retry and fail again, not be skipped")
+	}
+}
+
+func TestScheduledHeartbeatInSystemModeScansTheConsoleUsersHome(t *testing.T) {
+	consoleHome := t.TempDir()
+	writeTestFile(t, filepath.Join(consoleHome, ".cursor", "mcp.json"), `{"mcpServers":{"console-one":{"command":"npx"}}}`)
+	testenv.SetHome(t, t.TempDir()) // root's home: must not be what gets scanned
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	cfg := endpointconfig.Default(false, logPath)
+	settings := endpointconfig.InventoryConfig(cfg)
+
+	oldResolver := activeConsoleUser
+	t.Cleanup(func() { activeConsoleUser = oldResolver })
+	activeConsoleUser = func() (consoleUserInfo, bool, error) {
+		return consoleUserInfo{Username: "console", HomeDir: consoleHome}, true, nil
+	}
+	if _, err := writeInventoryHeartbeat(cfg, settings, false, inventoryTriggerScheduled, systemHeartbeatScope()); err != nil {
+		t.Fatalf("heartbeat with console user: %v", err)
+	}
+	inventoryLogPath := endpointinventory.LogPath(logPath, false)
+	data, err := os.ReadFile(inventoryLogPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"server_name":"console-one"`) {
+		t.Fatalf("system-mode heartbeat should inventory the console user's home: %s", data)
+	}
+	stateBefore, _ := endpointinventory.ReadState(endpointinventory.StatePathForLog(logPath, false))
+
+	// Nobody logged in: liveness only, no snapshot, digest untouched.
+	activeConsoleUser = func() (consoleUserInfo, bool, error) { return consoleUserInfo{}, false, nil }
+	result, err := writeInventoryHeartbeat(cfg, settings, false, inventoryTriggerScheduled, systemHeartbeatScope())
+	if err != nil {
+		t.Fatalf("heartbeat without console user: %v", err)
+	}
+	if !result.Written || result.SnapshotWritten {
+		t.Fatalf("no-console-user heartbeat = %#v, want heartbeat only", result)
+	}
+	data, _ = os.ReadFile(inventoryLogPath)
+	if strings.Count(string(data), "inventory.heartbeat") != 2 || strings.Count(string(data), "inventory.snapshot") != 1 {
+		t.Fatalf("expected a second heartbeat and no second snapshot: %s", data)
+	}
+	if !strings.Contains(string(data), `"mode":"no_console_user"`) {
+		t.Fatalf("the liveness heartbeat must say nobody was at the console: %s", data)
+	}
+	stateAfter, _ := endpointinventory.ReadState(endpointinventory.StatePathForLog(logPath, false))
+	// last_emitted_at has second resolution, so only the digest is a reliable assertion here.
+	if stateAfter.LastSnapshotDigest != stateBefore.LastSnapshotDigest || stateAfter.LastEmittedAt == "" {
+		t.Fatalf("no-console-user run must keep the digest: before=%#v after=%#v", stateBefore, stateAfter)
+	}
+}
+
+// Hooks installed by older versions still run `inventory heartbeat --trigger hook` on every prompt.
+func TestHeartbeatHookTriggerIsRetired(t *testing.T) {
+	testenv.SetHome(t, t.TempDir())
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	oldOpts := endpointOpts
+	t.Cleanup(func() { endpointOpts = oldOpts })
+	endpointOpts.userMode, endpointOpts.systemMode = true, false
+	endpointOpts.logPath = logPath
+	endpointOpts.inventoryTrigger = "hook"
+	endpointOpts.inventoryTriggerHarness = "claude"
+	endpointOpts.inventoryWorkingDir = "/tmp"
+	endpointOpts.jsonOutput = false
+	if err := runEndpointInventoryHeartbeat(nil, nil); err != nil {
+		t.Fatalf("retired hook trigger must exit cleanly: %v", err)
+	}
+	if _, err := os.Stat(endpointinventory.LogPath(logPath, true)); !os.IsNotExist(err) {
+		t.Fatalf("retired hook trigger must not write inventory, stat err=%v", err)
+	}
+}
+
+func TestTopLevelAliasesRegistered(t *testing.T) {
+	for _, name := range []string{"doctor", "status", "inventory"} {
+		cmd, _, err := rootCmd.Find([]string{name})
+		if err != nil {
+			t.Fatalf("Find %s returned error: %v", name, err)
+		}
+		if cmd == nil || cmd.Use != name {
+			t.Fatalf("top-level %s alias not registered: %#v", name, cmd)
+		}
+		if cmd.Flags().Lookup("user") == nil || cmd.Flags().Lookup("log-path") == nil {
+			t.Fatalf("top-level %s alias missing endpoint flags", name)
+		}
+	}
+}
+
+func writeTestFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRobustCLIFlagsRegistered(t *testing.T) {
+	for _, cmd := range []*cobra.Command{endpointInstallCmd, endpointRepairCmd, endpointUninstallCmd, endpointHooksInstallCmd, endpointHooksUninstallCmd} {
+		if cmd.Flags().Lookup("dry-run") == nil {
+			t.Fatalf("%s missing --dry-run", cmd.Use)
+		}
+	}
+	for _, cmd := range []*cobra.Command{endpointDiscoverCmd, endpointInventoryCmd, endpointHooksStatusCmd, endpointHooksInstallCmd, endpointHooksUninstallCmd, endpointIntegrationsValidateCmd} {
+		if cmd.Flags().Lookup("all") == nil {
+			t.Fatalf("%s missing --all", cmd.Use)
+		}
+	}
+	if endpointBundleDiagnosticsCmd.Flags().Lookup("include-event-summaries") == nil {
+		t.Fatal("bundle-diagnostics missing --include-event-summaries")
+	}
+	if endpointBundleDiagnosticsCmd.Flags().Lookup("include-raw-events") == nil {
+		t.Fatal("bundle-diagnostics missing --include-raw-events")
+	}
+	for _, cmd := range []*cobra.Command{endpointDoctorCmd, topLevelDoctorCmd} {
+		if cmd.Flags().Lookup("fix") == nil {
+			t.Fatalf("%s missing --fix", cmd.Use)
+		}
+		if cmd.Flags().Lookup("dry-run") != nil {
+			t.Fatalf("%s should not register --dry-run", cmd.Use)
+		}
+	}
+	for _, cmd := range []*cobra.Command{endpointInventoryCmd, topLevelInventoryCmd} {
+		for _, name := range []string{"mcp", "skills", "hooks"} {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Fatalf("%s missing --%s", cmd.Use, name)
+			}
+		}
+	}
+}
+
+func TestFilterInventorySectionsKeepsOnlyRequestedBuckets(t *testing.T) {
+	old := endpointOpts
+	t.Cleanup(func() { endpointOpts = old })
+	result := inventoryResult{
+		Hooks: map[string]hookTargetResult{
+			"cursor": {Target: "cursor", Status: "ok"},
+		},
+		Configs: []endpointinventory.Config{
+			{Runtime: "cursor", ConfigKind: endpointinventory.KindNativeConfig, MCPServerCount: 1},
+			{Runtime: "cursor", ConfigKind: endpointinventory.KindHookConfig},
+			{Runtime: "claude_code", ConfigKind: endpointinventory.KindNativeConfig},
+		},
+		MCPServers: []endpointinventory.MCPServer{
+			{Runtime: "cursor", ServerName: "filesystem"},
+		},
+		Skills: []endpointinventory.Skill{
+			{Runtime: "cursor", SkillName: "review"},
+		},
+	}
+
+	endpointOpts.inventoryMCP = true
+	filtered := filterInventorySections(result)
+	if len(filtered.MCPServers) != 1 || len(filtered.Configs) != 1 {
+		t.Fatalf("mcp filter kept wrong inventory: %#v", filtered)
+	}
+	if filtered.Hooks != nil || filtered.Skills != nil {
+		t.Fatalf("mcp filter should drop hooks and skills: %#v", filtered)
+	}
+	if filtered.Configs[0].MCPServerCount != 1 {
+		t.Fatalf("mcp filter kept wrong config: %#v", filtered.Configs)
+	}
+
+	endpointOpts.inventoryMCP = false
+	endpointOpts.inventoryHooks = true
+	endpointOpts.inventorySkills = true
+	filtered = filterInventorySections(result)
+	if len(filtered.Skills) != 1 || len(filtered.Hooks) != 1 {
+		t.Fatalf("hooks+skills filter dropped requested inventory: %#v", filtered)
+	}
+	if len(filtered.MCPServers) != 0 {
+		t.Fatalf("hooks+skills filter should drop MCP servers: %#v", filtered.MCPServers)
+	}
+	if len(filtered.Configs) != 1 || filtered.Configs[0].ConfigKind != endpointinventory.KindHookConfig {
+		t.Fatalf("hooks filter kept wrong configs: %#v", filtered.Configs)
+	}
+}
+
+func TestEndpointInventoryHooksJSONIncludesDefaultHookStatuses(t *testing.T) {
+	old := endpointOpts
+	t.Cleanup(func() { endpointOpts = old })
+	testenv.SetHome(t, t.TempDir())
+	endpointOpts.userMode = true
+	endpointOpts.logPath = filepath.Join(t.TempDir(), "runtime.jsonl")
+	endpointOpts.jsonOutput = true
+	endpointOpts.inventoryHooks = true
+	endpointOpts.hookHarnesses = ""
+
+	output, err := captureStdout(t, func() error {
+		return runEndpointInventory(endpointInventoryCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("runEndpointInventory returned error: %v", err)
+	}
+	var result inventoryResult
+	if err := json.Unmarshal([]byte(output), &result); err != nil {
+		t.Fatalf("inventory JSON did not decode: %v output=%s", err, output)
+	}
+	if len(result.Hooks) == 0 {
+		t.Fatalf("hooks inventory was empty: %#v", result)
+	}
+	if hook, ok := result.Hooks["cursor"]; !ok || hook.Target != "cursor" {
+		t.Fatalf("hooks inventory missing cursor status: %#v", result.Hooks)
+	}
+}
+
+func TestRepairInstalledEndpointHooksUsesExplicitHarnesses(t *testing.T) {
+	oldOpts := endpointOpts
+	oldConsoleUser := activeConsoleUser
+	oldRunAsUser := runHookRepairAsUser
+	t.Cleanup(func() {
+		endpointOpts = oldOpts
+		activeConsoleUser = oldConsoleUser
+		runHookRepairAsUser = oldRunAsUser
+	})
+
+	home := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	activeConsoleUser = func() (consoleUserInfo, bool, error) {
+		return consoleUserInfo{Username: "shad", HomeDir: home}, true, nil
+	}
+	var gotUser consoleUserInfo
+	var gotArgs []string
+	runHookRepairAsUser = func(info consoleUserInfo, args ...string) error {
+		gotUser = info
+		gotArgs = append([]string(nil), args...)
+		return nil
+	}
+	endpointOpts.logPath = logPath
+	endpointOpts.hookHarnesses = "claude,codex,cursor"
+	endpointOpts.hookLevel = "user"
+
+	result, err := repairInstalledEndpointHooks()
+	if err != nil {
+		t.Fatalf("repairInstalledEndpointHooks returned error: %v", err)
+	}
+	if result.User != "shad" || result.HomeDir != home {
+		t.Fatalf("result user/home = %#v", result)
+	}
+	wantArgs := []string{"endpoint", "hooks", "install", "--harness", "claude,codex,cursor", "--level", "user", "--log-path", logPath}
+	if strings.Join(gotArgs, "\x00") != strings.Join(wantArgs, "\x00") {
+		t.Fatalf("repair args = %#v, want %#v", gotArgs, wantArgs)
+	}
+	if gotUser.Username != "shad" || gotUser.HomeDir != home {
+		t.Fatalf("run user = %#v, want shad/%s", gotUser, home)
+	}
+}
+
+func TestRepairInstalledEndpointHooksDetectsAlreadyInstalledBeaconHooks(t *testing.T) {
+	oldOpts := endpointOpts
+	oldConsoleUser := activeConsoleUser
+	oldRunAsUser := runHookRepairAsUser
+	t.Cleanup(func() {
+		endpointOpts = oldOpts
+		activeConsoleUser = oldConsoleUser
+		runHookRepairAsUser = oldRunAsUser
+	})
+
+	home := t.TempDir()
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeTestFile(t, filepath.Join(home, ".claude", "settings.json"), `{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"echo keep"},{"type":"command","command":"BEACON_ENDPOINT_MODE=1 old-beacon-hooks --platform claude session-start"}]}]}}`)
+	writeTestFile(t, filepath.Join(home, ".codex", "hooks.json"), `{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"echo keep"}]}]}}`)
+	writeTestFile(t, filepath.Join(home, ".factory", "settings.json"), `{"hooks":{"PostToolUse":[{"hooks":[{"type":"command","command":"BEACON_ENDPOINT_MODE=1 beacon-hooks --platform factory post-tool"}]}]}}`)
+	activeConsoleUser = func() (consoleUserInfo, bool, error) {
+		return consoleUserInfo{Username: "shad", HomeDir: home}, true, nil
+	}
+	var gotArgs []string
+	runHookRepairAsUser = func(info consoleUserInfo, args ...string) error {
+		gotArgs = append([]string(nil), args...)
+		return nil
+	}
+	endpointOpts.logPath = logPath
+	endpointOpts.hookHarnesses = ""
+	endpointOpts.hookLevel = "user"
+
+	result, err := repairInstalledEndpointHooks()
+	if err != nil {
+		t.Fatalf("repairInstalledEndpointHooks returned error: %v", err)
+	}
+	if strings.Join(result.Targets, ",") != "claude,factory" {
+		t.Fatalf("targets = %#v, want claude,factory", result.Targets)
+	}
+	wantArgs := []string{"endpoint", "hooks", "install", "--harness", "claude,factory", "--level", "user", "--log-path", logPath}
+	if strings.Join(gotArgs, "\x00") != strings.Join(wantArgs, "\x00") {
+		t.Fatalf("repair args = %#v, want %#v", gotArgs, wantArgs)
+	}
+	data, err := os.ReadFile(filepath.Join(home, ".claude", "settings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "echo keep") {
+		t.Fatalf("detection should not modify hook file or drop non-Beacon hook: %s", string(data))
+	}
+}
+
+func TestRunEndpointInventoryWriteEventHonorsConfigContentOptIn(t *testing.T) {
+	old := endpointOpts
+	t.Cleanup(func() { endpointOpts = old })
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	writeTestFile(t, filepath.Join(home, ".cursor", "mcp.json"), `{"mcpServers":{"one":{"command":"npx","env":{"API_TOKEN":"secret"}}}}`)
+	include := true
+	cfg := endpointconfig.Default(true, logPath)
+	cfg.Inventory = &endpointconfig.Inventory{
+		Runtimes:        []string{"cursor"},
+		IncludeContents: &include,
+		MaxContentBytes: 4096,
+	}
+	if _, err := endpointconfig.Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	endpointOpts.userMode = true
+	endpointOpts.logPath = logPath
+	endpointOpts.jsonOutput = true
+	endpointOpts.writeInventoryEvent = true
+	endpointOpts.inventoryContents = false
+
+	output, err := captureStdout(t, func() error {
+		return runEndpointInventory(endpointInventoryCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("runEndpointInventory returned error: %v", err)
+	}
+	var result inventoryResult
+	if err := json.Unmarshal([]byte(output), &result); err != nil {
+		t.Fatalf("inventory JSON did not decode: %v output=%s", err, output)
+	}
+	foundContent := false
+	for _, config := range result.Configs {
+		if config.Runtime == "cursor" && config.Exists && config.Content != nil {
+			foundContent = true
+			break
+		}
+	}
+	if !foundContent {
+		t.Fatalf("manual inventory JSON did not include opted-in content: %#v", result.Configs)
+	}
+	data, err := os.ReadFile(endpointinventory.LogPath(logPath, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	if !strings.Contains(text, `"content"`) || !strings.Contains(text, "mcpServers") {
+		t.Fatalf("manual inventory snapshot log did not include opted-in content: %s", text)
+	}
+	if strings.Contains(text, "secret") {
+		t.Fatalf("manual inventory snapshot log leaked secret content: %s", text)
+	}
+}
+
+func TestEndpointUpdateCommandsRegistered(t *testing.T) {
+	for _, path := range [][]string{
+		{"update"},
+		{"update", "enable"},
+		{"update", "disable"},
+		{"update", "status"},
+	} {
+		cmd, _, err := endpointCmd.Find(path)
+		if err != nil {
+			t.Fatalf("endpoint command %v not registered: %v", path, err)
+		}
+		if cmd == nil {
+			t.Fatalf("endpoint command %v not registered", path)
+		}
+	}
+	if cmd, _, err := rootCmd.Find([]string{"update"}); err == nil && cmd != nil && cmd.Name() == "update" {
+		t.Fatal("top-level update command should not be registered")
+	}
+}
+
+func TestConfigAutoUpdateModeDoesNotFallBackOnSystemLoadError(t *testing.T) {
+	systemErr := fmt.Errorf("invalid system config")
+	got := configAutoUpdateModeFrom(
+		func() (string, error) { return "", systemErr },
+		func() (string, error) { return "check-only", nil },
+	)
+	if got != "" {
+		t.Fatalf("mode = %q, want empty when system config load fails", got)
+	}
+}
+
+func TestAutoUpdateModeIgnoresDestinationValidation(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	writeTestFile(t, path, `{
+  "user_mode": false,
+  "log_path": "/var/log/beacon-agent/runtime.jsonl",
+  "collector": {"grpc_port":4317,"http_port":4318},
+  "harnesses": ["claude"],
+  "destinations": {"splunk_hec": {"endpoint": "https://splunk.example"}},
+  "auto_update": {"mode": "check-only"}
+}`)
+	got, err := autoUpdateModeFromPath(path)
+	if err != nil {
+		t.Fatalf("autoUpdateModeFromPath: %v", err)
+	}
+	if got != "check-only" {
+		t.Fatalf("mode = %q, want check-only", got)
+	}
+	if err := setConfigAutoUpdateModeAt(path, "off"); err != nil {
+		t.Fatalf("setConfigAutoUpdateModeAt: %v", err)
+	}
+	if info, err := os.Stat(path); err != nil {
+		t.Fatal(err)
+	} else if got := info.Mode().Perm(); testenv.HasPOSIXFileModes() && got != 0o600 {
+		t.Fatalf("config permissions = %v, want 0600", got)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := raw["destinations"]; !ok {
+		t.Fatalf("destinations were not preserved: %s", data)
+	}
+	mode, err := autoUpdateModeFromPath(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode != "off" {
+		t.Fatalf("mode after set = %q, want off", mode)
+	}
+}
+
+func TestEndpointSystemLogPathUsesSystemPathForPackageInstall(t *testing.T) {
+	oldDetect := detectUpdateInstall
+	oldLogPath := endpointOpts.logPath
+	oldUserMode := endpointOpts.userMode
+	oldSystemMode := endpointOpts.systemMode
+	t.Cleanup(func() {
+		detectUpdateInstall = oldDetect
+		endpointOpts.logPath = oldLogPath
+		endpointOpts.userMode = oldUserMode
+		endpointOpts.systemMode = oldSystemMode
+	})
+	detectUpdateInstall = func() selfupdate.Install {
+		return selfupdate.Install{Kind: selfupdate.InstallSystemPkg, BinaryPath: "/opt/beacon/bin/beacon"}
+	}
+	endpointOpts.logPath = ""
+	endpointOpts.userMode = true
+	endpointOpts.systemMode = false
+
+	// The POSIX location is a published contract, so it stays a literal. Windows has no /var/log
+	// and keeps the system log beside its machine-wide config under %ProgramData%.
+	want := "/var/log/beacon-agent/system.jsonl"
+	if runtime.GOOS == "windows" {
+		want = filepath.Join(endpointconfig.SystemLogDir(), "system.jsonl")
+	}
+	if got := endpointSystemLogPath(); got != want {
+		t.Fatalf("endpointSystemLogPath = %q, want %q", got, want)
+	}
+}
+
+func TestRequireSystemPackageForUpdater(t *testing.T) {
+	if err := requireSystemPackageForUpdater(selfupdate.Install{Kind: selfupdate.InstallSystemPkg}); err != nil {
+		t.Fatalf("system package rejected: %v", err)
+	}
+	if err := requireSystemPackageForUpdater(selfupdate.Install{Kind: selfupdate.InstallHomebrew}); err == nil {
+		t.Fatal("homebrew install should not be allowed to install system updater")
+	}
+	if err := requireSystemPackageForUpdater(selfupdate.Install{Kind: selfupdate.InstallOther}); err == nil {
+		t.Fatal("other install should not be allowed to install system updater")
+	}
+}
+
+func TestEndpointUpdateApplyFlagRegistered(t *testing.T) {
+	cmd, _, err := endpointCmd.Find([]string{"update"})
+	if err != nil {
+		t.Fatalf("find endpoint update: %v", err)
+	}
+	if cmd.Flags().Lookup("apply") == nil {
+		t.Fatal("endpoint update missing --apply")
+	}
+}
+
+// TestApplyUpdateRequiresElevation asks the same question the code now asks.
+//
+// It used to check for the literal words "requires root", which is the POSIX spelling. That phrasing
+// was wrong on Windows in both directions: os.Geteuid returns -1 there so the guard could never pass,
+// and the advice it printed -- rerun with sudo -- names a command the platform does not have. The
+// requirement is elevation; what elevation is called is the platform's business.
+func TestApplyUpdateRequiresElevation(t *testing.T) {
+	if lifecycle.HasSystemPrivileges() {
+		t.Skip("an elevated process can apply updates")
+	}
+	oldAllow := endpointUpdateOpts.allowInsecure
+	t.Cleanup(func() { endpointUpdateOpts.allowInsecure = oldAllow })
+	endpointUpdateOpts.allowInsecure = false
+	err := applyUpdate(context.Background(), "0.0.1")
+	if err == nil {
+		t.Fatal("applyUpdate succeeded without elevation")
+	}
+	if !strings.Contains(err.Error(), "elevated privileges") {
+		t.Fatalf("applyUpdate error = %v, want it to name the elevation requirement", err)
+	}
+	// The advice has to be runnable on the platform that printed it.
+	if !strings.Contains(err.Error(), lifecycle.SystemPrivilegeHint()) {
+		t.Fatalf("applyUpdate error = %v, want it to carry this platform's hint (%q)",
+			err, lifecycle.SystemPrivilegeHint())
+	}
+}
+
+func TestApplyUpdateInsecureRequiresInstallPrefix(t *testing.T) {
+	oldAllow := endpointUpdateOpts.allowInsecure
+	oldPrefix := endpointUpdateOpts.installPrefix
+	t.Cleanup(func() {
+		endpointUpdateOpts.allowInsecure = oldAllow
+		endpointUpdateOpts.installPrefix = oldPrefix
+	})
+	endpointUpdateOpts.allowInsecure = true
+	endpointUpdateOpts.installPrefix = ""
+	if err := applyUpdate(context.Background(), "0.0.1"); err == nil || !strings.Contains(err.Error(), "requires --install-prefix") {
+		t.Fatalf("applyUpdate error = %v, want install-prefix requirement", err)
+	}
+}
+
+func TestEndpointUpdateCheckWinsOverApply(t *testing.T) {
+	oldCheck := endpointUpdateOpts.check
+	oldApply := endpointUpdateOpts.apply
+	t.Cleanup(func() {
+		endpointUpdateOpts.check = oldCheck
+		endpointUpdateOpts.apply = oldApply
+	})
+	endpointUpdateOpts.check = true
+	endpointUpdateOpts.apply = true
+	res := selfupdate.CheckResult{
+		ManifestResult: updatecheck.ManifestResult{UpdateAvailable: true},
+		Install:        selfupdate.Install{Kind: selfupdate.InstallSystemPkg},
+		HasArtifact:    true,
+	}
+	if err := maybeReturnAfterUpdateReport(res); err != nil {
+		t.Fatalf("maybeReturnAfterUpdateReport = %v, want nil check-only return", err)
+	}
+}
+
+func TestEndpointUpdateApplyRejectsHomebrew(t *testing.T) {
+	oldCheck := endpointUpdateOpts.check
+	oldApply := endpointUpdateOpts.apply
+	oldInsecure := endpointUpdateOpts.allowInsecure
+	t.Cleanup(func() {
+		endpointUpdateOpts.check = oldCheck
+		endpointUpdateOpts.apply = oldApply
+		endpointUpdateOpts.allowInsecure = oldInsecure
+	})
+	endpointUpdateOpts.check = false
+	endpointUpdateOpts.apply = true
+	endpointUpdateOpts.allowInsecure = false
+	res := selfupdate.CheckResult{
+		ManifestResult: updatecheck.ManifestResult{UpdateAvailable: true},
+		Install:        selfupdate.Install{Kind: selfupdate.InstallHomebrew},
+		HasArtifact:    true,
+	}
+	if err := maybeReturnAfterUpdateReport(res); err == nil || !strings.Contains(err.Error(), "Homebrew") {
+		t.Fatalf("maybeReturnAfterUpdateReport = %v, want Homebrew apply rejection", err)
+	}
+}
+
+func TestCompletionAndDocsCommandsRegistered(t *testing.T) {
+	for _, name := range []string{"completion", "docs"} {
+		cmd, _, err := rootCmd.Find([]string{name})
+		if err != nil {
+			t.Fatalf("Find %s returned error: %v", name, err)
+		}
+		if cmd == nil || cmd.Use == "" {
+			t.Fatalf("%s command not registered: %#v", name, cmd)
+		}
+	}
+	if docsCmd.Flags().Lookup("output") == nil {
+		t.Fatal("docs command missing --output")
+	}
+}
+
+func TestRedactConfigScrubsSplunkToken(t *testing.T) {
+	cfg := endpointconfig.Default(true, "/tmp/runtime.jsonl")
+	cfg.Destinations = &endpointconfig.Destinations{SplunkHEC: &endpointconfig.SplunkHEC{
+		Endpoint: "https://splunk.example/services/collector",
+		Token:    "secret-token",
+	}}
+	redacted := redactConfig(cfg)
+	if redacted.Destinations.SplunkHEC.Token != "[REDACTED]" {
+		t.Fatalf("token was not redacted: %#v", redacted.Destinations.SplunkHEC)
+	}
+	if cfg.Destinations.SplunkHEC.Token != "secret-token" {
+		t.Fatal("redactConfig mutated input config")
+	}
+}
+
+func TestRedactConfigScrubsFalconToken(t *testing.T) {
+	cfg := endpointconfig.Default(true, "/tmp/runtime.jsonl")
+	cfg.Destinations = &endpointconfig.Destinations{FalconHEC: &endpointconfig.FalconHEC{
+		Endpoint: "https://cloud.us.humio.com/api/v1/ingest/hec",
+		Token:    "secret-token",
+	}}
+	redacted := redactConfig(cfg)
+	if redacted.Destinations.FalconHEC.Token != "[REDACTED]" {
+		t.Fatalf("token was not redacted: %#v", redacted.Destinations.FalconHEC)
+	}
+	if cfg.Destinations.FalconHEC.Token != "secret-token" {
+		t.Fatal("redactConfig mutated input config")
+	}
+}
+
+func TestAggregateCheckStatus(t *testing.T) {
+	if got := aggregateCheckStatus([]diagnostics.Check{{Status: "ok"}}); got != "ok" {
+		t.Fatalf("ok aggregate = %q", got)
+	}
+	if got := aggregateCheckStatus([]diagnostics.Check{{Status: "ok"}, {Status: "warn"}}); got != "warn" {
+		t.Fatalf("warn aggregate = %q", got)
+	}
+	if got := aggregateCheckStatus([]diagnostics.Check{{Status: "warn"}, {Status: "fail"}}); got != "fail" {
+		t.Fatalf("fail aggregate = %q", got)
+	}
+}
+
+func TestConfigValidationCheckReportsInvalidConfig(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	path := endpointconfig.ConfigPath(true)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatalf("mkdir config dir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte("{not-json"), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	check := configValidationCheck(true)
+	if check.Status != diagnostics.StatusFail {
+		t.Fatalf("config validation status = %#v, want fail", check)
+	}
+	if !strings.Contains(check.Action, "fix the endpoint config JSON") {
+		t.Fatalf("config validation action = %q", check.Action)
+	}
+}
+
+func TestActionableChecksUsesRequestedRuntimeLogMode(t *testing.T) {
+	checks := actionableChecks([]diagnostics.Check{{
+		Name:   "runtime_log_source",
+		Status: diagnostics.StatusWarn,
+	}}, lifecycle.RuntimeLogSource{
+		RequestedUserMode: true,
+		EffectiveUserMode: false,
+	})
+	if len(checks) != 1 {
+		t.Fatalf("actionableChecks returned %d checks", len(checks))
+	}
+	if !strings.Contains(checks[0].Action, "stop the system collector") {
+		t.Fatalf("runtime log source action = %q", checks[0].Action)
+	}
+}
+
+func TestPrintDoctorResultIncludesActionsAndSummary(t *testing.T) {
+	old := endpointOpts
+	t.Cleanup(func() { endpointOpts = old })
+	endpointOpts.jsonOutput = false
+	result := doctorResult{
+		Status: diagnostics.StatusWarn,
+		Checks: []diagnostics.Check{
+			{Name: "ok_check", Status: diagnostics.StatusOK, Severity: diagnostics.SeverityInfo},
+			{Name: "warn_check", Status: diagnostics.StatusWarn, Severity: diagnostics.SeverityLow, Message: "needs attention", Action: "beacon endpoint test-event"},
+		},
+		GeneratedAt: "2026-06-05T12:00:00Z",
+	}
+
+	output, err := captureStdout(t, func() error { return printDoctorResult(result) })
+	if err != nil {
+		t.Fatalf("printDoctorResult returned error: %v", err)
+	}
+	if !strings.Contains(output, `action="beacon endpoint test-event"`) {
+		t.Fatalf("doctor output missing action: %s", output)
+	}
+	if !strings.Contains(output, "Summary: 0 failure(s), 1 warning(s)") {
+		t.Fatalf("doctor output missing summary: %s", output)
+	}
+}
+
+func TestPlanDoctorFixesAllowsRuntimeLogCreationAndSkipsInvalidConfig(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	status := lifecycle.Status{
+		LogPath:    logPath,
+		RuntimeLog: lifecycle.RuntimeLogSource{EffectiveUserMode: true},
+	}
+	result := doctorResult{
+		Checks: []diagnostics.Check{
+			{Name: "config_valid", Target: "/tmp/config.json", Status: diagnostics.StatusFail, Message: "invalid json"},
+			{Name: "runtime_log_permissions", Target: logPath, Status: diagnostics.StatusWarn, Evidence: "runtime_log_missing"},
+			{Name: "collector_reachability", Status: diagnostics.StatusFail},
+		},
+	}
+
+	plan := planDoctorFixes(result, status)
+	if len(plan.Fixes) != 1 || plan.Fixes[0].Action != "create_runtime_log" {
+		t.Fatalf("fix plan = %#v, want runtime log creation only", plan)
+	}
+	foundSkip := false
+	for _, skipped := range plan.Skipped {
+		if skipped.Action == "repair_collector_service" {
+			foundSkip = true
+		}
+	}
+	if !foundSkip {
+		t.Fatalf("fix plan did not skip endpoint repair for invalid config: %#v", plan)
+	}
+}
+
+func TestPlanDoctorFixesDoesNotTreatMissingEventAsAppliedFix(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	status := lifecycle.Status{
+		LogPath:    logPath,
+		RuntimeLog: lifecycle.RuntimeLogSource{EffectiveUserMode: true},
+	}
+	result := doctorResult{
+		Checks: []diagnostics.Check{
+			{Name: "last_event", Target: logPath, Status: diagnostics.StatusWarn, Evidence: "last_event_missing"},
+		},
+	}
+
+	plan := planDoctorFixes(result, status)
+	if len(plan.Fixes) != 0 {
+		t.Fatalf("missing last event should not be applied as a fix: %#v", plan)
+	}
+	if len(plan.Skipped) != 1 || !strings.Contains(plan.Skipped[0].Message, "test-event") {
+		t.Fatalf("missing last event should suggest test-event: %#v", plan)
+	}
+}
+
+// An external-volume home that Beacon can stage is informational, so --fix must not repair it; one it
+// cannot stage is skipped with the manual bootstrap as the message (#639).
+func TestPlanDoctorFixesTreatsLaunchAgentsVolumeAsManual(t *testing.T) {
+	status := lifecycle.Status{RuntimeLog: lifecycle.RuntimeLogSource{EffectiveUserMode: true}}
+	staged := planDoctorFixes(doctorResult{Checks: []diagnostics.Check{
+		{Name: "launch_agents_volume", Target: "/Volumes/Ext/Library/LaunchAgents", Status: diagnostics.StatusWarn,
+			Evidence: "launch_agents_external_volume_staged", Action: "beacon endpoint repair --user"},
+	}}, status)
+	if len(staged.Fixes) != 0 || len(staged.Skipped) != 0 {
+		t.Fatalf("a staged external-volume home needs no fix: %#v", staged)
+	}
+	unstaged := planDoctorFixes(doctorResult{Checks: []diagnostics.Check{
+		{Name: "launch_agents_volume", Target: "/Volumes/Ext/Library/LaunchAgents", Status: diagnostics.StatusFail,
+			Evidence: "launch_agents_external_volume_unstaged", Action: "install with --no-start, then launchctl bootstrap"},
+	}}, status)
+	if len(unstaged.Fixes) != 0 || len(unstaged.Skipped) != 1 || unstaged.Skipped[0].Action != "manual_fix" ||
+		!strings.Contains(unstaged.Skipped[0].Message, "--no-start") {
+		t.Fatalf("an unstaged external-volume home should be a manual skip: %#v", unstaged)
+	}
+}
+
+func TestApplyDoctorFixesContinuesAfterCollectorRepairFailure(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	logPath := filepath.Join(t.TempDir(), "logs", "runtime.jsonl")
+	status := lifecycle.Status{
+		LogPath:    logPath,
+		RuntimeLog: lifecycle.RuntimeLogSource{EffectiveUserMode: true},
+	}
+	plan := doctorFixPlan{
+		Fixes: []plannedAction{
+			{Action: "repair_collector_service", Target: filepath.Join(home, "missing-config.json")},
+			{Action: "create_runtime_log", Target: logPath},
+		},
+	}
+
+	err := applyDoctorFixes(plan, status)
+	if err == nil {
+		t.Fatal("applyDoctorFixes returned nil, want collector repair error")
+	}
+	if !strings.Contains(err.Error(), "repair_collector_service") {
+		t.Fatalf("applyDoctorFixes error = %q, want repair action context", err)
+	}
+	if _, statErr := os.Stat(logPath); statErr != nil {
+		t.Fatalf("runtime log was not created after collector repair failure: %v", statErr)
+	}
+}
+
+func TestEndpointIntegrationsValidateAllReturnsErrorForBrokenText(t *testing.T) {
+	oldAllTargets := endpointOpts.allTargets
+	oldJSONOutput := endpointOpts.jsonOutput
+	oldLogPath := endpointOpts.logPath
+	endpointOpts.allTargets = true
+	endpointOpts.jsonOutput = false
+	endpointOpts.logPath = filepath.Join(t.TempDir(), "missing.jsonl")
+	t.Cleanup(func() {
+		endpointOpts.allTargets = oldAllTargets
+		endpointOpts.jsonOutput = oldJSONOutput
+		endpointOpts.logPath = oldLogPath
+	})
+
+	output, err := captureStdout(t, func() error {
+		return runEndpointIntegrationsValidate(endpointIntegrationsValidateCmd, nil)
+	})
+	if err == nil {
+		t.Fatal("runEndpointIntegrationsValidate returned nil for broken integrations")
+	}
+	if !strings.Contains(output, "claude-cowork: broken") {
+		t.Fatalf("text output missing claude-cowork broken status: %s", output)
+	}
+	if !strings.Contains(output, "openclaw: broken") {
+		t.Fatalf("text output missing openclaw broken status: %s", output)
+	}
+}
+
+func TestEndpointIntegrationsValidateAllReturnsErrorForBrokenJSON(t *testing.T) {
+	oldAllTargets := endpointOpts.allTargets
+	oldJSONOutput := endpointOpts.jsonOutput
+	oldLogPath := endpointOpts.logPath
+	endpointOpts.allTargets = true
+	endpointOpts.jsonOutput = true
+	endpointOpts.logPath = filepath.Join(t.TempDir(), "missing.jsonl")
+	t.Cleanup(func() {
+		endpointOpts.allTargets = oldAllTargets
+		endpointOpts.jsonOutput = oldJSONOutput
+		endpointOpts.logPath = oldLogPath
+	})
+
+	output, err := captureStdout(t, func() error {
+		return runEndpointIntegrationsValidate(endpointIntegrationsValidateCmd, nil)
+	})
+	if err == nil {
+		t.Fatal("runEndpointIntegrationsValidate returned nil for broken integrations")
+	}
+	var results map[string]validationStage
+	if err := json.Unmarshal([]byte(output), &results); err != nil {
+		t.Fatalf("json output did not decode: %v output=%s", err, output)
+	}
+	for _, target := range []string{"claude-cowork", "openclaw"} {
+		if got := results[target].Status; got != "broken" {
+			t.Fatalf("%s status = %q, want broken", target, got)
+		}
+	}
+}
+
+func TestSyntheticEventDestinations(t *testing.T) {
+	event := syntheticEvent("pipeline")
+	data, err := json.Marshal(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.Destination.Type != "pipeline" || event.Destination.Mode != "local_jsonl" {
+		t.Fatalf("pipeline destination = %#v json=%s", event.Destination, data)
+	}
+
+	rapid7Event := syntheticEvent("rapid7")
+	if rapid7Event.Destination.Type != "rapid7" || rapid7Event.Destination.Mode != "custom_logs_webhook_ndjson" {
+		t.Fatalf("rapid7 destination = %#v", rapid7Event.Destination)
+	}
+	if rapid7Event.Message != "Beacon endpoint Rapid7 validation event" {
+		t.Fatalf("rapid7 message = %q", rapid7Event.Message)
+	}
+
+	s3Event := syntheticEvent("s3")
+	if s3Event.Destination.Type != "s3" || s3Event.Destination.Mode != "aws_s3_jsonl" {
+		t.Fatalf("s3 destination = %#v", s3Event.Destination)
+	}
+	if s3Event.Message != "Beacon endpoint S3 validation event" {
+		t.Fatalf("s3 message = %q", s3Event.Message)
+	}
+
+	cloudwatchEvent := syntheticEvent("cloudwatch")
+	if cloudwatchEvent.Destination.Type != "cloudwatch" || cloudwatchEvent.Destination.Mode != "aws_cloudwatch_logs" {
+		t.Fatalf("cloudwatch destination = %#v", cloudwatchEvent.Destination)
+	}
+	if cloudwatchEvent.Message != "Beacon endpoint AWS CloudWatch Logs validation event" {
+		t.Fatalf("cloudwatch message = %q", cloudwatchEvent.Message)
+	}
+
+	gcsEvent := syntheticEvent("gcs")
+	if gcsEvent.Destination.Type != "gcs" || gcsEvent.Destination.Mode != "google_cloud_storage_jsonl" {
+		t.Fatalf("gcs destination = %#v", gcsEvent.Destination)
+	}
+	if gcsEvent.Message != "Beacon endpoint GCS validation event" {
+		t.Fatalf("gcs message = %q", gcsEvent.Message)
+	}
+
+	asymptoteEvent := syntheticEvent("asymptote")
+	if asymptoteEvent.Destination.Type != "asymptote" || asymptoteEvent.Destination.Mode != "asymptote_managed_http" {
+		t.Fatalf("asymptote destination = %#v", asymptoteEvent.Destination)
+	}
+	if asymptoteEvent.Message != "Beacon endpoint Asymptote validation event" {
+		t.Fatalf("asymptote message = %q", asymptoteEvent.Message)
+	}
+}
+
+func TestEndpointS3ValidatePrintsAWSCLIInspectionGuidance(t *testing.T) {
+	oldLogPath := endpointOpts.logPath
+	oldUserMode := endpointOpts.userMode
+	oldSystemMode := endpointOpts.systemMode
+	endpointOpts.logPath = filepath.Join(t.TempDir(), "runtime.jsonl")
+	endpointOpts.userMode = true
+	endpointOpts.systemMode = false
+	t.Cleanup(func() {
+		endpointOpts.logPath = oldLogPath
+		endpointOpts.userMode = oldUserMode
+		endpointOpts.systemMode = oldSystemMode
+	})
+
+	output, err := runEndpointLeaf(t, "s3", "validate")
+	if err != nil {
+		t.Fatalf("s3 validate returned error: %v", err)
+	}
+	for _, want := range []string{
+		"Validation event written to",
+		"destination.type=s3 destination.mode=aws_s3_jsonl",
+		"aws s3 ls",
+		"aws s3 cp",
+		"Beacon endpoint S3 validation event",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("S3 validation output missing %q: %s", want, output)
+		}
+	}
+	if strings.Contains(output, "verified delivery") {
+		t.Fatalf("S3 validation output should not claim remote delivery verification: %s", output)
+	}
+}
+
+func TestEndpointCloudWatchPrintConfigPrintsVectorConfig(t *testing.T) {
+	oldLogPath := endpointOpts.logPath
+	oldUserMode := endpointOpts.userMode
+	oldSystemMode := endpointOpts.systemMode
+	endpointOpts.logPath = filepath.Join(t.TempDir(), "runtime.jsonl")
+	endpointOpts.userMode = true
+	endpointOpts.systemMode = false
+	t.Cleanup(func() {
+		endpointOpts.logPath = oldLogPath
+		endpointOpts.userMode = oldUserMode
+		endpointOpts.systemMode = oldSystemMode
+	})
+
+	output, err := runEndpointLeaf(t, "cloudwatch", "print-config")
+	if err != nil {
+		t.Fatalf("endpoint cloudwatch print-config returned error: %v", err)
+	}
+	for _, want := range []string{
+		"aws_cloudwatch_logs",
+		"BEACON_CLOUDWATCH_LOG_GROUP",
+		"BEACON_CLOUDWATCH_LOG_STREAM_PREFIX",
+		endpointOpts.logPath,
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("CloudWatch print-config output missing %q: %s", want, output)
+		}
+	}
+}
+
+func TestEndpointCloudWatchValidatePrintsAWSInspectionGuidance(t *testing.T) {
+	oldLogPath := endpointOpts.logPath
+	oldUserMode := endpointOpts.userMode
+	oldSystemMode := endpointOpts.systemMode
+	endpointOpts.logPath = filepath.Join(t.TempDir(), "runtime.jsonl")
+	endpointOpts.userMode = true
+	endpointOpts.systemMode = false
+	t.Cleanup(func() {
+		endpointOpts.logPath = oldLogPath
+		endpointOpts.userMode = oldUserMode
+		endpointOpts.systemMode = oldSystemMode
+	})
+
+	output, err := runEndpointLeaf(t, "cloudwatch", "validate")
+	if err != nil {
+		t.Fatalf("cloudwatch validate returned error: %v", err)
+	}
+	for _, want := range []string{
+		"Validation event written to",
+		"destination.type=cloudwatch destination.mode=aws_cloudwatch_logs",
+		"aws logs filter-log-events",
+		"CloudWatch Logs Insights query",
+		"Beacon endpoint AWS CloudWatch Logs validation event",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("CloudWatch validation output missing %q: %s", want, output)
+		}
+	}
+	if strings.Contains(output, "verified delivery") {
+		t.Fatalf("CloudWatch validation output should not claim remote delivery verification: %s", output)
+	}
+}
+
+func TestEndpointGCSValidatePrintsGoogleCloudCLIInspectionGuidance(t *testing.T) {
+	oldLogPath := endpointOpts.logPath
+	oldUserMode := endpointOpts.userMode
+	oldSystemMode := endpointOpts.systemMode
+	endpointOpts.logPath = filepath.Join(t.TempDir(), "runtime.jsonl")
+	endpointOpts.userMode = true
+	endpointOpts.systemMode = false
+	t.Cleanup(func() {
+		endpointOpts.logPath = oldLogPath
+		endpointOpts.userMode = oldUserMode
+		endpointOpts.systemMode = oldSystemMode
+	})
+
+	output, err := runEndpointLeaf(t, "gcs", "validate")
+	if err != nil {
+		t.Fatalf("gcs validate returned error: %v", err)
+	}
+	for _, want := range []string{
+		"Validation event written to",
+		"destination.type=gcs destination.mode=google_cloud_storage_jsonl",
+		"gcloud storage ls",
+		"gcloud storage cat",
+		"Beacon endpoint GCS validation event",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("GCS validation output missing %q: %s", want, output)
+		}
+	}
+	if strings.Contains(output, "verified delivery") {
+		t.Fatalf("GCS validation output should not claim remote delivery verification: %s", output)
+	}
+}
+
+func TestEndpointAsymptoteValidatePrintsCredentialAndDashboardGuidance(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	logPath := filepath.Join(home, "runtime.jsonl")
+	oldLogPath := endpointOpts.logPath
+	oldUserMode := endpointOpts.userMode
+	oldSystemMode := endpointOpts.systemMode
+	endpointOpts.logPath = logPath
+	endpointOpts.userMode = true
+	endpointOpts.systemMode = false
+	t.Cleanup(func() {
+		endpointOpts.logPath = oldLogPath
+		endpointOpts.userMode = oldUserMode
+		endpointOpts.systemMode = oldSystemMode
+	})
+
+	output, err := runEndpointLeaf(t, "asymptote", "validate")
+	if err != nil {
+		t.Fatalf("asymptote validate returned error: %v", err)
+	}
+	for _, want := range []string{
+		"Validation event written to",
+		"destination.type=asymptote destination.mode=asymptote_managed_http",
+		"/v1/ingest/health",
+		"Beacon endpoint Asymptote validation event",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("Asymptote validation output missing %q: %s", want, output)
+		}
+	}
+	if strings.Contains(output, "verified delivery") {
+		t.Fatalf("Asymptote validation output should not claim remote delivery verification: %s", output)
+	}
+	if strings.Contains(output, "bcn_device_") {
+		t.Fatalf("Asymptote validation output must not print a device key: %s", output)
+	}
+}
+
+func captureStdout(t *testing.T, fn func() error) (string, error) {
+	t.Helper()
+	oldStdout := os.Stdout
+	readEnd, writeEnd, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Drain the pipe while fn runs rather than after it returns. A pipe holds only a fixed buffer,
+	// and a writer that fills it blocks until someone reads: reading afterwards deadlocks as soon as
+	// fn prints more than that. Linux buffers 64 KiB, so the inventory JSON fits and the bug hid;
+	// Windows buffers far less, and `endpoint inventory --json` hung in its Encode for the full test
+	// timeout.
+	type readResult struct {
+		data []byte
+		err  error
+	}
+	drained := make(chan readResult, 1)
+	go func() {
+		data, err := io.ReadAll(readEnd)
+		drained <- readResult{data, err}
+	}()
+	os.Stdout = writeEnd
+	runErr := fn()
+	os.Stdout = oldStdout
+	if err := writeEnd.Close(); err != nil {
+		t.Fatal(err)
+	}
+	result := <-drained
+	output, err := result.data, result.err
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := readEnd.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return string(output), runErr
+}
+
+// captureStdout must not depend on the output fitting in a pipe buffer. It used to read only after
+// fn returned, which deadlocked `endpoint inventory --json` on Windows for the full test timeout;
+// a megabyte is past the buffer on every platform, so this pins the fix on Linux and macOS too.
+func TestCaptureStdoutDrainsOutputLargerThanAPipeBuffer(t *testing.T) {
+	payload := strings.Repeat("x", 1<<20)
+	realStdout := os.Stdout
+	done := make(chan string, 1)
+	go func() {
+		out, _ := captureStdout(t, func() error {
+			_, err := os.Stdout.WriteString(payload)
+			return err
+		})
+		done <- out
+	}()
+	select {
+	case out := <-done:
+		if len(out) != len(payload) {
+			t.Fatalf("captured %d bytes, want %d", len(out), len(payload))
+		}
+	case <-time.After(30 * time.Second):
+		// Put stdout back first: the testing package reports through it, and a deadlocked
+		// capture has left it pointing at the full pipe, so the failure would hang too.
+		os.Stdout = realStdout
+		t.Fatal("captureStdout deadlocked: fn filled the pipe and nothing was reading it")
+	}
+}
+
+// A shared Mac alternates console users. Switching between them is not a change in anyone's
+// inventory, so the second visit to each home must write a heartbeat and no snapshot.
+func TestScheduledHeartbeatKeepsOneDigestPerConsoleUser(t *testing.T) {
+	alice, bob := t.TempDir(), t.TempDir()
+	writeTestFile(t, filepath.Join(alice, ".cursor", "mcp.json"), `{"mcpServers":{"alice-one":{"command":"npx"}}}`)
+	writeTestFile(t, filepath.Join(bob, ".cursor", "mcp.json"), `{"mcpServers":{"bob-one":{"command":"npx"},"bob-two":{"command":"uvx"}}}`)
+	testenv.SetHome(t, t.TempDir())
+	logPath := filepath.Join(t.TempDir(), "runtime.jsonl")
+	cfg := endpointconfig.Default(false, logPath)
+	settings := endpointconfig.InventoryConfig(cfg)
+
+	run := func(home string) inventoryHeartbeatWriteResult {
+		t.Helper()
+		r, err := writeInventoryHeartbeat(cfg, settings, false, inventoryTriggerScheduled, heartbeatScope{HomeDir: home})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	if r := run(alice); !r.SnapshotWritten {
+		t.Fatalf("first visit to alice must snapshot: %+v", r)
+	}
+	if r := run(bob); !r.SnapshotWritten {
+		t.Fatalf("first visit to bob must snapshot: %+v", r)
+	}
+	if r := run(alice); r.SnapshotWritten || !r.Written {
+		t.Fatalf("returning to alice with nothing changed must be heartbeat only: %+v", r)
+	}
+	if r := run(bob); r.SnapshotWritten {
+		t.Fatalf("returning to bob with nothing changed must be heartbeat only: %+v", r)
+	}
+	writeTestFile(t, filepath.Join(alice, ".cursor", "mcp.json"), `{"mcpServers":{"alice-one":{"command":"npx"},"alice-two":{"command":"uvx"}}}`)
+	if r := run(alice); !r.SnapshotWritten {
+		t.Fatalf("a real change for alice must snapshot: %+v", r)
+	}
+	state, err := endpointinventory.ReadState(endpointinventory.StatePathForLog(logPath, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(state.LastSnapshotDigests) != 2 {
+		t.Fatalf("state should remember one digest per home: %+v", state)
+	}
+}
+
+func TestSystemHeartbeatScopeIgnoresServiceAccountsAtTheConsole(t *testing.T) {
+	oldResolver := activeConsoleUser
+	t.Cleanup(func() { activeConsoleUser = oldResolver })
+	for _, tc := range []struct {
+		name string
+		info consoleUserInfo
+		want bool // NoConsoleUser
+	}{
+		{"setup assistant", consoleUserInfo{Username: "_mbsetupuser", HomeDir: "/var/empty"}, true},
+		{"root", consoleUserInfo{Username: "root", HomeDir: "/var/root"}, true},
+		{"loginwindow", consoleUserInfo{Username: "loginwindow", HomeDir: "/"}, true},
+		{"empty home", consoleUserInfo{Username: "someone", HomeDir: ""}, true},
+		{"real user", consoleUserInfo{Username: "zac", HomeDir: t.TempDir()}, false},
+	} {
+		info := tc.info
+		activeConsoleUser = func() (consoleUserInfo, bool, error) { return info, true, nil }
+		if got := systemHeartbeatScope().NoConsoleUser; got != tc.want {
+			t.Errorf("%s: NoConsoleUser = %t, want %t", tc.name, got, tc.want)
+		}
+	}
+}
+
+// A hook that cannot be written must not turn a complete install into an error: the
+// collector, config, service, and OTLP settings are already in place, and the retry is one
+// command. Every other target is still attempted.
+func TestEndpointInstallHookFailureIsAWarningAndOtherHooksStillInstall(t *testing.T) {
+	home := t.TempDir()
+	testenv.SetHome(t, home)
+	old := endpointOpts
+	t.Cleanup(func() { endpointOpts = old })
+	endpointOpts.userMode = true
+	endpointOpts.logPath = filepath.Join(home, "runtime.jsonl")
+	endpointOpts.hookLevel = ""
+
+	// A settings file whose hooks key is not an object cannot be merged into.
+	claudeDir := filepath.Join(home, ".claude")
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(claudeDir, "settings.json"), []byte(`{"hooks": "not-an-object"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var report, out bytes.Buffer
+	installHookTargetsFromEndpointInstall(&report, &out, []string{"claude", "codex"})
+	if !strings.Contains(report.String(), "Codex CLI endpoint hooks installed:") || strings.Contains(report.String(), "Warning:") {
+		t.Fatalf("report = %q, want the Codex hooks written and no warnings", report.String())
+	}
+
+	if !strings.Contains(out.String(), "Warning: claude hooks were not installed") {
+		t.Fatalf("expected a claude warning, got:\n%s", out.String())
+	}
+	if !strings.Contains(out.String(), "Retry with: beacon endpoint hooks install --harness claude") {
+		t.Fatalf("expected a retry command naming only the failed target, got:\n%s", out.String())
+	}
+	if _, err := os.Stat(filepath.Join(home, ".codex", "hooks.json")); err != nil {
+		t.Fatalf("codex hooks must still be installed after the claude failure: %v", err)
+	}
+	if data, _ := os.ReadFile(filepath.Join(claudeDir, "settings.json")); string(data) != `{"hooks": "not-an-object"}` {
+		t.Fatalf("a settings file the merge cannot read must be left untouched, got %s", data)
+	}
+}

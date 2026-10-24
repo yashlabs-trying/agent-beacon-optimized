@@ -1,0 +1,219 @@
+---
+title: "Oh My Pi"
+description: "Beacon support details for Oh My Pi (omp) endpoint telemetry"
+---
+
+## Runtime overview
+
+Beacon supports [Oh My Pi](https://github.com/can1357/oh-my-pi) through a managed local extension.
+
+Oh My Pi is a fork of [pi-mono](https://github.com/badlogic/pi-mono) that ships as the `omp` binary, so it fits the same integration shape as [Pi](/runtimes/pi): no hooks configuration file to merge a managed hook block into, and no OpenTelemetry support to point at the local collector. Its observation surface is the TypeScript extension API, so one Beacon-owned extension file forwards runtime events to `beacon-hooks`.
+
+```bash
+beacon endpoint hooks install --harness omp
+```
+
+<Note>
+Oh My Pi and Pi are separately installed products, and Beacon records them under separate harness names. A machine running both produces two distinct streams; nothing is merged. If you are looking for upstream Pi, see [Pi](/runtimes/pi).
+</Note>
+
+## Prerequisites
+
+Before enabling Oh My Pi telemetry, make sure:
+
+- Oh My Pi is installed and available as the `omp` executable, or has a local state directory at `~/.omp/agent`.
+- `beacon endpoint install` has run so shared endpoint config and runtime log paths exist.
+- Oh My Pi is restarted after install or removal so new sessions load the updated extension.
+
+## Collection path
+
+Beacon's managed extension is a single TypeScript file in one of Oh My Pi's two auto-discovered extension directories:
+
+| Level | Extension path |
+|-------|----------------|
+| User | `~/.omp/agent/extensions/beacon.ts` |
+| Project | `./.omp/extensions/beacon.ts` |
+
+User level is the default, and `beacon endpoint discover` reports on the user path only.
+
+The two paths resolve asymmetrically, which matters if you set any of Oh My Pi's directory variables. The user path follows the profile Oh My Pi itself would run under:
+
+| Variable | Effect on the install path |
+|----------|---------------------------|
+| `OMP_PROFILE`, or `PI_PROFILE` when `OMP_PROFILE` is unset | Names the active profile. A named profile installs to `~/.omp/profiles/<name>/agent/extensions/beacon.ts`; empty or `default` is the default profile. A name Oh My Pi would refuse is refused |
+| `PI_CODING_AGENT_DIR` | Replaces the default profile's agent directory, so the extension goes to `$PI_CODING_AGENT_DIR/extensions/beacon.ts`. A named profile ignores it, as Oh My Pi does. Oh My Pi sets it, with the profile variables, on its own process when a named profile is active |
+| `PI_CONFIG_DIR` | Renames the `.omp` directory under your home directory only, including for a named profile. The project path stays `./.omp/extensions/` |
+
+Beacon identifies its own extension by the marker `beacon-managed-omp-extension:v1`, which is distinct from Pi's. The version suffix is part of the contract with the extension source: it is what lets a repair recognize a stale file instead of leaving it in place. A `beacon.ts` without the marker belongs to somebody else, so install will not overwrite it and discovery does not report it as Beacon telemetry.
+
+Oh My Pi has no OpenTelemetry export for Beacon to configure, so there is no OTLP path for this runtime.
+
+## Discovery and status
+
+Beacon detects Oh My Pi through the `omp` executable, and treats the resolved agent directory as an additional signal. Oh My Pi installed through bun, a version manager, or its own installer is often missing from the `PATH` the endpoint process inherited while its state directory is still present. The Pi, OpenCode, Cursor, and Hermes probes use the same fallback.
+
+```bash title="Show Oh My Pi discovery state"
+beacon endpoint discover --all --json
+```
+
+Oh My Pi reports as the `omp` harness with capability `plugin`:
+
+| Telemetry status | Meaning |
+|------------------|---------|
+| `missing` | No extension file at the user-level managed path |
+| `disabled` | A `beacon.ts` exists but carries no Beacon Oh My Pi marker, so it is somebody else's extension sharing the filename |
+| `enabled` | Beacon's managed extension is in place |
+
+A file carrying Pi's marker at this path is not an Oh My Pi install. The two runtimes read different directories, so it should not arise, but the markers are distinct so the answer does not depend on that staying true.
+
+## Beacon Cloud MCP
+
+[`beacon mcp connect`](/cli/mcp-connect) registers the Beacon Cloud MCP server as `beacon-managed` in the active profile's `mcp.json`, next to any servers already there, so Oh My Pi can search the history this endpoint forwards. It resolves the profile the same way as the extension install above. After connecting, run `/mcp reauth beacon-managed` in Oh My Pi and sign in with beacon.sh.
+
+```bash
+beacon mcp connect --harness omp
+```
+
+## Install or configuration support
+
+```bash
+beacon endpoint hooks install --harness omp            # user level (default)
+beacon endpoint hooks install --harness omp --level project
+beacon endpoint hooks status --harness omp
+beacon endpoint hooks uninstall --harness omp
+```
+
+`oh-my-pi` and `ohmypi` are accepted as `--harness` values alongside `omp`.
+
+Install writes one file and refuses to touch a `beacon.ts` it did not write, so an extension of your own that happens to share the filename is left alone and the install fails loudly rather than replacing it. Uninstall removes only a file carrying Oh My Pi's own marker.
+
+Unlike Pi, a project-level install needs no trust prompt: Oh My Pi loads `.omp` project inputs unconditionally, and its extension API's `isProjectTrusted()` always returns true. The difference between the two levels is scope, not interaction — a project install covers one checkout, while a user install follows the operator across checkouts.
+
+`status` reports `installed=false` when the extension exists but points at a hook binary that is no longer there, which happens after a Beacon uninstall, a partly applied update, or a home directory restored onto a different machine. In each case Oh My Pi loads an extension that spawns nothing.
+
+## Telemetry coverage
+
+| Area | Support |
+|------|---------|
+| Runtime discovery | Supported through executable and agent-directory detection, managed extension path, and telemetry status |
+| Harness attribution | Supported. `omp`, `omp_cli`, `omp-cli`, `oh-my-pi`, `oh_my_pi`, `ohmypi`, and `omp.sh` all normalize to `omp` |
+| Extension install, status, uninstall, and repair | Supported |
+| Session lifecycle | Supported. `session.started` and `session.ended` |
+| Prompts | Supported. `prompt.submitted`. In the terminal and over RPC it comes from Oh My Pi's `input` event and records whether the input was typed, delivered over RPC, or injected by another extension. Print (`omp -p`) and ACP sessions never emit `input`, so there it comes from the user message Oh My Pi delivers to the model, marked `raw.omp_prompt_origin: message_end`; see Known gaps for how that text differs |
+| Tool use | Supported. `tool.invoked` before execution, then `tool.completed` or `tool.failed`, joined by `gen_ai.tool.call.id`. The result of a tool that brought outside content into the session (a file read, a web page, a skill, an MCP reply) is kept in `gen_ai.tool.call.result`, which rules match as `e.gen_ai.tool.call.result_text`; see [tool results](#tool-results) |
+| **Approval decisions** | **Supported.** `approval.requested`, `approval.allowed`, and `approval.denied` from real operator prompts, carrying the command or file being decided on, the approval mode the session was running under, and the tool call id of the execution they decided. This is the capability Oh My Pi has that upstream Pi does not |
+| Commands | Supported. `command.executed` for the agent's `bash` tool, with its output in `command.output`, for commands you run with the `!` prefix, and for code you run with the `$` Python prefix — the last two marked as operator-initiated |
+| File activity | Supported. `file.read`, `file.created`, and `file.modified` under the absolute path Oh My Pi resolved, with the edit's diff. An edit that changes several files records one `file.modified` per file. Only filesystem targets count: see [file paths](#file-paths) and [tool devices and URIs](#tool-devices-and-uris) |
+| MCP activity | Supported. `tool.invoked` then `mcp.tool_invoked`, whether the model called the tool directly or through its `xd://` device. `mcp.server` and `mcp.tool` are the server's configured name and the tool's own name, read from the result Oh My Pi reports. A `read mcp://<uri>` is recorded as an MCP `resources/read` with `mcp.resource.uri` |
+| Agent reasoning | Supported. `agent.reasoning` from an assistant message's thinking parts, in the OTel GenAI reasoning-part shape |
+| Model-visible skill listings | Supported through the `context` event's `ctx.getSystemPrompt()`; Beacon retains only the `<skills>` index under the system prompt's `# Skills & Rules` heading, one part per skill in `gen_ai.system_instructions` with the skills named in `system_context`, not the full system prompt or skill bodies |
+| Model-visible MCP tool descriptions | Supported through the same `context` event. Beacon reads only the rows under the system prompt's `## MCP Tool Routes` heading and records one `mcp.tool_listed` per described tool, with the device name in `gen_ai.tool.name` and the description in `gen_ai.tool.description`, once per session and again when it changes |
+| Token usage and cost | Supported. `token.usage` normalized into `gen_ai.usage`, including cache and reasoning tokens and runtime-reported cost |
+| Local JSONL and dashboard | Supported |
+| MDM deployment | Supported for the endpoint agent. The extension installs separately in the logged-in user's context |
+
+### File paths
+
+Oh My Pi's tools take a path the way the model wrote it: relative to the session's working directory or to `~`, often with a line selector such as `.env:1-20`, `main.go:5-16,960-973`, or `notes.md:raw`. Beacon records the file that path names, as an absolute path, so file rules and queries see `/repo/.env` rather than `.env:1-20`. Results use the path Oh My Pi reports having resolved. `tool.path` keeps the path as written, selector included.
+
+The `tool.invoked` before a call, and any approval for it, resolve the path the same way Oh My Pi will:
+
+- against the session's working directory, even when the session has extra workspace directories (`--add-dir`), which Oh My Pi's tools only reach by absolute path;
+- with `~` expanded, including Oh My Pi's reading of `~name` as `<home>/name`;
+- with a stray leading `:` dropped, and a leading `@` dropped before `/`, `~`, a Windows absolute path, or a URL;
+- with Unicode spaces read as plain spaces, and a Windows drive alias translated for the host (`/c/...` on Windows, `C:\...` under WSL);
+- with a path of nothing but slashes read as the working directory;
+- with the selector removed, unless a file of that literal name exists.
+
+A result Oh My Pi reports as a URL or one of its own resources is never recorded as a file, even when a file backs it. The event before a call cannot follow what Oh My Pi decides by looking at the disk after the path it resolved turns out not to exist: a unique-suffix search under the working directory, an edit rebound by its snapshot tag, or a macOS spelling variant of a filename. Only the result records the file Oh My Pi used in those cases.
+
+Oh My Pi's default edit format can change several files in one call. Such an edit is recorded as one `file.modified` per file, each with that file's diff and its own operation (`create`, `modify`, or `delete`).
+
+### Tool devices and URIs
+
+Oh My Pi's `read` and `write` tools take URIs as well as paths. `https://` fetches a web page, and the runtime's own schemes (`artifact://`, `agent://`, `skill://`, `local://`, `proc://`, `omp://`, `xd://`, and others) address its resources: a spilled tool output, a subagent's report, a skill, a background job, its own docs, a tool device. Beacon records them as `tool.invoked` and `tool.completed` with the URI in `tool.path` and no `file` block, the same way every other runtime records a web fetch or a resource read. A `file://` URI is recorded as the path it names. A `skill://` read is the exception among the runtime's schemes, because a skill is a file its author wrote rather than the runtime's own storage: its result is recorded as a `file.read` of the `SKILL.md` (or the bundled file) Oh My Pi reports having read, with the URI still in `tool.path`. `read mcp://<uri>` reads an MCP resource and is recorded as an MCP call, with no server named: Oh My Pi does not report which server served it. A resource URI whose scheme Oh My Pi does not handle itself is also sent to MCP, but Beacon cannot tell those from the runtime's own schemes, and records them as plain tool events.
+
+### Tool results
+
+A tool's result is what Oh My Pi returned to the model, and the whole payload is kept in `raw.omp`. The results that brought content from outside the session into it are also recorded where threat rules match them, in `gen_ai.tool.call.result`, read by rules as `e.gen_ai.tool.call.result_text`: a file or a skill the agent read, a web page fetched through `read`, and an MCP tool's reply, a failed call's included. These are where indirect prompt injection arrives. The scope is the one every capture path shares, so a rule written against another runtime's file reads or MCP replies matches Oh My Pi's. The `bash` tool's output is recorded as `command.output`, including the `Wall time` line Oh My Pi appends. A write's or an edit's result, a subagent's report, and the runtime's other resources are not recorded again, because they echo what the agent itself produced. Images and audio in an MCP reply are kept as their size and SHA-256, not their bytes.
+
+Writing JSON to `xd://<tool>` is how the model calls a tool that Oh My Pi exposes as a device. That includes every MCP tool. Beacon records the device as the tool that ran, under the device's name, so an MCP call through a device produces the same `tool.invoked` and `mcp.tool_invoked` pair as one called directly. Oh My Pi reports most device calls twice: once as the `write`, and once from inside the dispatch as the device's own call, under the same tool call id. Beacon keeps one of them. Reading `xd://<tool>`, or writing `?` to it, fetches the device's documentation and is recorded as the `read` or `write` it is.
+
+An MCP call's server is known only once it has run. Oh My Pi names its MCP tools `mcp__<server>_<tool>`. It lowercases both halves, turns other characters into `_`, and shortens long names, so the server cannot be recovered from the name: `beacon-managed`'s `beacon_lookup` becomes `mcp__beacon_managed_beacon_lookup`. The result carries the real names. The `tool.invoked` before the call, and any approval for it, record the tool name without an `mcp` block. Their `gen_ai.tool.call.id` joins them to the attributed result, which is how the dashboard's MCP lens shows the call, and the approval decided on it, under the right server.
+
+### Approval telemetry
+
+Beacon never synthesizes an approval from a tool call. A `tool_call` handler that blocks is an extension deciding, not an operator being asked, and recording that as an approval would be indistinguishable from an answer a human gave — which is why [Pi](/runtimes/pi) and [Cline](/runtimes/cline) carry no approval telemetry at all.
+
+Oh My Pi reports the prompt and the answer as their own events, so its approval events are real. Each one carries:
+
+- The operator's decision, and the runtime's own reason when it gave one.
+- The command or file path being decided on. Oh My Pi's approval events carry the tool name but none of its arguments, so the managed extension remembers each `tool_call`'s input by the runtime's own call id and attaches it to the approval for that call. Without this the approval would say "the operator denied `bash`" rather than "the operator denied `rm -rf /var/data`", and every approval rule Beacon ships matches on the command or path rather than on a tool name.
+- `gen_ai.tool.call.id`, joining the decision to the `tool.invoked` it decided on.
+- The session's approval mode in `raw.omp_approval_mode`: `always-ask`, `write`, or `yolo`. A `yolo` session had the prompts turned off, which is the difference between a decision someone made and a decision nobody was asked to make.
+
+A resolved approval whose outcome Beacon cannot read is recorded as a denial. The safe reading of "no evidence the operator said yes" is not "the operator said yes". An approval for a call the extension never saw proposed still records the decision, the tool name, and the call id, without inventing a command block for it.
+
+Detections in `rules/approval-abuse/` fire on Oh My Pi activity, unlike on Pi. A denied `rm -rf` followed by its execution raises `approval-denied-command-executed-anyway`; a `yolo`-mode allow of a destructive command raises `high-risk-approval-allowed-without-reason`.
+
+## Data handling
+
+Oh My Pi content is handled like every other runtime. Prompts, tool arguments, commands, Python source, paths, diffs, and reasoning text are retained in local or customer-controlled logs, with local secret redaction and per-string limits applied before writing, and a hash and byte count on each content-bearing event. Events over the 64 KiB limit drop raw and retained content, preserve stable metadata, and set `field_truncated`.
+
+The `context` event is the exception to the extension's otherwise narrow event
+subscriptions: Oh My Pi's supported `ctx.getSystemPrompt()` supplies the effective
+system prompt, from which Beacon extracts only the `<skills>` index under the
+`# Skills & Rules` heading. That index is recorded as `session.context` with one
+`text` part per skill in `gen_ai.system_instructions` and a `system_context` block
+(`kind: skill_listing`, `source: system_prompt`) naming each skill, never as an
+operator prompt. Other system-prompt instructions and the conversation messages
+delivered with `context` are discarded by the extension.
+
+The extension also reads the MCP tool routes from the same prompt: the rows under
+the `## MCP Tool Routes` heading, one per MCP tool Oh My Pi mounts as an `xd://`
+device. Each described row becomes an `mcp.tool_listed` event with the device name
+in `gen_ai.tool.name` and the row's description in `gen_ai.tool.description`, which
+is the text `mcp-poisoned-tool-description` matches. The description is Oh My Pi's
+summary of what the server advertised, the text the model reads before choosing a
+tool. The full schema is a `read` of the device away, and that read is recorded as
+the tool call it is. There is no `mcp` block, because the device name does not
+name the server. A listing is a per-session advertisement, not a call: it is sent
+the first time a session shows it and again only when a description changes, and
+the skill index and the routes are tracked separately, so a change to one does
+not resend the other. Metadata-only managed forwarding removes the description
+before upload and keeps the tool name.
+
+The extension itself sends nothing over the network. It spawns the local `beacon-hooks` binary with a fixed argv and writes the event to its stdin. A send that has not completed in two seconds is abandoned so Beacon cannot stall Oh My Pi's agent loop, and a failure to spawn costs the event rather than the run. Every handler returns nothing, so Oh My Pi never reads a directive back from Beacon — the extension cannot block a tool call, revise its arguments, or answer a question that was put to the operator.
+
+## Known gaps
+
+- **No enforcement.** As with every other runtime, enforcement stays behind the optional, off-by-default policy provider seam (`BEACON_POLICY_PROVIDER`), which is not wired to Oh My Pi. Its blocking `tool_call` handler and its approval events make it a viable target for that seam later.
+- **Streaming events are not collected.** The extension subscribes to eleven of Oh My Pi's event types and ignores the rest, which are provider-request internals, streaming message updates, compaction and retry signals, and TUI plumbing. The `context` event is narrowly used only to extract the skill index and the MCP tool routes from the supported system-prompt accessor; its conversation messages are discarded. Assistant output is recorded once when a message finalizes rather than token by token, so Beacon stays out of the streaming path.
+- **MCP notifications are not collected.** `mcp_notification` fires for every JSON-RPC notification a connected server sends, most of them routine tools and resources list refreshes. It describes MCP transport plumbing rather than an action the agent took. MCP tool calls the agent makes *are* collected.
+- **One profile at a time.** Beacon installs into the active profile, named by `OMP_PROFILE` or `PI_PROFILE`, or into the default profile. It does not enumerate `~/.omp/profiles/`, so instrumenting another profile means running the install with that profile's variable set.
+- **Print and ACP prompts are recorded as delivered, not as typed.** Oh My Pi expands slash commands, prompt templates, and model mentions before it delivers a user message, so on print and ACP `prompt.text` holds the expanded text, which can include a template's body, and carries no input source. Runtime-generated turns, messages one agent hands another, and subagent tasks are not recorded as prompts. A message an extension sends as the user is, because Oh My Pi attributes it to the user. `/skill:` invocations are delivered as a different message type and are not recorded on these surfaces.
+- **Session switches are not distinguished.** Oh My Pi's `session_start` carries no reason, and its `session_switch`, `session_branch`, and `session_tree` events are not subscribed to, so a resumed or forked session is not marked as such.
+
+## Deployment notes
+
+The extension is loaded when Oh My Pi starts, so an install taken while it is running takes effect on the next launch.
+
+Confirm discovery sees the runtime, then generate one Oh My Pi event and check the log:
+
+```bash
+/opt/beacon/bin/beacon endpoint discover --all --json
+/opt/beacon/bin/beacon endpoint hooks status --harness omp
+/opt/beacon/bin/beacon endpoint doctor --system
+grep '"name":"omp"' ~/.beacon/endpoint/logs/runtime.jsonl | tail -3
+```
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Pi" icon="code" href="/runtimes/pi">
+    The upstream runtime Oh My Pi forked, supported separately.
+  </Card>
+  <Card title="Supported agent harnesses" icon="list-check" href="/runtimes">
+    Return to the runtime support overview.
+  </Card>
+</Columns>
