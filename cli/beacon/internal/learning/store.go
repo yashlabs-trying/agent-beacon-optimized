@@ -1,6 +1,7 @@
 package learning
 
 import (
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -31,6 +33,17 @@ type Store struct {
 	// Set only by subprocess fault-injection tests.
 	writeCheckpoint func(string)
 
+	// authorizer, when set, gates lifecycle mutations by the candidate's
+	// project. It is configured by the entry point (CLI operator or MCP server);
+	// nil means trusted embedding (direct library use by the store owner).
+	authorizer ProjectAuthorizer
+
+	// signingAuthority, when set, attests approved memory content with an
+	// Ed25519 signature. trustRegistry holds the public keys trusted for
+	// verification.
+	signingAuthority *SigningAuthority
+	trustRegistry    *TrustRegistry
+
 	// mu guards lazy pool creation and Close. A Store owns exactly one *sql.DB
 	// pool for its lifetime: opening it is deferred until the first operation
 	// and reused by every subsequent operation, instead of opening and closing a
@@ -38,6 +51,19 @@ type Store struct {
 	mu     sync.Mutex
 	dbPool *sql.DB
 	closed bool
+
+	// writeMu serializes in-process writers so only one goroutine holds a
+	// SQLite write transaction at a time. SQLite permits a single writer; with
+	// _txlock=immediate, concurrent writers otherwise busy-poll the lock and
+	// produce a long tail under 16+ client load. Serializing on a Go mutex makes
+	// waiting goroutines park cheaply instead of spinning in the busy handler.
+	// Durability is unchanged: every write still commits under WAL.
+	writeMu sync.Mutex
+
+	// busyRetries and busyExhausted count bounded cross-process BUSY retries and
+	// the retries that gave up.
+	busyRetries   atomic.Int64
+	busyExhausted atomic.Int64
 }
 
 // ErrStoreClosed is returned by store operations after Close.
@@ -73,6 +99,25 @@ type Query struct {
 	Q           string
 	Limit       int
 	Page        int
+
+	// ctx, when set by ListMemoriesContext, is honoured by the query path so a
+	// canceled or expired request stops promptly. It is unexported so a caller
+	// cannot smuggle a context through a public struct literal.
+	ctx context.Context
+}
+
+func (q Query) context() context.Context {
+	if q.ctx != nil {
+		return q.ctx
+	}
+	return context.Background()
+}
+
+func (q Query) contextErr() error {
+	if q.ctx == nil {
+		return nil
+	}
+	return q.ctx.Err()
 }
 
 func Open(path string) *Store {
@@ -80,6 +125,43 @@ func Open(path string) *Store {
 		path = storeFile
 	}
 	return &Store{dbPath: path}
+}
+
+// OpenAuthorized opens a store whose lifecycle mutations are gated by a. An
+// entry point that accepts callers who are not the store owner MUST use this
+// (or SetAuthorizer) so mutations cannot cross a project boundary.
+func OpenAuthorized(path string, a ProjectAuthorizer) *Store {
+	store := Open(path)
+	store.authorizer = a
+	return store
+}
+
+// SetAuthorizer configures the lifecycle authorizer. Call it before the store is
+// used concurrently. Passing nil selects trusted embedding.
+func (s *Store) SetAuthorizer(a ProjectAuthorizer) { s.authorizer = a }
+
+// SetSigningAuthority configures the approval signing key. When set, approved
+// memories carry an Ed25519 attestation. Call it before the store is used.
+func (s *Store) SetSigningAuthority(a *SigningAuthority) { s.signingAuthority = a }
+
+// SetTrustRegistry configures the public keys trusted for provenance
+// verification.
+func (s *Store) SetTrustRegistry(r *TrustRegistry) { s.trustRegistry = r }
+
+// AuthenticateMemory reports the provenance status of a memory against the
+// store's trust registry. With no registry configured every record is
+// Unverified (fail-safe).
+func (s *Store) AuthenticateMemory(m asymptoteobserve.LearningMemoryV1) Provenance {
+	return Authenticate(m, s.trustRegistry)
+}
+
+// authorizeLifecycle enforces the configured authorizer for a project, or allows
+// the operation in trusted-embedding mode (no authorizer).
+func (s *Store) authorizeLifecycle(projectID string) error {
+	if s.authorizer == nil {
+		return nil
+	}
+	return s.authorizer.AuthorizeProject(context.Background(), projectID)
 }
 
 func PathForRuntimeLog(logPath string) string {
@@ -135,13 +217,26 @@ func (s *Store) openLocked() error {
 	// Bound idle connections so an abandoned pool cannot hold file descriptors
 	// open indefinitely; a Store still in use keeps reusing its pool.
 	db.SetMaxIdleConns(2)
+	db.SetMaxOpenConns(8)
 	db.SetConnMaxIdleTime(30 * time.Second)
 	// busy_timeout is applied per connection by the DSN. journal_mode=WAL is
 	// persistent in the database file and is set once, in ensureSchemaOnce, so a
 	// read does not take a write lock just to open the store.
-	if err := s.ensureSchemaOnce(db); err != nil {
+	//
+	// Several processes opening the same fresh database race to create the
+	// schema. Retry the initialization on a transient BUSY so a concurrent
+	// first-open cannot fail a writer.
+	var schemaErr error
+	for attempt := 0; attempt < busyRetryMaxAttempts; attempt++ {
+		schemaErr = s.ensureSchemaOnce(db)
+		if schemaErr == nil || !isBusyError(schemaErr) {
+			break
+		}
+		time.Sleep(time.Duration(attempt+1) * busyRetryBaseBackoff)
+	}
+	if schemaErr != nil {
 		_ = db.Close()
-		return err
+		return schemaErr
 	}
 	s.dbPool = db
 	return nil
@@ -213,6 +308,18 @@ func ensureSchema(db *sql.DB) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS memories_by_project_updated ON memories (project_id, updated_at DESC)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS memories_by_candidate ON memories (candidate_id)`,
+		`CREATE TABLE IF NOT EXISTS audit (
+			seq INTEGER PRIMARY KEY AUTOINCREMENT,
+			ts TEXT NOT NULL,
+			event TEXT NOT NULL,
+			actor TEXT,
+			project TEXT,
+			target TEXT,
+			outcome TEXT,
+			request_id TEXT,
+			detail TEXT
+		)`,
+		`CREATE INDEX IF NOT EXISTS audit_by_project_ts ON audit (project, ts)`,
 	}
 	for _, stmt := range stmts {
 		if _, err := db.Exec(stmt); err != nil {
@@ -561,33 +668,20 @@ func (s *Store) GetEvaluation(id string) (asymptoteobserve.LearningEvaluationV1,
 }
 
 func (s *Store) PutCandidate(c asymptoteobserve.LearningCandidateV1) error {
-	if c.SchemaVersion == "" {
-		c.SchemaVersion = asymptoteobserve.LearningSchemaVersion
-	}
-	now := nowString()
-	if c.CreatedAt == "" {
-		c.CreatedAt = now
-	}
-	c.UpdatedAt = now
-	if c.State == "" {
-		c.State = asymptoteobserve.LearningCandidateStateCandidate
-	}
-	if c.ID == "" {
-		c.ID = CandidateID(c)
-	}
-	data, err := json.Marshal(c)
-	if err != nil {
-		return err
-	}
+	c = normalizeCandidateForWrite(c)
 	db, err := s.db()
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(`INSERT INTO candidates (id, project_id, state, kind, title, source_evaluation_id, memory_id, created_at, updated_at, candidate_json)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET state = excluded.state, kind = excluded.kind, title = excluded.title, memory_id = excluded.memory_id, updated_at = excluded.updated_at, candidate_json = excluded.candidate_json`,
-		c.ID, c.Project.ID, c.State, c.Kind, c.Title, c.SourceEvaluationID, c.MemoryID, c.CreatedAt, c.UpdatedAt, string(data))
-	return err
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin candidate write: %w", err)
+	}
+	defer tx.Rollback()
+	if err := putCandidateTx(tx, c); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *Store) ListCandidates(query Query) ([]asymptoteobserve.LearningCandidateV1, error) {
@@ -633,17 +727,10 @@ func (s *Store) GetCandidate(id string) (asymptoteobserve.LearningCandidateV1, b
 }
 
 func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
-	if m.SchemaVersion == "" {
-		m.SchemaVersion = asymptoteobserve.LearningSchemaVersion
+	if err := s.authorizeLifecycle(m.Project.ID); err != nil {
+		return err
 	}
-	now := nowString()
-	if m.CreatedAt == "" {
-		m.CreatedAt = now
-	}
-	m.UpdatedAt = now
-	if m.ID == "" {
-		m.ID = MemoryID(m)
-	}
+	m = normalizeMemoryForWrite(m)
 	data, err := json.Marshal(m)
 	if err != nil {
 		return err
@@ -652,81 +739,42 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 	if err != nil {
 		return err
 	}
-	faultPoint("tx_begin_pre")
-	tx, err := db.Begin()
-	if err != nil {
-		return fmt.Errorf("begin memory write: %w", err)
-	}
-	faultPoint("tx_begin_post")
-	defer tx.Rollback()
-	if s.writeCheckpoint != nil {
-		s.writeCheckpoint("after-begin")
-	}
-	if _, err = tx.Exec(`INSERT INTO memories (id, candidate_id, project_id, kind, title, created_at, updated_at, superseded_by, memory_json)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET title = excluded.title, updated_at = excluded.updated_at, superseded_by = excluded.superseded_by, memory_json = excluded.memory_json`,
-		m.ID, m.CandidateID, m.Project.ID, m.Kind, m.Title, m.CreatedAt, m.UpdatedAt, m.SupersededBy, string(data)); err != nil {
-		return fmt.Errorf("insert memory: %w", err)
-	}
-	if s.writeCheckpoint != nil {
-		s.writeCheckpoint("after-authoritative")
-	}
-	faultPoint("memory_insert")
-	// Refresh the derived index row in the same transaction when the index is
-	// known-good, and advance the durable generation either way so every process
-	// sees that cached results for this store are now stale.
-	indexHealthy := indexReadyTx(tx)
-	if indexHealthy {
-		if err := upsertMemoryIndex(tx, m); err != nil {
-			// A derived-index problem must never fail the authoritative write.
-			// Mark the index not-ready so the next search rebuilds it, and let
-			// the authoritative row and the generation advance commit normally.
-			indexHealthy = false
-			if _, markErr := tx.Exec(`UPDATE memory_index_meta SET value = '0' WHERE key = 'index_ready'`); markErr != nil {
-				return fmt.Errorf("index memory: %w", err)
-			}
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+	return s.busyRetry(func() error {
+		faultPoint("tx_begin_pre")
+		tx, err := db.Begin()
+		if err != nil {
+			return fmt.Errorf("begin memory write: %w", err)
 		}
-	}
-	if s.writeCheckpoint != nil {
-		s.writeCheckpoint("after-index")
-	}
-	faultPoint("fts_update")
-	if _, err := tx.Exec(`UPDATE memory_index_meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'generation'`); err != nil {
-		return fmt.Errorf("bump generation: %w", err)
-	}
-	if s.writeCheckpoint != nil {
-		s.writeCheckpoint("after-generation")
-	}
-	faultPoint("generation_update")
-	if s.embedder != nil {
-		// Embeddings are derived state, updated incrementally in the same
-		// transaction. A failure here must never fail the authoritative write;
-		// RebuildEmbeddings can repair it later.
-		_ = s.upsertEmbeddingTx(tx, m)
-	} else {
-		// A lexical writer may update a memory after another process embedded
-		// it. Invalidate that derived row so the next semantic query rebuilds
-		// the current content instead of serving a stale vector.
-		_, _ = tx.Exec(`DELETE FROM memory_embeddings WHERE memory_id = ?`, m.ID)
-	}
-	if s.writeCheckpoint != nil {
-		s.writeCheckpoint("before-commit")
-	}
-	faultPoint("pre_commit")
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit memory: %w", err)
-	}
-	if s.writeCheckpoint != nil {
-		s.writeCheckpoint("after-commit")
-	}
-	faultPoint("post_commit")
-	if !indexHealthy {
-		// The derived index did not refresh with this write; mark it unhealthy
-		// so the next search rebuilds it and re-ensure the derived schema in case
-		// a table is missing. The authoritative row is already committed.
-		s.markIndexUnhealthy(db)
-	}
-	return nil
+		faultPoint("tx_begin_post")
+		defer tx.Rollback()
+		if s.writeCheckpoint != nil {
+			s.writeCheckpoint("after-begin")
+		}
+		indexHealthy, err := s.writeMemoryTx(tx, m, data)
+		if err != nil {
+			return err
+		}
+		if s.writeCheckpoint != nil {
+			s.writeCheckpoint("before-commit")
+		}
+		faultPoint("pre_commit")
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("commit memory: %w", err)
+		}
+		if s.writeCheckpoint != nil {
+			s.writeCheckpoint("after-commit")
+		}
+		faultPoint("post_commit")
+		if !indexHealthy {
+			// The derived index did not refresh with this write; mark it unhealthy
+			// so the next search rebuilds it and re-ensure the derived schema in case
+			// a table is missing. The authoritative row is already committed.
+			s.markIndexUnhealthy(db)
+		}
+		return nil
+	})
 }
 
 // ListMemories returns approved (non-superseded) memories for a project. A query
@@ -736,6 +784,9 @@ func (s *Store) PutMemory(m asymptoteobserve.LearningMemoryV1) error {
 func (s *Store) ListMemories(query Query) ([]asymptoteobserve.LearningMemoryV1, error) {
 	query, err := s.scopeQuery(query)
 	if err != nil {
+		return nil, err
+	}
+	if err := query.contextErr(); err != nil {
 		return nil, err
 	}
 	db, err := s.db()
@@ -748,6 +799,14 @@ func (s *Store) ListMemories(query Query) ([]asymptoteobserve.LearningMemoryV1, 
 	return s.searchMemories(db, query)
 }
 
+// ListMemoriesContext is ListMemories that honours cancellation and deadlines.
+// A canceled or expired context stops the scan promptly and returns the context
+// error; no partial result is returned as if complete.
+func (s *Store) ListMemoriesContext(ctx context.Context, query Query) ([]asymptoteobserve.LearningMemoryV1, error) {
+	query.ctx = ctx
+	return s.ListMemories(query)
+}
+
 // listMemoriesOrdered is the original no-text path: project/kind scoped rows,
 // newest first, limited and paged in SQL.
 func (s *Store) listMemoriesOrdered(db *sql.DB, query Query) ([]asymptoteobserve.LearningMemoryV1, error) {
@@ -758,7 +817,7 @@ func (s *Store) listMemoriesOrdered(db *sql.DB, query Query) ([]asymptoteobserve
 		where += ` AND (superseded_by IS NULL OR superseded_by = '')`
 	}
 	args = append(args, normalizeLimit(query.Limit), offset(query))
-	rows, err := db.Query(`SELECT memory_json FROM memories`+where+` ORDER BY updated_at DESC LIMIT ? OFFSET ?`, args...)
+	rows, err := db.QueryContext(query.context(), `SELECT memory_json FROM memories`+where+` ORDER BY updated_at DESC LIMIT ? OFFSET ?`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -778,6 +837,20 @@ func (s *Store) listMemoriesOrdered(db *sql.DB, query Query) ([]asymptoteobserve
 	return out, rows.Err()
 }
 
+// searchScanRowCap bounds how many rows the in-Go scan decodes for a text query.
+// Selective queries are answered by the bounded FTS5 path; only non-selective
+// queries (short or common terms) reach the scan, which otherwise reads and
+// JSON-decodes the whole project. The cap is generous for legitimate projects and
+// turns a pathological scan into an explicit overload error instead of unbounded
+// work. It is deliberately not a silent truncation: the caller sees an error.
+// It is a var only so tests can lower it.
+var searchScanRowCap = 200000
+
+// ErrSearchScanExceeded is returned when a text-query scan exceeds
+// searchScanRowCap. The result is unknown, not empty: callers must not present
+// it as a complete answer.
+var ErrSearchScanExceeded = errors.New("learning: text search scan exceeded the row cap; narrow the query")
+
 // listMemoriesScan is the original text path and the correctness reference: it
 // scans the scoped rows newest first, applies the in-Go matcher, and pages in
 // Go. The indexed path reproduces exactly this result and falls back here.
@@ -788,7 +861,7 @@ func (s *Store) listMemoriesScan(db *sql.DB, query Query) ([]asymptoteobserve.Le
 	} else {
 		where += ` AND (superseded_by IS NULL OR superseded_by = '')`
 	}
-	rows, err := db.Query(`SELECT memory_json FROM memories`+where+` ORDER BY updated_at DESC`, args...)
+	rows, err := db.QueryContext(query.context(), `SELECT memory_json FROM memories`+where+` ORDER BY updated_at DESC`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -796,8 +869,16 @@ func (s *Store) listMemoriesScan(db *sql.DB, query Query) ([]asymptoteobserve.Le
 	limit := normalizeLimit(query.Limit)
 	skip := offset(query)
 	matches := 0
+	scanned := 0
 	var out []asymptoteobserve.LearningMemoryV1
 	for rows.Next() {
+		if err := query.contextErr(); err != nil {
+			return nil, err
+		}
+		scanned++
+		if scanned > searchScanRowCap {
+			return nil, ErrSearchScanExceeded
+		}
 		var raw string
 		if err := rows.Scan(&raw); err != nil {
 			return nil, err
@@ -826,6 +907,48 @@ func (s *Store) GetMemory(id string) (asymptoteobserve.LearningMemoryV1, bool, e
 	ok, err := s.getJSON(`SELECT memory_json FROM memories WHERE id = ?`, id, &raw)
 	if err != nil || !ok {
 		return asymptoteobserve.LearningMemoryV1{}, ok, err
+	}
+	var value asymptoteobserve.LearningMemoryV1
+	return value, true, json.Unmarshal([]byte(raw), &value)
+}
+
+// GetMemoryContext is GetMemory that honours cancellation and deadlines.
+func (s *Store) GetMemoryContext(ctx context.Context, id string) (asymptoteobserve.LearningMemoryV1, bool, error) {
+	db, err := s.db()
+	if err != nil {
+		return asymptoteobserve.LearningMemoryV1{}, false, err
+	}
+	var raw string
+	err = db.QueryRowContext(ctx, `SELECT memory_json FROM memories WHERE id = ?`, id).Scan(&raw)
+	if err == sql.ErrNoRows {
+		return asymptoteobserve.LearningMemoryV1{}, false, nil
+	}
+	if err != nil {
+		return asymptoteobserve.LearningMemoryV1{}, false, err
+	}
+	var value asymptoteobserve.LearningMemoryV1
+	return value, true, json.Unmarshal([]byte(raw), &value)
+}
+
+// GetMemoryInProject is GetMemory with the project scope pushed into the query,
+// so a caller can never fetch a row outside the project it is authorized for.
+func (s *Store) GetMemoryInProject(id, projectID string) (asymptoteobserve.LearningMemoryV1, bool, error) {
+	return s.GetMemoryInProjectContext(context.Background(), id, projectID)
+}
+
+// GetMemoryInProjectContext is GetMemoryInProject that honours cancellation.
+func (s *Store) GetMemoryInProjectContext(ctx context.Context, id, projectID string) (asymptoteobserve.LearningMemoryV1, bool, error) {
+	db, err := s.db()
+	if err != nil {
+		return asymptoteobserve.LearningMemoryV1{}, false, err
+	}
+	var raw string
+	err = db.QueryRowContext(ctx, `SELECT memory_json FROM memories WHERE id = ? AND project_id = ?`, id, projectID).Scan(&raw)
+	if err == sql.ErrNoRows {
+		return asymptoteobserve.LearningMemoryV1{}, false, nil
+	}
+	if err != nil {
+		return asymptoteobserve.LearningMemoryV1{}, false, err
 	}
 	var value asymptoteobserve.LearningMemoryV1
 	return value, true, json.Unmarshal([]byte(raw), &value)

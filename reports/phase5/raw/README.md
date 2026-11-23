@@ -1,6 +1,6 @@
 # Phase 5 Raw Evidence
 
-Produced on WSL2 with the Apple M5 Mac (`192.168.1.10`) as the remote Ollama +
+Produced on WSL2 with the Apple M5 Mac (`192.0.2.10`) as the remote Ollama +
 BGE-small host. No downloads, no paid compute.
 
 | File | Meaning |

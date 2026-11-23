@@ -688,7 +688,7 @@ func TestRequireLoopbackHostRejectsRebindingHosts(t *testing.T) {
 		"[::1]":                      http.StatusOK,
 		"attacker.example:8765":      http.StatusForbidden,
 		"localhost.attacker.example": http.StatusForbidden,
-		"192.168.1.20:8765":          http.StatusForbidden,
+		"192.0.2.20:8765":          http.StatusForbidden,
 		"":                           http.StatusForbidden,
 	} {
 		req := httptest.NewRequest(http.MethodGet, "/api/events", nil)

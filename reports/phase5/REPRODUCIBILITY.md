@@ -6,7 +6,7 @@
 |---|---|
 | Original Beacon | `99c709081ad49da1c5ade205929b61b19360ed9b` |
 | Phase 4D (frozen comparison) | `7c7e24933dbef69fe47599c35c211ee24f383a1d` |
-| Phase 5 branch | `phase5/beacon-ultimate-eval` (worktree `/home/user/work/phase5`) |
+| Phase 5 branch | `phase5/beacon-ultimate-eval` (worktree `/home/<user>/work/phase5`) |
 | Phase 3 locked fixtures | `LOCK OK ×3` (unchanged) |
 
 Ancestry `99c70908 → bcf3a1fd → e032ee73 → 2932e8e5 → 12226058 → 7c7e2493` verified.
@@ -28,7 +28,7 @@ Ancestry `99c70908 → bcf3a1fd → e032ee73 → 2932e8e5 → 12226058 → 7c7e2
 Model `qwen2.5-coder:7b`; temperature 0; seeds 0/1/2; num_ctx 4096; num_predict 384.
 Dependencies: Go 1.27.3, Python 3.14.4 stdlib, `sentence-transformers` on the Mac.
 
-## 4. Exact commands (all run from `/home/user/work/phase5`)
+## 4. Exact commands (all run from `/home/<user>/work/phase5`)
 
 ```sh
 # generate + freeze the 300-task suite
@@ -39,17 +39,17 @@ python3 reports/phase5/harness/generate_tasks.py \
 # build binaries
 ( cd cli/beacon && go build -o reports/phase5/bin/beacon-v6 . )
 ( cd cli/beacon && go build -o reports/phase5/bin/phase5seed ./internal/learning/testdata/phase5seed )
-( cd /home/user/work/phase3a-baseline/cli/beacon && go build -o <abs>/reports/phase5/bin/beacon-original . )
+( cd /home/<user>/work/phase3a-baseline/cli/beacon && go build -o <abs>/reports/phase5/bin/beacon-original . )
 
 # selection dump (arms C/D candidates)
 ( cd cli/beacon && BEACON_PHASE5_SELECT=1 BEACON_PHASE5_FIXTURE=<abs>/reports/phase5/fixtures/phase5_heldout_v1.json \
     BEACON_PHASE5_OUT=<abs>/reports/phase5/raw/selection_dump.json BEACON_PHASE5_K=8 \
-    BEACON_EMBED_URL=http://192.168.1.10:8077 go test ./internal/learning/ -run TestPhase5Select -count=1 )
+    BEACON_EMBED_URL=http://192.0.2.10:8077 go test ./internal/learning/ -run TestPhase5Select -count=1 )
 
 # five-arm comparison (per suite)
 python3 reports/phase5/harness/agent_eval.py --fixture <fix> --selection <sel> \
   --run-root /tmp/p5 --bin-dir reports/phase5/bin --seed-bin reports/phase5/bin/phase5seed \
-  --ollama-url http://192.168.1.10:11434/api/chat --model qwen2.5-coder:7b \
+  --ollama-url http://192.0.2.10:11434/api/chat --model qwen2.5-coder:7b \
   --categories <suite cats> --trace-dir reports/phase5/traces --output reports/phase5/raw/results_suiteX.json
 
 # analysis

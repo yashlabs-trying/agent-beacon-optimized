@@ -25,9 +25,9 @@ remain **opt-in**; no default was changed.
 |---|---|
 | Host | WSL2 (`lappiiii`), Linux 6.18.33.2-microsoft-standard-WSL2, x86_64 |
 | CPU / RAM | 8 vCPU / 7.6 GiB (Windows 11 host, 15.7 GiB total) |
-| Go | go1.27.3 linux/amd64 (`/home/user/tools/go/bin/go`) |
-| Worktree | `/home/user/work/phase3a` (native ext4, not a Windows CRLF mount) |
-| Baseline worktree | `/home/user/work/phase3a-baseline` (detached at 99c70908) |
+| Go | go1.27.3 linux/amd64 (`/home/<user>/tools/go/bin/go`) |
+| Worktree | `/home/<user>/work/phase3a` (native ext4, not a Windows CRLF mount) |
+| Baseline worktree | `/home/<user>/work/phase3a-baseline` (detached at 99c70908) |
 | Mac M5 | **Unreachable** — `192.0.2.4` "No route to host", `<host>` unresolvable |
 | Neural model | **Absent locally** — no `BAAI/bge-small-en-v1.5`, no `torch`/`sentence-transformers` on WSL2 |
 

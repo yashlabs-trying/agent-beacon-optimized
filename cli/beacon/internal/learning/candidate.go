@@ -140,6 +140,10 @@ func ApproveCandidateWithEdits(store *Store, id, reason string, edits ApprovalEd
 	if !ok {
 		return asymptoteobserve.LearningCandidateV1{}, asymptoteobserve.LearningMemoryV1{}, fmt.Errorf("candidate not found: %s", id)
 	}
+	if err := store.authorizeLifecycle(candidate.Project.ID); err != nil {
+		store.auditDenied(candidate.ID, candidate.Project.ID)
+		return asymptoteobserve.LearningCandidateV1{}, asymptoteobserve.LearningMemoryV1{}, err
+	}
 	if candidate.State != asymptoteobserve.LearningCandidateStateCandidate {
 		return asymptoteobserve.LearningCandidateV1{}, asymptoteobserve.LearningMemoryV1{}, fmt.Errorf("candidate %s is %s, not candidate", id, candidate.State)
 	}
@@ -158,14 +162,20 @@ func ApproveCandidateWithEdits(store *Store, id, reason string, edits ApprovalEd
 		UpdatedAt:     now,
 	}
 	memory.ID = MemoryID(memory)
+	if store.signingAuthority != nil {
+		memory.Tags = append(memory.Tags, store.signingAuthority.Sign(memory))
+	}
 	candidate.State = asymptoteobserve.LearningCandidateStateApproved
 	candidate.MemoryID = memory.ID
 	candidate.ApprovedAt = now
 	candidate.ReviewReason = strings.TrimSpace(reason)
-	if err := store.PutMemory(memory); err != nil {
-		return asymptoteobserve.LearningCandidateV1{}, asymptoteobserve.LearningMemoryV1{}, err
-	}
-	if err := store.PutCandidate(candidate); err != nil {
+	// Write the approved memory and the candidate transition in one transaction.
+	// A crash or a concurrent reviewer can no longer leave an approved memory
+	// whose candidate still reads "candidate".
+	if err := store.CommitCandidateTransition(candidate, &memory, TransitionOptions{
+		ExpectStates: []string{asymptoteobserve.LearningCandidateStateCandidate},
+		AuditEvent:   "memory_approved",
+	}); err != nil {
 		return asymptoteobserve.LearningCandidateV1{}, asymptoteobserve.LearningMemoryV1{}, err
 	}
 	return candidate, memory, nil
@@ -198,13 +208,20 @@ func RejectCandidate(store *Store, id, reason string) (asymptoteobserve.Learning
 	if !ok {
 		return asymptoteobserve.LearningCandidateV1{}, fmt.Errorf("candidate not found: %s", id)
 	}
+	if err := store.authorizeLifecycle(candidate.Project.ID); err != nil {
+		store.auditDenied(candidate.ID, candidate.Project.ID)
+		return asymptoteobserve.LearningCandidateV1{}, err
+	}
 	if candidate.State != asymptoteobserve.LearningCandidateStateCandidate {
 		return asymptoteobserve.LearningCandidateV1{}, fmt.Errorf("candidate %s is %s, not candidate", id, candidate.State)
 	}
 	candidate.State = asymptoteobserve.LearningCandidateStateRejected
 	candidate.RejectedAt = nowString()
 	candidate.ReviewReason = strings.TrimSpace(reason)
-	if err := store.PutCandidate(candidate); err != nil {
+	if err := store.CommitCandidateTransition(candidate, nil, TransitionOptions{
+		ExpectStates: []string{asymptoteobserve.LearningCandidateStateCandidate},
+		AuditEvent:   "memory_rejected",
+	}); err != nil {
 		return asymptoteobserve.LearningCandidateV1{}, err
 	}
 	return candidate, nil
@@ -231,26 +248,26 @@ func SupersedeCandidate(store *Store, id, replacementMemoryID, reason string) (a
 	if candidate.Project.ID != replacement.Project.ID {
 		return asymptoteobserve.LearningCandidateV1{}, fmt.Errorf("replacement memory belongs to a different project")
 	}
+	if err := store.authorizeLifecycle(candidate.Project.ID); err != nil {
+		store.auditDenied(candidate.ID, candidate.Project.ID)
+		return asymptoteobserve.LearningCandidateV1{}, err
+	}
 	now := nowString()
 	candidate.State = asymptoteobserve.LearningCandidateStateSuperseded
 	candidate.SupersededAt = now
 	candidate.SupersededBy = replacement.ID
 	candidate.ReviewReason = strings.TrimSpace(reason)
-	if err := store.PutCandidate(candidate); err != nil {
+	// The candidate transition and the tombstone of whatever memory the
+	// candidate currently points at commit together, and the memory id is read
+	// inside the transaction, so a concurrent approval cannot leave an active
+	// memory behind.
+	if err := store.CommitCandidateTransition(candidate, nil, TransitionOptions{
+		ExpectStates:     []string{asymptoteobserve.LearningCandidateStateCandidate, asymptoteobserve.LearningCandidateStateApproved},
+		TombstoneBy:      replacement.ID,
+		PreserveMemoryID: true,
+		AuditEvent:       "memory_superseded",
+	}); err != nil {
 		return asymptoteobserve.LearningCandidateV1{}, err
-	}
-	if candidate.MemoryID != "" {
-		memory, ok, err := store.GetMemory(candidate.MemoryID)
-		if err != nil {
-			return asymptoteobserve.LearningCandidateV1{}, err
-		}
-		if ok {
-			memory.SupersededBy = replacement.ID
-			memory.UpdatedAt = now
-			if err := store.PutMemory(memory); err != nil {
-				return asymptoteobserve.LearningCandidateV1{}, err
-			}
-		}
 	}
 	return candidate, nil
 }

@@ -44,7 +44,11 @@ type TrustContextOptions struct {
 	// agent is not pushed to guess from evidence that does not cover the query.
 	RequireSufficiency     bool
 	WithholdIfInsufficient bool
-	Now                    time.Time
+	// Trust, when set, enables authenticated-provenance classification. A memory
+	// is listed as authenticated only with a valid signature by a trusted key over
+	// its exact content and scope. Nil disables the check (default).
+	Trust *TrustRegistry
+	Now   time.Time
 }
 
 // TrustContextSignals records the layer's decisions for observability and tests.
@@ -61,6 +65,9 @@ type TrustContextSignals struct {
 	Missing         []string `json:"missing"`
 	Uncertainty     []string `json:"uncertainty"`
 	SufficiencyNote string   `json:"sufficiency_note"`
+	// Authenticated-provenance classification (populated only when Trust is set).
+	AuthenticatedIDs     []string `json:"authenticated_ids,omitempty"`
+	ProvenanceInvalidIDs []string `json:"provenance_invalid_ids,omitempty"`
 }
 
 // TrustContext is the curated evidence plus the signals that produced it.
@@ -101,10 +108,21 @@ func SelectTrustContext(memories []asymptoteobserve.LearningMemoryV1, query stri
 		}
 	}
 
+	// Term sets are shared by supersession and contradiction detection; compute
+	// them once for the whole selection instead of once per mechanism. Supersession
+	// needs them only when some memory could be a correction (an explicit
+	// SupersededBy link or a correction marker); otherwise the O(n) tokenization is
+	// skipped entirely. This is the common case for a plain fact store.
+	var pairTerms []map[string]bool
+	needSupersession := opts.EnableSupersession && hasCorrectionCandidate(memories)
+	if needSupersession || opts.EnableConflict {
+		pairTerms = significantTermsPerMemory(memories)
+	}
+
 	// 3. Structured supersession over candidate pairs only.
 	superseded := map[string]bool{}
 	if opts.EnableSupersession {
-		superseded = resolveSupersessions(memories, untrusted, opts.EnableTrust)
+		superseded = resolveSupersessionsWithTerms(memories, pairTerms, untrusted, opts.EnableTrust)
 		for id := range superseded {
 			sig.SupersededIDs = append(sig.SupersededIDs, id)
 		}
@@ -114,7 +132,7 @@ func SelectTrustContext(memories []asymptoteobserve.LearningMemoryV1, query stri
 	// 4. Conflict detection over candidate pairs only.
 	conflicts := map[string]bool{}
 	if opts.EnableConflict {
-		for _, c := range detectContradictionsIndexed(memories, TrustOptions{AllowCrossKind: true, ContradictionTerms: 2}) {
+		for _, c := range detectContradictionsIndexedWithTerms(memories, pairTerms, TrustOptions{AllowCrossKind: true, ContradictionTerms: 2}) {
 			sig.ConflictPairs = append(sig.ConflictPairs, [2]string{c.A.ID, c.B.ID})
 			aDead := superseded[c.A.ID] || untrusted[c.A.ID]
 			bDead := superseded[c.B.ID] || untrusted[c.B.ID]
@@ -159,6 +177,20 @@ func SelectTrustContext(memories []asymptoteobserve.LearningMemoryV1, query stri
 		}
 	}
 
+	// 6b. Authenticated provenance (opt-in). Classify survivors so a self-asserted
+	// label is never mistaken for a trusted signature. This never changes which
+	// memories are selected; it only records which carry a valid attestation.
+	if opts.Trust != nil {
+		for _, m := range kept {
+			switch Authenticate(m, opts.Trust).Status {
+			case ProvenanceVerified:
+				sig.AuthenticatedIDs = append(sig.AuthenticatedIDs, m.ID)
+			case ProvenanceInvalid:
+				sig.ProvenanceInvalidIDs = append(sig.ProvenanceInvalidIDs, m.ID)
+			}
+		}
+	}
+
 	// 7. Budget: prefer verified memories.
 	if opts.Budget > 0 && len(kept) > opts.Budget {
 		sort.SliceStable(kept, func(i, j int) bool {
@@ -176,17 +208,29 @@ func SelectTrustContext(memories []asymptoteobserve.LearningMemoryV1, query stri
 // candidatePairs returns index pairs sharing >=2 significant terms, computed with an
 // inverted index rather than an O(n^2) scan. Sorted for determinism.
 func candidatePairs(memories []asymptoteobserve.LearningMemoryV1) [][2]int {
+	return candidatePairsTerms(significantTermsPerMemory(memories))
+}
+
+// significantTermsPerMemory tokenizes each memory's body once. Callers that need
+// both supersession and contradiction detection share this single computation.
+func significantTermsPerMemory(memories []asymptoteobserve.LearningMemoryV1) []map[string]bool {
 	terms := make([]map[string]bool, len(memories))
 	for i, m := range memories {
 		terms[i] = significantTerms(m.Body)
 	}
-	// Retrieval candidate sets are small (tens). For those a direct pairwise
-	// scan is cheaper than building inverted-index maps and allocates far less,
-	// while producing the identical set of pairs (shared >=2 significant terms).
-	if len(memories) <= 64 {
+	return terms
+}
+
+// candidatePairsTerms is candidatePairs over precomputed term sets.
+func candidatePairsTerms(terms []map[string]bool) [][2]int {
+	n := len(terms)
+	// Retrieval candidate sets are small (tens). For those a direct pairwise scan
+	// is cheaper than building inverted-index maps and allocates far less, while
+	// producing the identical set of pairs (shared >=2 significant terms).
+	if n <= 64 {
 		var out [][2]int
-		for i := 0; i < len(memories); i++ {
-			for j := i + 1; j < len(memories); j++ {
+		for i := 0; i < n; i++ {
+			for j := i + 1; j < n; j++ {
 				if sharedAtLeast(terms[i], terms[j], 2) {
 					out = append(out, [2]int{i, j})
 				}
@@ -228,6 +272,20 @@ func candidatePairs(memories []asymptoteobserve.LearningMemoryV1) [][2]int {
 	return out
 }
 
+// sharedCount returns the number of shared terms without allocating.
+func sharedCount(a, b map[string]bool) int {
+	if len(b) < len(a) {
+		a, b = b, a
+	}
+	count := 0
+	for term := range a {
+		if b[term] {
+			count++
+		}
+	}
+	return count
+}
+
 // sharedAtLeast reports whether two term sets share at least n terms, exiting
 // early once the threshold is reached.
 func sharedAtLeast(a, b map[string]bool, n int) bool {
@@ -250,19 +308,24 @@ func sharedAtLeast(a, b map[string]bool, n int) bool {
 // detectContradictionsIndexed mirrors detectContradictions exactly but only visits
 // candidate pairs (shared >=2 significant terms). Regression-tested for equality.
 func detectContradictionsIndexed(memories []asymptoteobserve.LearningMemoryV1, opts TrustOptions) []Contradiction {
+	return detectContradictionsIndexedWithTerms(memories, significantTermsPerMemory(memories), opts)
+}
+
+// detectContradictionsIndexedWithTerms mirrors detectContradictions exactly but
+// only visits candidate pairs (shared >=2 significant terms) using precomputed
+// term sets. Regression-tested for equality.
+func detectContradictionsIndexedWithTerms(memories []asymptoteobserve.LearningMemoryV1, terms []map[string]bool, opts TrustOptions) []Contradiction {
 	if opts.ContradictionTerms <= 0 {
 		opts.ContradictionTerms = 2
 	}
-	terms := make([]map[string]bool, len(memories))
 	tokens := make([]map[string]bool, len(memories))
 	pol := make([]int, len(memories))
 	for i, m := range memories {
-		terms[i] = significantTerms(m.Body)
 		tokens[i] = trustTokens(m.Body)
 		pol[i] = directivePolarity(m.Body)
 	}
 	var out []Contradiction
-	for _, p := range candidatePairs(memories) {
+	for _, p := range candidatePairsTerms(terms) {
 		i, j := p[0], p[1]
 		a, b := memories[i], memories[j]
 		if a.Project.ID != b.Project.ID {
@@ -274,18 +337,18 @@ func detectContradictionsIndexed(memories []asymptoteobserve.LearningMemoryV1, o
 		if distinctExplicitVersions(a.Applicability, b.Applicability) {
 			continue
 		}
-		shared := intersectTerms(terms[i], terms[j])
-		if len(shared) < opts.ContradictionTerms {
+		shared := sharedCount(terms[i], terms[j])
+		if shared < opts.ContradictionTerms {
 			continue
 		}
 		minTerms := min(len(terms[i]), len(terms[j]))
-		if minTerms > 0 && len(shared)*2 <= minTerms {
+		if minTerms > 0 && shared*2 <= minTerms {
 			continue
 		}
 		if !conflictingDirective(pol[i], pol[j], tokens[i], tokens[j]) {
 			continue
 		}
-		out = append(out, Contradiction{A: a, B: b, SharedTerm: shared})
+		out = append(out, Contradiction{A: a, B: b, SharedTerm: intersectTerms(terms[i], terms[j])})
 	}
 	return out
 }
@@ -296,28 +359,27 @@ func detectContradictionsIndexed(memories []asymptoteobserve.LearningMemoryV1, o
 // explicit SupersededBy field plus evidence-backed lexical corrections, resolving
 // chains deterministically and breaking cycles.
 func resolveSupersessions(memories []asymptoteobserve.LearningMemoryV1, untrusted map[string]bool, trustEnabled bool) map[string]bool {
+	return resolveSupersessionsWithTerms(memories, significantTermsPerMemory(memories), untrusted, trustEnabled)
+}
+
+// resolveSupersessionsWithTerms returns the set of memory IDs that are superseded,
+// using the explicit SupersededBy field plus evidence-backed lexical corrections,
+// resolving chains deterministically and breaking cycles. Term sets are supplied
+// by the caller so they are computed once for the whole selection.
+func resolveSupersessionsWithTerms(memories []asymptoteobserve.LearningMemoryV1, terms []map[string]bool, untrusted map[string]bool, trustEnabled bool) map[string]bool {
 	byID := map[string]asymptoteobserve.LearningMemoryV1{}
 	for _, m := range memories {
 		byID[m.ID] = m
 	}
 	superseded := map[string]bool{}
-
-	// Explicit relationships (a memory declares the ID that replaces it).
 	for _, m := range memories {
 		if m.SupersededBy != "" {
 			superseded[m.ID] = true
 		}
 	}
 
-	// Precompute significant terms once; the pairwise loop previously recomputed
-	// them up to four times per candidate pair.
-	terms := make([]map[string]bool, len(memories))
-	for i, m := range memories {
-		terms[i] = significantTerms(m.Body)
-	}
-
 	// Lexical corrections over candidate pairs.
-	for _, p := range candidatePairs(memories) {
+	for _, p := range candidatePairsTerms(terms) {
 		older, newer := memories[p[0]], memories[p[1]]
 		olderTerms, newerTerms := terms[p[0]], terms[p[1]]
 		if memoryTime(newer).Before(memoryTime(older)) {
@@ -334,17 +396,17 @@ func resolveSupersessions(memories []asymptoteobserve.LearningMemoryV1, untruste
 			continue
 		}
 		if trustEnabled && untrusted[newer.ID] {
-			continue // a low-trust note must not override verified knowledge
+			continue
 		}
 		if untrusted[newer.ID] {
 			continue
 		}
-		shared := intersectTerms(olderTerms, newerTerms)
-		if len(shared) < 2 {
+		shared := sharedCount(olderTerms, newerTerms)
+		if shared < 2 {
 			continue
 		}
 		minTerms := min(len(olderTerms), len(newerTerms))
-		if minTerms > 0 && len(shared)*2 < minTerms {
+		if minTerms > 0 && shared*2 < minTerms {
 			continue
 		}
 		if !isNewer(newer, older) {
@@ -353,9 +415,6 @@ func resolveSupersessions(memories []asymptoteobserve.LearningMemoryV1, untruste
 		superseded[older.ID] = true
 	}
 
-	// Break cycles: a supersession cycle means every member points to a replacement
-	// but none is a stable head. Fail safe by un-superseding the cycle members so the
-	// conflict is preserved rather than silently resolved.
 	breakCycles(memories, byID, superseded)
 	return superseded
 }
@@ -454,6 +513,18 @@ var correctionMarkers = []string{
 	"now", "changed to", "changed from", "updated to", "raised to", "lowered to",
 	"replaced", "no longer", "instead of", "corrected", "revised", "supersedes",
 	"superseded", "migrated to", "switched to", "overridden", "deprecated",
+}
+
+// hasCorrectionCandidate reports whether any memory could supersede another: it
+// declares a SupersededBy link or contains a correction marker. It is a cheap
+// guard so a store with no corrections never pays for pairwise tokenization.
+func hasCorrectionCandidate(memories []asymptoteobserve.LearningMemoryV1) bool {
+	for _, m := range memories {
+		if m.SupersededBy != "" || hasCorrectionMarker(m.Body) {
+			return true
+		}
+	}
+	return false
 }
 
 func hasCorrectionMarker(body string) bool {

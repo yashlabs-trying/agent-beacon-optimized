@@ -4,10 +4,10 @@ Final integrated optimization of the V6 Intelligent Memory system: one consisten
 post-retrieval decision layer, optimized, hardened, and contract-tested.
 
 - Date: 2026-10-23 (Asia/Kolkata)
-- Branch: `phase4d/beacon-integrated-optimization` (worktree `/home/user/work/phase4d`)
+- Branch: `phase4d/beacon-integrated-optimization` (worktree `/home/<user>/work/phase4d`)
 - Base: Phase 4C `12226058ac0ba57c6e0e01a71356bc83abd81735`
 - Frozen refs unchanged: `99c70908…`, `bcf3a1fd…`, `e032ee73…`, `2932e8e5…`, `12226058…`
-- Hosts: WSL2 laptop (8 vCPU, 7.6 GiB, Go 1.27.3) + Apple M5 Mac (`192.168.1.10`, MPS, Ollama 0.40.6)
+- Hosts: WSL2 laptop (8 vCPU, 7.6 GiB, Go 1.27.3) + Apple M5 Mac (`192.0.2.10`, MPS, Ollama 0.40.6)
 - No paid compute, no downloads, no push/PR.
 
 **Bottom line.** Phase 4D turns the Phase 4C prototype into a faster, safer, reachable

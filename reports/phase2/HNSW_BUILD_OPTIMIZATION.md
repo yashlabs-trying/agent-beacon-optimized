@@ -16,7 +16,7 @@ default.
 | Hardware | Apple M5, 10 logical CPUs, 16 GB unified memory |
 | OS | macOS 26.6.2 (build 25G83), arm64 |
 | Go | go1.27.3 darwin/arm64 |
-| Worktree | `/Users/user/beacon-phase2-opencode` |
+| Worktree | `/Users/<user>/beacon-phase2-opencode` |
 | Branch | `test/beacon-v6-phase2-opencode` |
 | Base SHA | `85e6ea1c` (Phase 1 verified V6) |
 | HNSW code | `cli/beacon/internal/hnsw/graph.go` (vendored `coder/hnsw` v0.6.1, MIT) |

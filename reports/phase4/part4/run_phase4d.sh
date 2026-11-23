@@ -2,12 +2,12 @@
 # Phase 4D reproduction script: builds the optimized layer, runs contract/scaling tests,
 # the CLI opt-in check, the dev + held-out pilots, and the reliability suites.
 set -euo pipefail
-REPO="${REPO:-/home/user/work/phase4d}"
-BASELINE="${BASELINE:-/home/user/work/phase3a-baseline}"
-PHASE4C="${PHASE4C:-/home/user/work/phase4c}"
-MAC="${MAC:-192.168.1.10}"
+REPO="${REPO:-/home/<user>/work/phase4d}"
+BASELINE="${BASELINE:-/home/<user>/work/phase3a-baseline}"
+PHASE4C="${PHASE4C:-/home/<user>/work/phase4c}"
+MAC="${MAC:-192.0.2.10}"
 OLLAMA_URL="http://${MAC}:11434/api/chat"; EMBED_URL="http://${MAC}:8077"
-export PATH="/home/user/tools/go/bin:${PATH}"; export GOTOOLCHAIN=local
+export PATH="/home/<user>/tools/go/bin:${PATH}"; export GOTOOLCHAIN=local
 R="${REPO}/reports/phase4/part4/RAW_EVIDENCE"; BIN="${R}/bin"; mkdir -p "${BIN}"
 
 python3 "${REPO}/reports/phase3/heldout/validate_lock.py"

@@ -15,17 +15,20 @@ import (
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/activity"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/dashboard"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/lifecycle"
+	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/learning"
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/mcpserver"
 )
 
 const defaultMCPHTTPAddr = "127.0.0.1:8766"
 
 var mcpOpts struct {
-	userMode   bool
-	systemMode bool
-	logPath    string
-	transport  string
-	addr       string
+	userMode         bool
+	systemMode       bool
+	logPath          string
+	transport        string
+	addr             string
+	projectAllowlist string
+	authorizeAll     bool
 }
 
 var mcpCmd = &cobra.Command{
@@ -62,7 +65,55 @@ func init() {
 		c.Flags().StringVar(&mcpOpts.logPath, "log-path", "", "Runtime JSONL log path")
 		c.Flags().StringVar(&mcpOpts.transport, "transport", mcpserver.TransportStdio, "MCP transport: stdio or http (HTTP JSON-RPC)")
 		c.Flags().StringVar(&mcpOpts.addr, "addr", defaultMCPHTTPAddr, "Loopback HTTP JSON-RPC listen address for --transport http")
+		c.Flags().StringVar(&mcpOpts.projectAllowlist, "project-allowlist", "", "Comma-separated project IDs the MCP memory tools may access. When empty, the server is scoped to its own working-directory project.")
+		c.Flags().BoolVar(&mcpOpts.authorizeAll, "authorize-all-projects", false, "Serve memory for every project in the store. Disables project isolation; only for a single-user local operator who explicitly wants it.")
 	}
+}
+
+// mcpAuthorizer builds the server-side project authorizer from configuration.
+// It returns nil when no allowlist is configured, which selects the documented
+// single-user local policy.
+func mcpAuthorizer() mcpserver.Authorizer {
+	raw := mcpAllowlistRaw()
+	if raw == "" {
+		return nil
+	}
+	var ids []string
+	for _, part := range strings.Split(raw, ",") {
+		if id := strings.TrimSpace(part); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return mcpserver.NewProjectAllowlist(ids...)
+}
+
+// mcpAllowlistRaw returns the configured project allowlist from the flag or the
+// environment, or "" when neither is set.
+func mcpAllowlistRaw() string {
+	raw := strings.TrimSpace(mcpOpts.projectAllowlist)
+	if raw == "" {
+		raw = strings.TrimSpace(os.Getenv("BEACON_MCP_PROJECT_ALLOWLIST"))
+	}
+	return raw
+}
+
+// effectiveMCPProjectScope describes, for the operator, exactly which projects
+// the memory tools will serve. It makes a fail-closed default visible so a
+// misconfigured launch (for example, started outside the project directory) is
+// obvious instead of presenting as unexplained "not authorized" denials.
+func effectiveMCPProjectScope() string {
+	if mcpOpts.authorizeAll {
+		return "Beacon MCP project scope: ALL projects (--authorize-all-projects; project isolation DISABLED)."
+	}
+	if raw := mcpAllowlistRaw(); raw != "" {
+		return fmt.Sprintf("Beacon MCP project scope: allowlist [%s].", raw)
+	}
+	if project, err := learning.ResolveProject(""); err == nil && strings.TrimSpace(project.ID) != "" {
+		return fmt.Sprintf("Beacon MCP project scope: working-directory project %q. "+
+			"Set --project-allowlist (or BEACON_MCP_PROJECT_ALLOWLIST) to serve other projects.", project.ID)
+	}
+	return "Beacon MCP project scope: NONE. No project could be resolved; memory tools will deny every " +
+		"request until --project-allowlist (or BEACON_MCP_PROJECT_ALLOWLIST) is set."
 }
 
 func runMCPServe(cmd *cobra.Command, args []string) error {
@@ -70,13 +121,18 @@ func runMCPServe(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	runtimeLog := resolveMCPRuntimeLog()
-	server := mcpserver.New(mcpserver.Options{LogPath: runtimeLog.EffectiveLogPath})
+	authorizer := mcpAuthorizer()
+	server := mcpserver.New(mcpserver.Options{LogPath: runtimeLog.EffectiveLogPath, Authorizer: authorizer, AuthorizeAll: mcpOpts.authorizeAll})
+	fmt.Fprintln(os.Stderr, effectiveMCPProjectScope())
 	switch normalizedTransport() {
 	case mcpserver.TransportStdio:
 		return server.ServeStdio(cmd.Context(), os.Stdin, os.Stdout)
 	case mcpserver.TransportHTTP:
 		if err := dashboard.ValidateLoopbackAddr(mcpOpts.addr); err != nil {
 			return err
+		}
+		if mcpOpts.authorizeAll {
+			fmt.Fprintln(os.Stderr, "Beacon MCP: --authorize-all-projects is set; the HTTP memory tools serve every project in the store. Set --project-allowlist (or BEACON_MCP_PROJECT_ALLOWLIST) instead if other local users or processes can reach this endpoint.")
 		}
 		fmt.Fprintf(os.Stderr, "Beacon MCP server: http://%s/mcp\n", mcpOpts.addr)
 		fmt.Fprintf(os.Stderr, "Runtime log: %s\n", runtimeLog.EffectiveLogPath)

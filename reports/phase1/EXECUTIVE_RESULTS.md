@@ -56,7 +56,7 @@ Branch `feat/beacon-memory-engine-v6-production`. Revision tested: `aee750a5`
 
 ## Blocker
 
-Mac (192.168.1.10) SSH: `Permission denied (publickey,password,keyboard-interactive)`.
+Mac (192.0.2.10) SSH: `Permission denied (publickey,password,keyboard-interactive)`.
 Neither `id_ed25519` nor `runpod_kernellab` is authorized. Neural/agent work on the
 Mac is therefore NOT TESTED in Phase 1; neural was instead validated on the GPU pod
 in V6 (allowed evidence, no new spend).

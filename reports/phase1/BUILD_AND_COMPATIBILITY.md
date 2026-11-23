@@ -1,6 +1,6 @@
 # Phase 1 — Build and Compatibility (22 October 2026)
 
-Recovered V6 base `85e6ea1cbb25ac193bd902966aa5889bf174dfa3`; untouched original baseline `99c709081ad49da1c5ade205929b61b19360ed9b`. The complete unpublished history was preserved in `../../../beacon-v6.bundle` (outside this repository), then cloned into isolated WSL2 (`/home/user/work/phase1-v6`) and Mac (`~/beacon-phase1-v6`) workspaces. Both HEADs matched the base SHA before edits. The original Windows checkout remained clean. Passwordless authenticated SSH to the Mac worked. No remote Git operation was used to publish work. Exact OS/tool versions and point-in-time resources are in `artifacts/host_manifest.txt`.
+Recovered V6 base `85e6ea1cbb25ac193bd902966aa5889bf174dfa3`; untouched original baseline `99c709081ad49da1c5ade205929b61b19360ed9b`. The complete unpublished history was preserved in `../../../upstream-history.bundle` (outside this repository), then cloned into isolated WSL2 (`/home/<user>/work/phase1-v6`) and Mac (`~/beacon-phase1-v6`) workspaces. Both HEADs matched the base SHA before edits. The original Windows checkout remained clean. Passwordless authenticated SSH to the Mac worked. No remote Git operation was used to publish work. Exact OS/tool versions and point-in-time resources are in `artifacts/host_manifest.txt`.
 
 | Host | Environment | Go build/vet | Tests |
 |---|---|---|---|

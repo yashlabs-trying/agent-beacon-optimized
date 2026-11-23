@@ -56,6 +56,80 @@ Beacon is an open-source memory layer for AI coding agents that learns from your
 
 ---
 
+## 🧩 Memory-Engine Optimization (this lineage)
+
+> **Attribution.** Agent Beacon is an open-source project by
+> [Asymptote Labs](https://github.com/Asymptote-Labs/agent-beacon) (MIT). This repository
+> is that project **plus** a body of memory-engine optimization and hardening commits
+> (everything after `7b605aa84`). Upstream product code, docs, and license notices are
+> preserved unchanged. The optimization work is documented and evidenced in
+> [`docs/optimization/`](docs/optimization/index.md) and [`reports/`](reports/).
+
+The optimization changes **three things** in the memory engine and leaves the product
+interfaces and defaults intact. All numbers below are **reproducible** and point to a
+source report; nothing here claims an agent-quality improvement.
+
+### Performance at a glance
+
+| Metric | Baseline | Optimized | Source |
+|---|---:|---:|---|
+| 16-client write p99 (local ext4, 8 s mixed) | 634 ms | **48–54 ms** | [`D_DATABASE_CONCURRENCY_FIX.md`](reports/v7-hardening/D_DATABASE_CONCURRENCY_FIX.md) |
+| Question-aware retrieval allocs/op (warm, 1k store) | 2,007 | **875 (−56.4%)** | [`RETRIEVAL_ALLOCATION_FIX.md`](reports/v7-hardening/RETRIEVAL_ALLOCATION_FIX.md) |
+| Question-aware retrieval bytes/op | 208,054 | **130,495 (−37.3%)** | [`RETRIEVAL_ALLOCATION_FIX.md`](reports/v7-hardening/RETRIEVAL_ALLOCATION_FIX.md) |
+| Indexed no-match search (scaling with N) | O(N): 8.05→46 ms | **81→142 µs** (flat) | [`security/00_EXECUTIVE_SUMMARY.md`](reports/security/00_EXECUTIVE_SUMMARY.md) |
+| Cold healthy-store retrieval | 43.7 ms | **20–36 ms** (≈ original) | [`FINAL_STABILIZATION_REPORT.md`](reports/v7-hardening/FINAL_STABILIZATION_REPORT.md) |
+
+Workload, hardware (WSL2, 8 vCPU, 7.6 GiB, Go 1.27), comparator commits, and units are in
+[`docs/optimization/performance.md`](docs/optimization/performance.md). These are
+**storage/retrieval microbenchmarks**, not agent-task outcomes.
+
+### What changed
+
+1. **Write concurrency** — a process-level mutex serializes in-process writers instead of
+   letting 16 SQLite connections busy-poll the single write lock. Durability is
+   unchanged (WAL, `synchronous` untouched); the p99 tail collapses.
+2. **Retrieval allocations** — significant-term sets are computed once and shared across
+   supersession/contradiction detection, and intersection counts no longer allocate.
+3. **Placement + lifecycle** — a configurable local database directory
+   (`BEACON_MEMORY_DIR`) with synchronized-mount detection and safe migration, plus
+   project authorization, atomic lifecycle, bounded search, and an opt-in Ed25519
+   provenance mechanism.
+
+### Try it (no model, no GPU, ~5 minutes)
+
+```sh
+# Build the CLI
+cd cli/beacon && CGO_ENABLED=0 go build -o /tmp/beacon .
+export BEACON_BIN=/tmp/beacon
+
+# Example A: store a memory and retrieve it through the real MCP server
+cd ../../examples/memory-basic && python3 run.py
+```
+
+See [`examples/`](examples/) for scale retrieval and agent/MCP integration examples.
+
+### Reproduce the headline benchmark
+
+```sh
+cd cli/beacon
+BEACON_PHASE3_WRITER=1 BEACON_PHASE3_W_CONCURRENCY=16 BEACON_PHASE3_W_SECONDS=8 \
+  go test ./internal/learning/ -run TestPhase3BWriterLatency -v -count=1
+```
+
+Full instructions: [`docs/optimization/benchmarks.md`](docs/optimization/benchmarks.md).
+
+### Honest status
+
+Reproducible today: the write-concurrency fix, the allocation reduction, cold-start
+parity on healthy stores, safe placement/migration, and core/race/vet/build. **Open or
+blocked:** authenticated-provenance *deployment* (no protected key authority ships),
+semantic-vs-lexical quality (fresh ablation not run), 64-client/1M scale, full
+integration, and any agent-intelligence claim. Read
+[`docs/optimization/limitations.md`](docs/optimization/limitations.md) before quoting
+anything. This build is **not** certified production-ready.
+
+---
+
 ## 🎬 Demo
 
 https://github.com/user-attachments/assets/38995612-84e9-4989-a905-0099f77955f0
@@ -441,6 +515,16 @@ Read the docs for:
 
 [**Read the docs →**](https://docs.beacon.sh)
 
+### Memory-engine optimization docs (this lineage)
+
+- [Overview](docs/optimization/index.md)
+- [Architecture](docs/optimization/architecture.md) · [Retrieval pipeline](docs/optimization/retrieval-pipeline.md)
+- [Performance](docs/optimization/performance.md) · [Benchmarks & reproduction](docs/optimization/benchmarks.md)
+- [Security](docs/optimization/security.md) · [Configuration](docs/optimization/configuration.md)
+- [Limitations](docs/optimization/limitations.md) · [Roadmap](docs/optimization/roadmap.md)
+- [Troubleshooting](docs/optimization/troubleshooting.md)
+- [Examples](examples/README.md) · [Evidence reports](reports/)
+
 ---
 
 ## Contributing
@@ -448,6 +532,11 @@ Read the docs for:
 Contributions are welcome.
 
 Open an issue, submit a pull request, or join the [Discord](https://discord.gg/zdNChS2fBu).
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). For the memory-engine optimization work,
+start with [`docs/optimization/`](docs/optimization/index.md) and mind the rules there:
+evidence or it didn't happen, never claim agent-quality gains from a retrieval
+microbenchmark, and preserve the default path.
 
 ---
 

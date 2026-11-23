@@ -25,7 +25,7 @@ Phase 1 could not re-run it on Apple Silicon.
 
 ## Mac blocker
 
-`ssh user@192.168.1.10` →
+`ssh <user>@192.0.2.10` →
 `Permission denied (publickey,password,keyboard-interactive)`. Neither
 `id_ed25519` nor `runpod_kernellab` is authorized. No neural inference was run on
 the Mac.

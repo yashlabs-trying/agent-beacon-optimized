@@ -2,7 +2,7 @@
 
 ## Scope and isolation
 
-- Worktree: `/Users/user/beacon-phase2-opencode`
+- Worktree: `/Users/<user>/beacon-phase2-opencode`
 - Branch: `test/beacon-v6-phase2-opencode`
 - Base SHA: `85e6ea1c` (Phase 1 verified V6; the latest committed V6 SHA at
   isolation time)

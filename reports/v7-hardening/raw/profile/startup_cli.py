@@ -12,8 +12,8 @@ OUT = ROOT / 'startup_cli.json'
 if OUT.exists():
     raise SystemExit('refusing overwrite')
 bins = {
-    'original': Path('/home/user/work/phase5/reports/phase5/bin/beacon-original'),
-    'v7': Path('/home/user/work/beacon-v7-hardening-profile/cli/beacon/beacon-v7-audit'),
+    'original': Path('/home/<user>/work/phase5/reports/phase5/bin/beacon-original'),
+    'v7': Path('/home/<user>/work/beacon-v7-hardening-profile/cli/beacon/beacon-v7-audit'),
 }
 arms = list(bins) * 56
 random.Random(20261023).shuffle(arms)

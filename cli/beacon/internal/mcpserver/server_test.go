@@ -84,6 +84,7 @@ func TestMCPMemoryToolsSearchGetAndContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := learning.Open(learning.PathForRuntimeLog(logPath))
+	defer store.Close()
 	memory := asymptoteobserve.LearningMemoryV1{
 		ID:          "memory-1",
 		CandidateID: "candidate-1",
@@ -96,7 +97,8 @@ func TestMCPMemoryToolsSearchGetAndContext(t *testing.T) {
 	if err := store.PutMemory(memory); err != nil {
 		t.Fatal(err)
 	}
-	server := New(Options{LogPath: logPath})
+	server := New(Options{LogPath: logPath, Authorizer: NewProjectAllowlist("project-1")})
+	defer server.Close()
 	search, err := server.callTool(t.Context(), callToolParams{Name: "search_memory", Arguments: map[string]interface{}{"project_id": "project-1", "q": "ECONNRESET"}})
 	if err != nil {
 		t.Fatalf("search_memory: %v", err)
@@ -126,6 +128,7 @@ func TestMCPMemoryToolsSearchOlderMatchesBeforeLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := learning.Open(learning.PathForRuntimeLog(logPath))
+	defer store.Close()
 	project := asymptoteobserve.LearningProjectV1{ID: "project-1"}
 	if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
 		ID:          "memory-older-match",
@@ -152,7 +155,8 @@ func TestMCPMemoryToolsSearchOlderMatchesBeforeLimit(t *testing.T) {
 		}
 		setStoredMemoryUpdatedAt(t, store.Path(), id, fmt.Sprintf("2026-01-02T00:00:0%dZ", i))
 	}
-	server := New(Options{LogPath: logPath})
+	server := New(Options{LogPath: logPath, Authorizer: NewProjectAllowlist("project-1")})
+	defer server.Close()
 	search, err := server.callTool(t.Context(), callToolParams{Name: "search_memory", Arguments: map[string]interface{}{"project_id": "project-1", "q": "unique-needle", "limit": 5}})
 	if err != nil {
 		t.Fatalf("search_memory: %v", err)

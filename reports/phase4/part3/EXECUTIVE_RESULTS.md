@@ -4,10 +4,10 @@ Intelligent memory: a trust-aware, supersession-aware context-selection layer, w
 ablation and held-out evaluation.
 
 - Date: 2026-10-23 (Asia/Kolkata)
-- Branch: `phase4c/beacon-intelligent-memory` (worktree `/home/user/work/phase4c`)
+- Branch: `phase4c/beacon-intelligent-memory` (worktree `/home/<user>/work/phase4c`)
 - Base: Phase 4B `2932e8e503abff7b941e72fd7ae0c09a165f4b2e`
 - Frozen refs unchanged: original `99c70908…`, Phase 3D `bcf3a1fd…`, Phase 4A `e032ee73…`, Phase 4B `2932e8e5…`
-- Hosts: WSL2 laptop (8 vCPU, 7.6 GiB, Go 1.27.3) + Apple M5 Mac (`192.168.1.10`, MPS, Ollama 0.40.6)
+- Hosts: WSL2 laptop (8 vCPU, 7.6 GiB, Go 1.27.3) + Apple M5 Mac (`192.0.2.10`, MPS, Ollama 0.40.6)
 - No paid compute, no downloads, no push/PR.
 
 **Bottom line.** The new opt-in context-selection layer **significantly improves agent

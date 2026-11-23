@@ -1,7 +1,7 @@
 # Phase 4A Raw Evidence Manifest
 
 All files produced by `reports/phase4/part1/run_phase4a.sh` on the WSL2 laptop
-(Go 1.27.3, Python 3.14.4) using the Apple M5 Mac (`192.168.1.10`) as the
+(Go 1.27.3, Python 3.14.4) using the Apple M5 Mac (`192.0.2.10`) as the
 remote Ollama + BGE-small host. No paid compute, no model downloads.
 
 | File | Produced by | Meaning |

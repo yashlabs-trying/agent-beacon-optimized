@@ -298,26 +298,23 @@ func refreshCommonTrigramsTx(tx *sql.Tx) error {
 // launch several concurrent rebuilds that would contend for the write lock.
 var indexRebuildMu sync.Mutex
 
-// indexReadyCache remembers, per store path, that the index is known-good, so a
-// search does not read the readiness flag on every call. It is cleared whenever
-// the index is marked unhealthy.
+// indexReadyCache is retained only so existing tests can clear it; the readiness
+// decision no longer reads it. Index health is always taken from the durable
+// `index_ready` flag, so a process cannot conceal an index another process
+// marked unhealthy.
 var indexReadyCache sync.Map
 
 // ensureIndexReady reports whether the derived index reflects the authoritative
-// table, rebuilding it once if needed. A rebuild failure leaves index_ready at 0
-// so the caller falls back to the scan path.
+// table, rebuilding it once if needed. The durable `index_ready` flag is the
+// single source of truth, so the decision is correct across processes. A rebuild
+// failure leaves index_ready at 0 so the caller falls back to the scan path.
 func (s *Store) ensureIndexReady(db *sql.DB) bool {
-	if v, ok := indexReadyCache.Load(s.dbPath); ok && v.(bool) {
-		return true
-	}
 	if ready, ok := metaValue(db, "index_ready"); ok && ready == "1" {
-		indexReadyCache.Store(s.dbPath, true)
 		return true
 	}
 	indexRebuildMu.Lock()
 	defer indexRebuildMu.Unlock()
 	if ready, ok := metaValue(db, "index_ready"); ok && ready == "1" {
-		indexReadyCache.Store(s.dbPath, true)
 		return true
 	}
 	tx, err := db.Begin()
@@ -334,7 +331,6 @@ func (s *Store) ensureIndexReady(db *sql.DB) bool {
 	if err := tx.Commit(); err != nil {
 		return false
 	}
-	indexReadyCache.Store(s.dbPath, true)
 	return true
 }
 
@@ -380,25 +376,74 @@ func termTrigrams(term string) []string {
 // selective term. The bool is false when the table is unavailable, in which case
 // the caller falls back to a bounded posting-list probe.
 func queryIsSelective(db *sql.DB, terms []string) (bool, bool) {
-	for _, term := range terms {
+	// Collect each term's trigrams and the unique set for one batched lookup.
+	// The previous shape issued one SELECT per term; a long multi-term query
+	// (e.g. 40 words) therefore paid 40 round trips before deciding to scan,
+	// which dominated its latency. A single batched lookup returns the same
+	// verdict in one (or a few, chunked) statements.
+	perTerm := make([][]string, len(terms))
+	unique := make([]string, 0, len(terms)*6)
+	seen := make(map[string]struct{}, len(terms)*6)
+	for i, term := range terms {
 		trigrams := termTrigrams(term)
 		if len(trigrams) == 0 {
+			// A term too short to have a trigram cannot be judged by the
+			// index; fall back to the bounded probe exactly as before.
 			return false, false
 		}
-		// One statement per term, not per trigram: a long common term like
-		// "workflow" has six trigrams, and six round trips were measurably
-		// slower than the scan they were meant to avoid.
-		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(trigrams)), ",")
-		args := make([]any, len(trigrams))
-		for i, tri := range trigrams {
+		perTerm[i] = trigrams
+		for _, tri := range trigrams {
+			if _, ok := seen[tri]; ok {
+				continue
+			}
+			seen[tri] = struct{}{}
+			unique = append(unique, tri)
+		}
+	}
+	// Chunk the IN list to stay under SQLite's variable limit for very long
+	// queries while still collapsing per-term round trips to per-chunk ones.
+	present := make(map[string]struct{}, len(unique))
+	const trigramChunk = 900
+	for start := 0; start < len(unique); start += trigramChunk {
+		end := start + trigramChunk
+		if end > len(unique) {
+			end = len(unique)
+		}
+		part := unique[start:end]
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(part)), ",")
+		args := make([]any, len(part))
+		for i, tri := range part {
 			args[i] = tri
 		}
-		var present int
-		if err := db.QueryRow(`SELECT COUNT(*) FROM memory_trigram_df WHERE term IN (`+placeholders+`)`, args...).Scan(&present); err != nil {
+		rows, err := db.Query(`SELECT term FROM memory_trigram_df WHERE term IN (`+placeholders+`)`, args...)
+		if err != nil {
 			return false, false
 		}
-		if present < len(trigrams) {
-			// At least one trigram is rare, so the term is selective.
+		for rows.Next() {
+			var term string
+			if err := rows.Scan(&term); err != nil {
+				rows.Close()
+				return false, false
+			}
+			present[term] = struct{}{}
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return false, false
+		}
+		rows.Close()
+	}
+	// A term is selective when at least one of its trigrams is absent from the
+	// common-trigram table; the whole AND is selective if any term is.
+	for _, trigrams := range perTerm {
+		allPresent := true
+		for _, tri := range trigrams {
+			if _, ok := present[tri]; !ok {
+				allPresent = false
+				break
+			}
+		}
+		if !allPresent {
 			return true, true
 		}
 	}
@@ -429,7 +474,7 @@ func (s *Store) fetchIndexedCandidates(db *sql.DB, query Query, terms []string) 
 		JOIN memories m ON m.id = memories_fts.memory_id
 		WHERE memories_fts MATCH ? AND ` + strings.Join(clauses, ` AND `) + `
 		LIMIT ?`
-	rows, err := db.Query(stmt, args...)
+	rows, err := db.QueryContext(query.context(), stmt, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -478,6 +523,9 @@ func (s *Store) probePostingListOverflow(db *sql.DB, terms []string) (bool, erro
 // result is therefore identical to the scan path whenever the indexed path is
 // used, and falls back to it otherwise.
 func (s *Store) searchMemories(db *sql.DB, query Query) ([]asymptoteobserve.LearningMemoryV1, error) {
+	if err := query.contextErr(); err != nil {
+		return nil, err
+	}
 	terms, indexable := memorySearchTerms(query.Q)
 	if !indexable || !s.ensureIndexReady(db) {
 		// Short terms and an unavailable index go straight to the scan, so a

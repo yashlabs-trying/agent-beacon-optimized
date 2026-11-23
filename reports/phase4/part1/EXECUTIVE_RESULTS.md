@@ -4,11 +4,11 @@ Rigorous benchmarking, independent baselines, and real-agent evaluation of the
 integrated V6 memory engine.
 
 - Date: 2026-10-23 (Asia/Kolkata)
-- Branch: `phase4a/beacon-v6-benchmark` (isolated worktree `/home/user/work/phase4a`)
+- Branch: `phase4a/beacon-v6-benchmark` (isolated worktree `/home/<user>/work/phase4a`)
 - Base: Phase 3D `bcf3a1fd46d5865ca21b48a224646b9e107b2f86`
 - Frozen refs unchanged: integration `209a987b…`, prep `c9275d84…`, baseline `99c70908…`
 - Execution hosts: WSL2 laptop (`lappiiii`, 8 vCPU, 7.6 GiB, Go 1.27.3 linux/amd64)
-  **and the Apple M5 Mac (`192.168.1.10`, 16 GiB, MPS GPU, Ollama 0.40.6)** over SSH.
+  **and the Apple M5 Mac (`192.0.2.10`, 16 GiB, MPS GPU, Ollama 0.40.6)** over SSH.
 - No paid compute, no GPU rental, no model downloads, no push/PR. All model weights
   (BGE-small, qwen2.5-coder) were already cached locally.
 
@@ -36,7 +36,7 @@ win over simple baselines comes from the real neural model.
 
 The provenance strings in the Phase 4A brief (Phase 3A–3D and V6-integration commits)
 were located and verified: they exist in the primary repository (git common dir
-`C:\Users\user\work\beacon`), whose worktrees `phase3a`–`phase3d`
+`C:\\Users\\<user>\\work\rescue\beacon`), whose worktrees `phase3a`–`phase3d`
 and `beacon-integration` carry them. An earlier scan of a separate Mac clone
 (`~/beacon-phase1-v6`) did not contain them; that clone is a Phase 1/2-only checkout and
 was not used for evaluation.

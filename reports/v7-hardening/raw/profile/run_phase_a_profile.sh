@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source_root=/home/user/work/beacon-v7-hardening-profile
+source_root=/home/<user>/work/beacon-v7-hardening-profile
 module_root="$source_root/cli/beacon"
 evidence_root=/mnt/c/Users/user/work/beacon-v7-hardening/reports/v7-hardening/raw/profile
-go_bin=/home/user/sdk/go/bin/go
+go_bin=/home/<user>/sdk/go/bin/go
 
 cd "$module_root"
 test "$(git rev-parse HEAD)" = 7b605aa84f0f570ba265fbda17fe6d99e927b10e

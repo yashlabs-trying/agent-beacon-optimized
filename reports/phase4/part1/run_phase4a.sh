@@ -8,15 +8,15 @@
 # Prerequisites (already provisioned, not downloaded here):
 #   * Mac reachable over SSH with Ollama (qwen2.5-coder:7b) and the BGE-small
 #     sentence-transformers sidecar.
-#   * Go 1.27.3 at /home/user/tools/go/bin.
+#   * Go 1.27.3 at /home/<user>/tools/go/bin.
 set -euo pipefail
 
-REPO="${REPO:-/home/user/work/phase4a}"
-BASELINE="${BASELINE:-/home/user/work/phase3a-baseline}"   # detached at 99c70908
-MAC="${MAC:-192.168.1.10}"
+REPO="${REPO:-/home/<user>/work/phase4a}"
+BASELINE="${BASELINE:-/home/<user>/work/phase3a-baseline}"   # detached at 99c70908
+MAC="${MAC:-192.0.2.10}"
 OLLAMA_URL="http://${MAC}:11434/api/chat"
 EMBED_URL="http://${MAC}:8077"
-export PATH="/home/user/tools/go/bin:${PATH}"
+export PATH="/home/<user>/tools/go/bin:${PATH}"
 export GOTOOLCHAIN=local
 
 R="${REPO}/reports/phase4/part1/RAW_EVIDENCE"

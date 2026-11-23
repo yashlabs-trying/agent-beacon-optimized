@@ -1,6 +1,6 @@
 {
   "model": "qwen2.5-coder:7b",
-  "endpoint": "http://192.168.1.10:11434/api/chat",
+  "endpoint": "http://192.0.2.10:11434/api/chat",
   "tool_call_syntax_ok": true,
   "tool_arguments_valid": true,
   "consumed_tool_results": true,

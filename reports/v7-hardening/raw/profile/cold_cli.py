@@ -7,13 +7,13 @@ import subprocess
 import time
 from pathlib import Path
 
-ROOT = Path('/home/user/work/beacon-v7-hardening-profile')
+ROOT = Path('/home/<user>/work/beacon-v7-hardening-profile')
 EVIDENCE = Path('/mnt/c/Users/user/work/beacon-v7-hardening/reports/v7-hardening/raw/profile')
 FIXTURE = ROOT / 'reports/v7/validation/holdout_v1.json'
-SEED = Path('/home/user/work/phase5/reports/phase5/bin/phase5seed')
-ORIGINAL = Path('/home/user/work/phase5/reports/phase5/bin/beacon-original')
-V7 = Path('/home/user/work/beacon-v7-hardening-profile/cli/beacon/beacon-v7-audit')
-WORK = Path('/home/user/work/v7-phase-a-cold-20261023')
+SEED = Path('/home/<user>/work/phase5/reports/phase5/bin/phase5seed')
+ORIGINAL = Path('/home/<user>/work/phase5/reports/phase5/bin/beacon-original')
+V7 = Path('/home/<user>/work/beacon-v7-hardening-profile/cli/beacon/beacon-v7-audit')
+WORK = Path('/home/<user>/work/v7-phase-a-cold-20261023')
 OUT = EVIDENCE / 'cold_cli.json'
 
 if WORK.exists() or OUT.exists():

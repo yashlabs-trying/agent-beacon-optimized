@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/asymptote-labs/agent-beacon/cli/beacon/internal/endpoint/activity"
@@ -24,16 +25,73 @@ import (
 const (
 	TransportStdio = "stdio"
 	TransportHTTP  = "http"
+
+	// Request-shape limits. They bound the work a single MCP memory call can ask
+	// the engine to do and reject oversized input with a clear error rather than
+	// silently truncating it.
+	maxMemoryQueryBytes = 4096
+	maxMemoryQueryTerms = 32
+	maxMemoryIDBytes    = 512
+	maxProjectArgBytes  = 4096
 )
 
 type Options struct {
 	LogPath string
+	// Authorizer gates every memory operation by the project the operation
+	// targets. When set it is used as-is and the fields below are ignored.
+	Authorizer learning.ProjectAuthorizer
+	// ProjectScope is the explicit set of project IDs this server may serve. It
+	// is used when Authorizer is nil.
+	ProjectScope []string
+	// AuthorizeAll explicitly disables project isolation: every project the store
+	// holds becomes reachable. It exists for a single-user local operator who
+	// deliberately wants the pre-hardening behavior. It is NOT the default.
+	AuthorizeAll bool
 }
 
+// defaultAuthorizer selects the server-side project authority. It is
+// fail-closed: with no explicit authorizer, scope, or permissive opt-in, the
+// server is scoped to the project of its own working directory; if that cannot
+// be resolved the server serves no project at all. A caller-supplied project ID
+// never becomes authority.
+func defaultAuthorizer(opts Options) learning.ProjectAuthorizer {
+	if opts.Authorizer != nil {
+		return opts.Authorizer
+	}
+	if len(opts.ProjectScope) > 0 {
+		return learning.NewProjectAllowlist(opts.ProjectScope...)
+	}
+	if opts.AuthorizeAll {
+		return learning.AllowAllProjects{}
+	}
+	project, err := learning.ResolveProject("")
+	if err != nil || strings.TrimSpace(project.ID) == "" {
+		return learning.NewProjectAllowlist() // deny everything
+	}
+	return learning.NewProjectAllowlist(project.ID)
+}
+
+// The authorization mechanism lives in the learning package so the storage
+// lifecycle and the MCP surface share exactly one implementation.
+type Authorizer = learning.ProjectAuthorizer
+type AllowAll = learning.AllowAllProjects
+type ProjectAllowlist = learning.ProjectAllowlist
+
+var ErrProjectNotAuthorized = learning.ErrProjectNotAuthorized
+var NewProjectAllowlist = learning.NewProjectAllowlist
+
 type Server struct {
-	logPath string
-	tools   map[string]Tool
-	order   []string
+	logPath    string
+	authorizer learning.ProjectAuthorizer
+	tools      map[string]Tool
+	order      []string
+
+	// storeMu guards the lazily opened, shared memory store. The server opens the
+	// store once and reuses it for every memory tool call, instead of opening and
+	// abandoning a fresh *sql.DB pool per call (which leaked a pool and, on
+	// Windows, kept the database file locked).
+	storeMu sync.Mutex
+	store   *learning.Store
 }
 
 type Tool struct {
@@ -100,11 +158,21 @@ type memorySummary struct {
 
 func New(opts Options) *Server {
 	server := &Server{
-		logPath: opts.LogPath,
-		tools:   map[string]Tool{},
+		logPath:    opts.LogPath,
+		authorizer: defaultAuthorizer(opts),
+		tools:      map[string]Tool{},
 	}
 	server.registerTools()
 	return server
+}
+
+// authorizeProject asks the configured authorizer whether the caller may act on
+// projectID. It is the single choke point for project authorization.
+func (s *Server) authorizeProject(ctx context.Context, projectID string) error {
+	if s.authorizer == nil {
+		return nil
+	}
+	return s.authorizer.AuthorizeProject(ctx, projectID)
 }
 
 func ValidateTransport(transport string) error {
@@ -319,11 +387,12 @@ func (s *Server) registerTools() {
 		Description: "Search approved Beacon project memory and return compact summaries.",
 		InputSchema: memoryQuerySchema("Search filters for approved project memory."),
 		handler: func(ctx context.Context, args map[string]interface{}) (interface{}, error) {
-			query, err := s.parseMemoryQuery(args)
+			store := s.memoryStore()
+			query, err := s.parseMemoryQuery(ctx, store, args)
 			if err != nil {
 				return nil, err
 			}
-			memories, err := s.memoryStore().ListMemories(query)
+			memories, err := store.ListMemoriesContext(ctx, query)
 			if err != nil {
 				return nil, err
 			}
@@ -345,11 +414,14 @@ func (s *Server) registerTools() {
 			if id == "" {
 				return nil, errors.New("id is required")
 			}
-			memory, ok, err := s.memoryStore().GetMemory(id)
+			if len(id) > maxMemoryIDBytes {
+				return nil, fmt.Errorf("id is too long (max %d bytes)", maxMemoryIDBytes)
+			}
+			memory, ok, err := s.getAuthorizedMemory(ctx, id)
 			if err != nil {
 				return nil, err
 			}
-			if !ok || memory.SupersededBy != "" {
+			if !ok {
 				return nil, fmt.Errorf("memory not found: %s", id)
 			}
 			return memory, nil
@@ -360,14 +432,15 @@ func (s *Server) registerTools() {
 		Description: "Return a small approved-memory context set for the current task.",
 		InputSchema: memoryQuerySchema("Task and project filters for approved memory context."),
 		handler: func(ctx context.Context, args map[string]interface{}) (interface{}, error) {
-			query, err := s.parseMemoryQuery(args)
+			store := s.memoryStore()
+			query, err := s.parseMemoryQuery(ctx, store, args)
 			if err != nil {
 				return nil, err
 			}
 			if query.Limit <= 0 || query.Limit > 5 {
 				query.Limit = 5
 			}
-			memories, err := s.memoryStore().ListMemories(query)
+			memories, err := store.ListMemoriesContext(ctx, query)
 			if err != nil {
 				return nil, err
 			}
@@ -380,10 +453,30 @@ func (s *Server) registerTools() {
 }
 
 func (s *Server) memoryStore() *learning.Store {
-	return learning.Open(learning.PathForRuntimeLog(s.logPath))
+	s.storeMu.Lock()
+	defer s.storeMu.Unlock()
+	if s.store == nil {
+		s.store = learning.OpenAuthorized(learning.DatabasePath(s.logPath), s.authorizer)
+	}
+	return s.store
 }
 
-func (s *Server) parseMemoryQuery(args map[string]interface{}) (learning.Query, error) {
+// Close releases the server's shared memory store. It is safe to call more than
+// once and from any goroutine. Callers that construct a Server directly (rather
+// than through the CLI, which owns it for the process lifetime) should Close it
+// when done.
+func (s *Server) Close() error {
+	s.storeMu.Lock()
+	defer s.storeMu.Unlock()
+	if s.store == nil {
+		return nil
+	}
+	err := s.store.Close()
+	s.store = nil
+	return err
+}
+
+func (s *Server) parseMemoryQuery(ctx context.Context, store *learning.Store, args map[string]interface{}) (learning.Query, error) {
 	limit := intArg(args, "limit")
 	if limit <= 0 {
 		limit = 5
@@ -395,6 +488,15 @@ func (s *Server) parseMemoryQuery(args map[string]interface{}) (learning.Query, 
 		Kind:        stringArg(args, "kind"),
 		Limit:       normalizeMemoryLimit(limit),
 	}
+	if len(query.Q) > maxMemoryQueryBytes {
+		return learning.Query{}, fmt.Errorf("query is too long: %d bytes (max %d)", len(query.Q), maxMemoryQueryBytes)
+	}
+	if len(strings.Fields(query.Q)) > maxMemoryQueryTerms {
+		return learning.Query{}, fmt.Errorf("query has too many terms (max %d)", maxMemoryQueryTerms)
+	}
+	if len(query.ProjectID) > maxProjectArgBytes || len(query.ProjectPath) > maxProjectArgBytes {
+		return learning.Query{}, fmt.Errorf("project identifier is too long (max %d bytes)", maxProjectArgBytes)
+	}
 	if query.ProjectID == "" && query.ProjectPath == "" {
 		project, err := learning.ResolveProject("")
 		if err != nil {
@@ -402,7 +504,54 @@ func (s *Server) parseMemoryQuery(args map[string]interface{}) (learning.Query, 
 		}
 		query.ProjectID = project.ID
 	}
+	// Resolve a relayed project path to an ID here, before authorization, so the
+	// authorizer always sees the same ID the store will scope the query to. The
+	// resolver never touches the filesystem for a request-supplied path.
+	if query.ProjectID == "" && query.ProjectPath != "" {
+		id, err := store.ProjectIDForPath(query.ProjectPath)
+		if err != nil {
+			return learning.Query{}, err
+		}
+		query.ProjectID = id
+		query.ProjectPath = ""
+	}
+	if err := s.authorizeProject(ctx, query.ProjectID); err != nil {
+		return learning.Query{}, err
+	}
 	return query, nil
+}
+
+// getAuthorizedMemory fetches one memory by ID and enforces the server's project
+// scope. When the server is scoped to exactly one project the scope is pushed
+// into the SQL predicate, so the row is never fetched outside it. Otherwise the
+// row is fetched by ID and authorized against its own project. A denial is
+// reported to the caller as "not found" (by the handler), so existence is never
+// disclosed.
+func (s *Server) getAuthorizedMemory(ctx context.Context, id string) (asymptoteobserve.LearningMemoryV1, bool, error) {
+	store := s.memoryStore()
+	if sp, ok := s.authorizer.(interface{ SingleProject() (string, bool) }); ok {
+		if projectID, single := sp.SingleProject(); single {
+			memory, ok, err := store.GetMemoryInProjectContext(ctx, id, projectID)
+			if err != nil {
+				return asymptoteobserve.LearningMemoryV1{}, false, err
+			}
+			if !ok || memory.SupersededBy != "" {
+				return asymptoteobserve.LearningMemoryV1{}, false, nil
+			}
+			return memory, true, nil
+		}
+	}
+	memory, ok, err := store.GetMemoryContext(ctx, id)
+	if err != nil {
+		return asymptoteobserve.LearningMemoryV1{}, false, err
+	}
+	if !ok || memory.SupersededBy != "" {
+		return asymptoteobserve.LearningMemoryV1{}, false, nil
+	}
+	if err := s.authorizeProject(ctx, memory.Project.ID); err != nil {
+		return asymptoteobserve.LearningMemoryV1{}, false, nil
+	}
+	return memory, true, nil
 }
 
 func memoryQuerySchema(description string) map[string]interface{} {

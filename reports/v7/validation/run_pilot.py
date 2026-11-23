@@ -51,7 +51,7 @@ def main():
     p.add_argument("--original-bin", required=True)
     p.add_argument("--v7-bin", required=True)
     p.add_argument("--output", required=True)
-    p.add_argument("--ollama-url", default="http://192.168.1.10:11434/api/chat")
+    p.add_argument("--ollama-url", default="http://192.0.2.10:11434/api/chat")
     p.add_argument("--model", default="qwen2.5-coder:7b")
     p.add_argument("--v7-lexical-only", action="store_true",
                    help="Disable V7 semantic expansion for a component ablation")

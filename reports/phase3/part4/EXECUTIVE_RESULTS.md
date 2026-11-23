@@ -4,7 +4,7 @@ Evaluation-first phase: (A) real BGE-small neural retrieval, then (B) the six-ta
 paired agent evaluation. No product features, no default changes.
 
 - Date: 2026-10-23 (Asia/Kolkata)
-- Branch: `phase3d/beacon-v6-verification` (isolated worktree `/home/user/work/phase3d`)
+- Branch: `phase3d/beacon-v6-verification` (isolated worktree `/home/<user>/work/phase3d`)
 - Parent: Phase 3C `d12e413a08a20d1f2abbe80a91daa1386e5edfd6`
 - Ancestry verified: `99c70908` → `209a987b` → `c9275d84` → `c8a6749b` → `17a10b0f` → `d12e413a` → Phase 3D
 - Frozen refs unchanged: integration `209a987bc96c29b5e5d811a794d0357f20214463`,

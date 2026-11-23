@@ -5,7 +5,7 @@ were changed, no defaults were flipped, no paid compute or GPU was used, and the
 frozen baseline / integration / Phase 3 prep / Phase 3A commit were not modified.
 
 - Date: 2026-10-23 (Asia/Kolkata)
-- Branch: `phase3b/beacon-v6-verification` (isolated worktree `/home/user/work/phase3b`)
+- Branch: `phase3b/beacon-v6-verification` (isolated worktree `/home/<user>/work/phase3b`)
 - Base: Phase 3A commit `c8a6749bb91d6cc85cb317ba0c75fcb5f23305ad`
 - Unchanged frozen refs: integration `209a987b…`, prep `c9275d84…`, baseline `99c70908…`, tag `freeze/beacon-v6-integration-verified-209a987b`
 - Fixtures re-validated with `validate_lock.py`: all `LOCK OK` (retrieval `FADF313E…`, contradiction `B3B4CAC0…`, agent tasks `409195B0…`)

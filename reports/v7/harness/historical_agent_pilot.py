@@ -22,7 +22,7 @@ def main():
     parser.add_argument("--selection", required=True)
     parser.add_argument("--original-results", nargs="+", required=True)
     parser.add_argument("--output", required=True)
-    parser.add_argument("--ollama-url", default="http://192.168.1.10:11434/api/chat")
+    parser.add_argument("--ollama-url", default="http://192.0.2.10:11434/api/chat")
     parser.add_argument("--model", default="qwen2.5-coder:7b")
     parser.add_argument("--categories", default="A3_knowledge_transfer,B2_ambiguity,B3_multi_hop,B5_trust_adversarial")
     args = parser.parse_args()

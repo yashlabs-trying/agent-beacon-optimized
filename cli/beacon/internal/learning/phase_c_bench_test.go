@@ -17,11 +17,11 @@ func phaseCStore(b *testing.B, n int) *Store {
 		g := i % 50
 		m := asymptoteobserve.LearningMemoryV1{
 			ID: fmt.Sprintf("m%d", i), CandidateID: fmt.Sprintf("c%d", i),
-			Kind: asymptoteobserve.LearningMemoryKindConvention,
-			Title: fmt.Sprintf("note %d", i),
-			Body:  fmt.Sprintf("The component%d setting value is %d.", g, i),
-			Project: asymptoteobserve.LearningProjectV1{ID: "p"},
-			Tags: []string{"source:verified"},
+			Kind:     asymptoteobserve.LearningMemoryKindConvention,
+			Title:    fmt.Sprintf("note %d", i),
+			Body:     fmt.Sprintf("The component%d setting value is %d.", g, i),
+			Project:  asymptoteobserve.LearningProjectV1{ID: "p"},
+			Tags:     []string{"source:verified"},
 			Evidence: []asymptoteobserve.LearningEvidenceV1{{TraceID: fmt.Sprintf("t%d", i)}},
 		}
 		if err := s.PutMemory(m); err != nil {
@@ -59,5 +59,41 @@ func BenchmarkPhaseCSearchQuestionWarm(b *testing.B) {
 		if _, err := s.SearchQuestion(q, question, QuestionOptions{}); err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+// BenchmarkPhaseCOpenColdExisting measures opening an already-populated store and
+// running one lexical query — the cold process path for a healthy database.
+func BenchmarkPhaseCOpenColdExisting(b *testing.B) {
+	dir := b.TempDir()
+	path := filepath.Join(dir, "memory.db")
+	seed := Open(path)
+	for i := 0; i < 1000; i++ {
+		g := i % 50
+		m := asymptoteobserve.LearningMemoryV1{
+			ID: fmt.Sprintf("m%d", i), CandidateID: fmt.Sprintf("c%d", i),
+			Kind: asymptoteobserve.LearningMemoryKindConvention, Title: fmt.Sprintf("note %d", i),
+			Body:    fmt.Sprintf("The component%d setting value is %d.", g, i),
+			Project: asymptoteobserve.LearningProjectV1{ID: "p"}, Tags: []string{"source:verified"},
+			Evidence: []asymptoteobserve.LearningEvidenceV1{{TraceID: fmt.Sprintf("t%d", i)}},
+		}
+		if err := seed.PutMemory(m); err != nil {
+			b.Fatal(err)
+		}
+	}
+	if _, err := seed.ListMemories(Query{ProjectID: "p", Q: "component0 setting", Limit: 8}); err != nil {
+		b.Fatal(err)
+	}
+	if err := seed.Close(); err != nil {
+		b.Fatal(err)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		s := Open(path)
+		if _, err := s.ListMemories(Query{ProjectID: "p", Q: "component0 setting", Limit: 8}); err != nil {
+			b.Fatal(err)
+		}
+		_ = s.Close()
 	}
 }

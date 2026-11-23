@@ -9,6 +9,45 @@ contributions aligned with that posture: normal hook execution should not depend
 on hosted accounts, remote policy fetches, hosted dashboards, or external network
 services.
 
+## Memory-Engine Optimization Work
+
+This repository also carries an ongoing **memory-engine optimization and hardening**
+lineage on top of upstream Beacon (commits after `7b605aa84`). If your change touches
+the memory store, retrieval pipeline, MCP memory tools, storage placement, or the
+security of those paths, read these first:
+
+- [`docs/optimization/architecture.md`](docs/optimization/architecture.md) — the pipeline
+  and the three optimization themes.
+- [`docs/optimization/benchmarks.md`](docs/optimization/benchmarks.md) — how each number
+  is measured and reproduced.
+- [`docs/optimization/limitations.md`](docs/optimization/limitations.md) — what is **not**
+  established. Read this before making any performance or quality claim.
+- [`docs/optimization/roadmap.md`](docs/optimization/roadmap.md) — the open gaps.
+
+Rules for this work:
+
+- **Evidence or it didn't happen.** A performance or security claim must point to a
+  committed benchmark or test and a report under `reports/`. Do not present a
+  historical or non-reproducible number as a current result.
+- **Never claim agent-quality gains from a retrieval microbenchmark.** Faster or
+  leaner retrieval does not imply a more accurate or more successful agent.
+- **Preserve the default path.** The plain `memory list` path, public APIs, and existing
+  benchmarks must keep working. Optimizations are additive or opt-in.
+- **Mind the filesystem.** Benchmark on a **local** filesystem. Synchronized/network
+  mounts are ~12× slower at p99 and will falsify your numbers.
+- **Attribution stays.** Upstream copyright, the MIT license, and upstream docs are not
+  to be modified for this work.
+
+Validation for memory-engine changes:
+
+```bash
+cd cli/beacon
+go build ./...
+go test ./internal/learning/ -count=1
+go vet ./internal/learning/
+go test -race ./internal/learning/ -run 'Concurrency|Concurrent|Crash' -count=1
+```
+
 ## Ways to Contribute
 
 Useful contributions include:

@@ -27,7 +27,7 @@ The agent smoke test requires a local coding model and a harness. In Phase 1:
 
 - The **Mac** (the designated machine for local model inference) is unreachable:
   `Permission denied (publickey,password,keyboard-interactive)` on
-  `user@192.168.1.10`.
+  `<user>@192.0.2.10`.
 - No coding model or agent harness is installed on the WSL2 laptop, and the brief
   forbids new paid compute (the GPU pod is a paid rental and was not used for
   Phase 1).

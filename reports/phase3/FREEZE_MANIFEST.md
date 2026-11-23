@@ -7,7 +7,7 @@ raw evidence** is `209a987bc96c29b5e5d811a794d0357f20214463`. Its parent is
 the two-parent code merge `394e631e7ddd98347795253b546ced527b76cf8e`.
 The local tag `freeze/beacon-v6-integration-verified-209a987b` points to the
 verified report commit. The independent recovery bundle is
-`C:\Users\user\work\beacon-v6-integration-verified-209a987b.bundle`
+`C:\\Users\\<user>\\work\rescue\beacon-v6-integration-verified-209a987b.bundle`
 (69,640,496 bytes, SHA-256
 `98C63CC6176449F41800CEEB4E6A6F0403397C57DD0A2B6142BA045470670A7A`).
 `git bundle verify` confirmed that it contains a complete history. Phase 3
@@ -19,14 +19,14 @@ evidence and the Phase 1/Phase 2 branch tips remain unchanged.
 Original Beacon is `99c709081ad49da1c5ade205929b61b19360ed9b`, tree
 `1a846f27c7679d644d128d96c3332ba8220645d2`. A separate local clone with
 its own `.git` object store is detached at that commit and has no remote:
-`C:\Users\user\work\beacon-original-baseline-99c70908`.
+`C:\\Users\\<user>\\work\rescue\beacon-original-baseline-99c70908`.
 It is clean and has a local `frozen/original-beacon-99c70908` tag. Its complete
 recovery bundle is
-`C:\Users\user\work\beacon-original-baseline-99c70908.bundle`
+`C:\\Users\\<user>\\work\rescue\beacon-original-baseline-99c70908.bundle`
 (69,362,876 bytes, SHA-256
 `8B5BDF743A02B17367B2DD7184C3C7E145D137C5D58E625B21105C5726033A8D`).
 `git bundle verify` confirmed a complete history. The existing Mac comparison
-checkout at `/Users/user/beacon-phase1-baseline` was
+checkout at `/Users/<user>/beacon-phase1-baseline` was
 also verified clean at the same SHA. Benchmark or agent runs should use a
 throwaway copy or generated files outside the baseline checkout.
 

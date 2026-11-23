@@ -4,9 +4,9 @@ Ultimate adversarial evaluation of optimized V6 vs untouched original Beacon on 
 300-task held-out suite.
 
 - Date: 2026-10-23 (Asia/Kolkata)
-- Branch: `phase5/beacon-ultimate-eval` (worktree `/home/user/work/phase5`), base `7c7e2493`
+- Branch: `phase5/beacon-ultimate-eval` (worktree `/home/<user>/work/phase5`), base `7c7e2493`
 - Original Beacon: `99c709081ad49da1c5ade205929b61b19360ed9b` (frozen)
-- Hosts: WSL2 laptop + Apple M5 Mac (`192.168.1.10`, Ollama qwen2.5-coder:7b, BGE sidecar)
+- Hosts: WSL2 laptop + Apple M5 Mac (`192.0.2.10`, Ollama qwen2.5-coder:7b, BGE sidecar)
 - No paid compute, no downloads, no push/PR.
 
 **Bottom line (truth, not favorable):** On the frozen 300-task suite, **V6 intelligent

@@ -1,3 +1,5 @@
+//go:build !windows
+
 package learning
 
 import (
@@ -216,28 +218,6 @@ func TestPhase2CrashDuringMigration(t *testing.T) {
 	db := openRaw(t, dbPath)
 	defer db.Close()
 	integrityCheck(t, db)
-}
-
-// openRaw opens the store's database directly for integrity and row checks.
-func openRaw(t *testing.T, dbPath string) *sql.DB {
-	t.Helper()
-	store := Open(dbPath)
-	db, err := store.db()
-	if err != nil {
-		t.Fatalf("reopen %s: %v", dbPath, err)
-	}
-	return db
-}
-
-func integrityCheck(t *testing.T, db *sql.DB) {
-	t.Helper()
-	var result string
-	if err := db.QueryRow(`PRAGMA integrity_check`).Scan(&result); err != nil {
-		t.Fatalf("integrity_check: %v", err)
-	}
-	if result != "ok" {
-		t.Fatalf("integrity_check = %q, want ok", result)
-	}
 }
 
 func memoryRowExists(t *testing.T, db *sql.DB, id string) bool {

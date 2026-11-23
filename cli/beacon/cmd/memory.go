@@ -276,6 +276,7 @@ func init() {
 }
 
 func runMemoryList(cmd *cobra.Command, args []string) error {
+	warnDatabasePlacement(cmd)
 	query, err := memoryQuery()
 	if err != nil {
 		return err
@@ -770,7 +771,17 @@ func printCandidate(cmd *cobra.Command, candidate asymptoteobserve.LearningCandi
 }
 
 func memoryStore() *learning.Store {
-	return learning.Open(learning.PathForRuntimeLog(memoryLogPath()))
+	return learning.Open(learning.DatabasePath(memoryLogPath()))
+}
+
+// warnDatabasePlacement prints a one-line warning when the resolved database path
+// sits on a synchronized or network filesystem, where SQLite writes are far
+// slower and risk lock/consistency problems. It never moves the database.
+func warnDatabasePlacement(cmd *cobra.Command) {
+	p := learning.CheckPlacement(learning.DatabasePath(memoryLogPath()))
+	if p.Synchronized {
+		fmt.Fprintln(cmd.ErrOrStderr(), "warning: "+p.Warning)
+	}
 }
 
 func memoryLogPath() string {

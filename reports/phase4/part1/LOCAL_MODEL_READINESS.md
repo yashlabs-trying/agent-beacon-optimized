@@ -11,10 +11,10 @@
 | Host | Reachable | RAM | Free disk | Runtimes | Cached weights |
 |---|---|---|---|---|---|
 | WSL2 laptop (`lappiiii`) | local | 7.6 GiB | ~332 GiB | Go 1.27.3, Python 3.14.4, torch 2.14.0+cpu, transformers 5.17.0 | none for this task |
-| Apple M5 Mac (`192.168.1.10`) | **yes (SSH + LAN)** | 16 GiB | 332 GiB | Python 3.12 venv: torch 2.14.1, sentence-transformers 6.2.0; Ollama 0.40.6; MPS GPU | **BGE-small (133 MB), qwen2.5-coder:1.5b, qwen2.5-coder:7b** |
+| Apple M5 Mac (`192.0.2.10`) | **yes (SSH + LAN)** | 16 GiB | 332 GiB | Python 3.12 venv: torch 2.14.1, sentence-transformers 6.2.0; Ollama 0.40.6; MPS GPU | **BGE-small (133 MB), qwen2.5-coder:1.5b, qwen2.5-coder:7b** |
 
 The Mac was `192.0.2.4` and unreachable during Phases 3A–3D; it is now on
-`192.168.1.10` and reachable. This is what unblocked both Phase 3D gates.
+`192.0.2.10` and reachable. This is what unblocked both Phase 3D gates.
 
 ## 2. What changed versus Phase 3D
 
@@ -67,7 +67,7 @@ failure from this model must not be read as a memory-system failure.
 
 ## 4. Model invocation facts
 
-- Endpoint: `http://192.168.1.10:11434/api/chat` (Ollama `OLLAMA_HOST=0.0.0.0`).
+- Endpoint: `http://192.0.2.10:11434/api/chat` (Ollama `OLLAMA_HOST=0.0.0.0`).
 - Decoding: `temperature=0, seed=42, num_ctx=4096, num_predict=512` (harness defaults).
 - Device: Apple M5 Metal GPU (Ollama log: `library=Metal … Apple M5`).
 - Tool-call transport: **JSON-in-content** (Ollama did not return native `tool_calls` for

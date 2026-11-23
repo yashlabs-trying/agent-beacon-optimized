@@ -79,7 +79,7 @@ describe('isAllowedEndpoint', () => {
     ['credentials', 'http://user:pw@127.0.0.1:4318/v1/logs'],
     ['a non-http scheme', 'ftp://127.0.0.1:4318/'],
     ['a javascript URL', 'javascript:alert(1)'],
-    ['a private LAN address', 'http://192.168.1.10:4318/v1/logs'],
+    ['a private LAN address', 'http://192.0.2.10:4318/v1/logs'],
     ['not a URL', 'not a url'],
     ['a non-string', 4318],
   ])('refuses %s', (_name, u) => {

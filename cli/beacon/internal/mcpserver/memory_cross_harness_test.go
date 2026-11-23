@@ -12,6 +12,7 @@ import (
 func TestApprovedMemoryFromOneHarnessIsRetrievableForAnother(t *testing.T) {
 	logPath := filepath.Join(t.TempDir(), "endpoint", "logs", "runtime.jsonl")
 	store := learning.Open(learning.PathForRuntimeLog(logPath))
+	defer store.Close()
 	project := asymptoteobserve.LearningProjectV1{ID: "project-1"}
 	memory := asymptoteobserve.LearningMemoryV1{
 		ID:          "memory-cross-harness",
@@ -27,7 +28,8 @@ func TestApprovedMemoryFromOneHarnessIsRetrievableForAnother(t *testing.T) {
 	if err := store.PutMemory(memory); err != nil {
 		t.Fatal(err)
 	}
-	server := New(Options{LogPath: logPath})
+	server := New(Options{LogPath: logPath, Authorizer: NewProjectAllowlist(project.ID)})
+	defer server.Close()
 	result, err := server.callTool(t.Context(), callToolParams{
 		Name: "get_memory_context",
 		Arguments: map[string]interface{}{

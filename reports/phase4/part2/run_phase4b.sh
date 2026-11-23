@@ -5,12 +5,12 @@
 # Apple M5 Mac. Does not download models, use paid compute, or push.
 set -euo pipefail
 
-REPO="${REPO:-/home/user/work/phase4b}"
-BASELINE="${BASELINE:-/home/user/work/phase3a-baseline}"   # detached at 99c70908
-MAC="${MAC:-192.168.1.10}"
+REPO="${REPO:-/home/<user>/work/phase4b}"
+BASELINE="${BASELINE:-/home/<user>/work/phase3a-baseline}"   # detached at 99c70908
+MAC="${MAC:-192.0.2.10}"
 OLLAMA_URL="http://${MAC}:11434/api/chat"
 EMBED_URL="http://${MAC}:8077"
-export PATH="/home/user/tools/go/bin:${PATH}"
+export PATH="/home/<user>/tools/go/bin:${PATH}"
 export GOTOOLCHAIN=local
 
 R="${REPO}/reports/phase4/part2/RAW_EVIDENCE"

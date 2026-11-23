@@ -4,7 +4,7 @@ Two tasks: implement and validate a persistent per-`Store` SQLite pool, and run 
 BGE-small neural retrieval if a local model/runtime exists.
 
 - Date: 2026-10-23 (Asia/Kolkata)
-- Branch: `phase3c/beacon-v6-verification` (isolated worktree `/home/user/work/phase3c`)
+- Branch: `phase3c/beacon-v6-verification` (isolated worktree `/home/<user>/work/phase3c`)
 - Parent: Phase 3B `17a10b0fa5966d34e476ddf71371aa5b1bc490dc`
 - Ancestry verified: `99c70908` → `209a987b` → `c9275d84` → `c8a6749b` → `17a10b0f` → Phase 3C
 - Frozen refs unchanged: integration `209a987bc96c29b5e5d811a794d0357f20214463`,

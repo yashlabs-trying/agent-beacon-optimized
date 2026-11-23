@@ -7,11 +7,11 @@ import re
 import subprocess
 from pathlib import Path
 
-ROOT = Path('/home/user/work/beacon-v7-hardening-profile')
+ROOT = Path('/home/<user>/work/beacon-v7-hardening-profile')
 EVIDENCE = Path('/mnt/c/Users/user/work/beacon-v7-hardening/reports/v7-hardening/raw/profile')
 FIXTURE = ROOT / 'reports/v7/validation/holdout_v1.json'
-SEED = Path('/home/user/work/phase5/reports/phase5/bin/phase5seed')
-WORK = Path('/home/user/work/v7-phase-a-stages-20261023')
+SEED = Path('/home/<user>/work/phase5/reports/phase5/bin/phase5seed')
+WORK = Path('/home/<user>/work/v7-phase-a-stages-20261023')
 OUT = EVIDENCE / 'cold_stages.json'
 SRC = ROOT / 'cli/beacon/internal/learning/phase_a_stages_test.go'
 if WORK.exists() or OUT.exists():
@@ -33,7 +33,7 @@ for category, task in sorted(by_category.items()):
     env.update(BEACON_AUDIT_DB=str(db), BEACON_AUDIT_PROJECT_PATH=str(workspace),
                BEACON_AUDIT_QUERY=task['retrieval_query'], BEACON_AUDIT_QUESTION=task['request'],
                BEACON_AUDIT_SEMANTIC='1' if category=='chain' else '0')
-    proc = subprocess.run(['/home/user/sdk/go/bin/go', 'test', './internal/learning',
+    proc = subprocess.run(['/home/<user>/sdk/go/bin/go', 'test', './internal/learning',
                            '-run', '^TestProfileV7Stages$', '-v', '-count=1'],
                           cwd=ROOT / 'cli/beacon', env=env, capture_output=True,
                           text=True, timeout=90)
