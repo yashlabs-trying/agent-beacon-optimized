@@ -327,7 +327,9 @@ func runMemoryList(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		var err error
-		memories, err = memoryStore().ListMemories(query)
+		ms := memoryStore()
+		defer ms.Close()
+		memories, err = ms.ListMemories(query)
 		if err != nil {
 			return err
 		}
@@ -367,7 +369,9 @@ func runMemoryList(cmd *cobra.Command, args []string) error {
 }
 
 func runMemoryShow(cmd *cobra.Command, args []string) error {
-	memory, ok, err := memoryStore().GetMemory(args[0])
+	ms := memoryStore()
+	defer ms.Close()
+	memory, ok, err := ms.GetMemory(args[0])
 	if err != nil {
 		return err
 	}
@@ -398,6 +402,7 @@ func runMemoryShow(cmd *cobra.Command, args []string) error {
 
 func runMemoryEvaluationsRun(cmd *cobra.Command, args []string) error {
 	store := memoryStore()
+	defer store.Close()
 	inputs, err := selectedEvaluationInputs()
 	if err != nil {
 		return err
@@ -478,7 +483,9 @@ func runMemoryEvaluationsList(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	evals, err := memoryStore().ListEvaluations(query)
+	ms := memoryStore()
+	defer ms.Close()
+	evals, err := ms.ListEvaluations(query)
 	if err != nil {
 		return err
 	}
@@ -492,7 +499,9 @@ func runMemoryEvaluationsList(cmd *cobra.Command, args []string) error {
 }
 
 func runMemoryEvaluationsShow(cmd *cobra.Command, args []string) error {
-	eval, ok, err := memoryStore().GetEvaluation(args[0])
+	ms := memoryStore()
+	defer ms.Close()
+	eval, ok, err := ms.GetEvaluation(args[0])
 	if err != nil {
 		return err
 	}
@@ -514,7 +523,9 @@ func runMemoryCandidatesList(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	candidates, err := memoryStore().ListCandidates(query)
+	ms := memoryStore()
+	defer ms.Close()
+	candidates, err := ms.ListCandidates(query)
 	if err != nil {
 		return err
 	}
@@ -528,7 +539,9 @@ func runMemoryCandidatesList(cmd *cobra.Command, args []string) error {
 }
 
 func runMemoryCandidatesShow(cmd *cobra.Command, args []string) error {
-	candidate, ok, err := memoryStore().GetCandidate(args[0])
+	ms := memoryStore()
+	defer ms.Close()
+	candidate, ok, err := ms.GetCandidate(args[0])
 	if err != nil {
 		return err
 	}
@@ -565,7 +578,9 @@ func runMemoryCandidatesCreate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := memoryStore().PutCandidate(candidate); err != nil {
+	ms := memoryStore()
+	defer ms.Close()
+	if err := ms.PutCandidate(candidate); err != nil {
 		return err
 	}
 	if memoryOpts.jsonOutput {
@@ -580,7 +595,9 @@ func runMemoryCandidatesApprove(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	candidate, memory, err := learning.ApproveCandidateWithEdits(memoryStore(), args[0], memoryOpts.reason, edits)
+	ms := memoryStore()
+	defer ms.Close()
+	candidate, memory, err := learning.ApproveCandidateWithEdits(ms, args[0], memoryOpts.reason, edits)
 	if err != nil {
 		return err
 	}
@@ -622,7 +639,9 @@ func memoryApprovalEdits(cmd *cobra.Command) (learning.ApprovalEdits, error) {
 }
 
 func runMemoryCandidatesReject(cmd *cobra.Command, args []string) error {
-	candidate, err := learning.RejectCandidate(memoryStore(), args[0], memoryOpts.reason)
+	ms := memoryStore()
+	defer ms.Close()
+	candidate, err := learning.RejectCandidate(ms, args[0], memoryOpts.reason)
 	if err != nil {
 		return err
 	}
@@ -634,7 +653,9 @@ func runMemoryCandidatesReject(cmd *cobra.Command, args []string) error {
 }
 
 func runMemoryCandidatesSupersede(cmd *cobra.Command, args []string) error {
-	candidate, err := learning.SupersedeCandidate(memoryStore(), args[0], memoryOpts.replacement, memoryOpts.reason)
+	ms := memoryStore()
+	defer ms.Close()
+	candidate, err := learning.SupersedeCandidate(ms, args[0], memoryOpts.replacement, memoryOpts.reason)
 	if err != nil {
 		return err
 	}
@@ -646,7 +667,9 @@ func runMemoryCandidatesSupersede(cmd *cobra.Command, args []string) error {
 }
 
 func runMemorySkillsPreview(cmd *cobra.Command, args []string) error {
-	candidate, memory, err := learning.CandidateMemoryForSkill(memoryStore(), args[0])
+	ms := memoryStore()
+	defer ms.Close()
+	candidate, memory, err := learning.CandidateMemoryForSkill(ms, args[0])
 	if err != nil {
 		return err
 	}
@@ -660,7 +683,9 @@ func runMemorySkillsPreview(cmd *cobra.Command, args []string) error {
 }
 
 func runMemorySkillsInstall(cmd *cobra.Command, args []string) error {
-	candidate, memory, err := learning.CandidateMemoryForSkill(memoryStore(), args[0])
+	ms := memoryStore()
+	defer ms.Close()
+	candidate, memory, err := learning.CandidateMemoryForSkill(ms, args[0])
 	if err != nil {
 		return err
 	}
@@ -770,6 +795,9 @@ func printCandidate(cmd *cobra.Command, candidate asymptoteobserve.LearningCandi
 	fmt.Fprintln(cmd.OutOrStdout(), candidate.Body)
 }
 
+// memoryStore opens the memory database. The Store keeps a connection pool
+// open for its lifetime, so callers must Close it (an unclosed pool holds the
+// SQLite file open, which also blocks deleting it on Windows).
 func memoryStore() *learning.Store {
 	return learning.Open(learning.DatabasePath(memoryLogPath()))
 }

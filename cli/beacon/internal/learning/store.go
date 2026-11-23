@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -195,6 +196,18 @@ func (s *Store) db() (*sql.DB, error) {
 	return s.dbPool, nil
 }
 
+// maxIdleConns keeps up to two warm connections on Unix. On Windows an open
+// SQLite connection locks the database file, so an idle connection would stop a
+// short-lived Store's file (and its directory) from being removed, which breaks
+// t.TempDir cleanup and any caller that deletes or moves the database. There,
+// connections are closed as soon as they are idle.
+func maxIdleConns() int {
+	if runtime.GOOS == "windows" {
+		return 0
+	}
+	return 2
+}
+
 // openLocked creates the pool and initializes the schema. It must be called with
 // s.mu held. On any failure the pool is closed so no handle leaks.
 func (s *Store) openLocked() error {
@@ -216,7 +229,7 @@ func (s *Store) openLocked() error {
 	}
 	// Bound idle connections so an abandoned pool cannot hold file descriptors
 	// open indefinitely; a Store still in use keeps reusing its pool.
-	db.SetMaxIdleConns(2)
+	db.SetMaxIdleConns(maxIdleConns())
 	db.SetMaxOpenConns(8)
 	db.SetConnMaxIdleTime(30 * time.Second)
 	// busy_timeout is applied per connection by the DSN. journal_mode=WAL is

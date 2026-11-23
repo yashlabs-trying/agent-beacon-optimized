@@ -9,6 +9,7 @@ import (
 
 func ReadMemory(logPath string, query learning.Query) (MemoryResponse, error) {
 	store := learning.Open(learning.PathForRuntimeLog(logPath))
+	defer store.Close()
 	status, err := store.Status()
 	if err != nil {
 		return MemoryResponse{}, err
