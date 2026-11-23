@@ -123,6 +123,7 @@ func TestPhase4CSelect(t *testing.T) {
 			byID[m.ID] = p4cToMem(c, m)
 		}
 		store := OpenSemantic(filepath.Join(t.TempDir(), "sel.db"), embed)
+		t.Cleanup(func() { _ = store.Close() })
 		for _, m := range c.Memories {
 			if err := store.PutMemory(byID[m.ID]); err != nil {
 				t.Fatalf("put %s: %v", m.ID, err)

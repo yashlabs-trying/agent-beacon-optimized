@@ -45,6 +45,7 @@ func TestP4CrossProcessWriters(t *testing.T) {
 				t.Fatalf("%d children failed", failures)
 			}
 			s := Open(dbPath)
+			t.Cleanup(func() { _ = s.Close() })
 			defer supClose(s)
 			db, err := s.db()
 			if err != nil {
@@ -75,6 +76,7 @@ func TestP4WriterChild(t *testing.T) {
 	proc, _ := strconv.Atoi(os.Getenv("P4_PROC"))
 	count, _ := strconv.Atoi(os.Getenv("P4_COUNT"))
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	for i := 0; i < count; i++ {
 		id := fmt.Sprintf("p%d-m%d", proc, i)
 		if err := s.PutMemory(asymptoteobserve.LearningMemoryV1{
@@ -97,6 +99,7 @@ func TestP4ReadAfterWriteAcrossProcesses(t *testing.T) {
 		t.Fatalf("writer child: %v\n%s", err, out)
 	}
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	got, ok, err := s.GetMemory("p0-m7")
 	if err != nil || !ok || got.Project.ID != "p" {
@@ -107,6 +110,7 @@ func TestP4ReadAfterWriteAcrossProcesses(t *testing.T) {
 // TestP4BoundedRetryStats confirms the retry counters are wired and bounded.
 func TestP4BoundedRetryStats(t *testing.T) {
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	if err := s.PutMemory(asymptoteobserve.LearningMemoryV1{
 		ID: "m", CandidateID: "c", Kind: asymptoteobserve.LearningMemoryKindConvention,

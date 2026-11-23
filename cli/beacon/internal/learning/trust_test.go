@@ -115,6 +115,7 @@ func TestTrustContradictionPrecisionRecall(t *testing.T) {
 // returns another project's memories, with or without the semantic layer.
 func TestTrustNoCrossScopeLeakage(t *testing.T) {
 	store := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	a := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	b := asymptoteobserve.LearningProjectV1{ID: "proj-b"}
 	for i := 0; i < 30; i++ {

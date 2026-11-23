@@ -28,6 +28,7 @@ func p1Mem(i int) asymptoteobserve.LearningMemoryV1 {
 func TestP1BatchCorrectness(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	var ms []asymptoteobserve.LearningMemoryV1
 	for i := 0; i < 250; i++ {
@@ -50,6 +51,7 @@ func TestP1BatchCorrectness(t *testing.T) {
 func TestP1BatchAuthorizationAtomic(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	ms := []asymptoteobserve.LearningMemoryV1{
 		{ID: "a", CandidateID: "ca", Kind: asymptoteobserve.LearningMemoryKindConvention, Title: "t", Body: "b", Project: asymptoteobserve.LearningProjectV1{ID: "project-A"}},
@@ -69,6 +71,7 @@ func TestP1BatchAuthorizationAtomic(t *testing.T) {
 func TestP1BatchSizeBound(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	ms := make([]asymptoteobserve.LearningMemoryV1, MaxBatchSize+1)
 	for i := range ms {
@@ -82,6 +85,7 @@ func TestP1BatchSizeBound(t *testing.T) {
 func TestP1BatchIdempotentRetry(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	var ms []asymptoteobserve.LearningMemoryV1
 	for i := 0; i < 50; i++ {
@@ -118,6 +122,7 @@ func TestP1IngestionBenchmark(t *testing.T) {
 	// single-record ingestion
 	{
 		s := Open(filepath.Join(supTempDir(t), "single.db"))
+		t.Cleanup(func() { _ = s.Close() })
 		start := time.Now()
 		for i := 0; i < n; i++ {
 			if err := s.PutMemory(p1Mem(i)); err != nil {
@@ -131,6 +136,7 @@ func TestP1IngestionBenchmark(t *testing.T) {
 	// batched ingestion at several batch sizes
 	for _, b := range []int{10, 25, 50, 100} {
 		s := Open(filepath.Join(supTempDir(t), fmt.Sprintf("batch%d.db", b)))
+		t.Cleanup(func() { _ = s.Close() })
 		start := time.Now()
 		for i := 0; i < n; i += b {
 			end := i + b

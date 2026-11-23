@@ -29,6 +29,7 @@ func p6Events(t *testing.T, s *Store) map[string]int {
 func TestP6LifecycleEventsRecorded(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 
 	// approve
@@ -62,10 +63,12 @@ func TestP6LifecycleEventsRecorded(t *testing.T) {
 func TestP6AuthorizationDenialAudited(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	seed := Open(dbPath)
+	t.Cleanup(func() { _ = seed.Close() })
 	_ = seed.PutCandidate(p3Candidate("c-b", "project-B"))
 	supClose(seed)
 
 	s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	_, _, _ = ApproveCandidate(s, "c-b", "x")
 	if ev := p6Events(t, s); ev["authorization_denied"] != 1 {
@@ -76,6 +79,7 @@ func TestP6AuthorizationDenialAudited(t *testing.T) {
 func TestP6NoFalseSuccessOnRollback(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	_ = s.PutCandidate(supCandidate("c1"))
 	if _, _, err := ApproveCandidate(s, "c1", "ok"); err != nil {
@@ -91,6 +95,7 @@ func TestP6NoFalseSuccessOnRollback(t *testing.T) {
 func TestP6AuditFailureRollsBackMutation(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	db, _ := s.db()
 	if _, err := db.Exec(`DROP TABLE audit`); err != nil {
@@ -109,6 +114,7 @@ func TestP6AuditFailureRollsBackMutation(t *testing.T) {
 func TestP6OrderingAndRestart(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	for i := 0; i < 20; i++ {
 		id := "c" + string(rune('a'+i))
 		_ = s.PutCandidate(supCandidate(id))
@@ -117,6 +123,7 @@ func TestP6OrderingAndRestart(t *testing.T) {
 	supClose(s)
 
 	r := Open(dbPath)
+	t.Cleanup(func() { _ = r.Close() })
 	defer supClose(r)
 	entries, err := r.AuditEntries()
 	if err != nil {
@@ -135,6 +142,7 @@ func TestP6OrderingAndRestart(t *testing.T) {
 func TestP6ConcurrentAudit(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	var wg sync.WaitGroup
 	for i := 0; i < 16; i++ {
@@ -155,6 +163,7 @@ func TestP6ConcurrentAudit(t *testing.T) {
 func TestP6NoSensitiveContentInAudit(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	c := supCandidate("c1")
 	c.Body = "SECRET_CANARY_BODY_VALUE"

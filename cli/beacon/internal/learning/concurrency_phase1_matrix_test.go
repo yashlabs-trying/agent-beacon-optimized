@@ -22,6 +22,7 @@ func TestConcurrencyPhase1Matrix(t *testing.T) {
 		for _, mode := range []string{"read", "write", "mixed", "supersede", "rebuild"} {
 			t.Run(fmt.Sprintf("%s-%d", mode, clients), func(t *testing.T) {
 				store := Open(filepath.Join(t.TempDir(), "memory.db"))
+				t.Cleanup(func() { _ = store.Close() })
 				for i := 0; i < 100; i++ {
 					if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
 						ID: fmt.Sprintf("base-%03d", i), CandidateID: fmt.Sprintf("base-c-%03d", i),

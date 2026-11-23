@@ -175,6 +175,7 @@ func TestMemoryEndpointServesReadOnlyLearningState(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := learning.Open(learning.PathForRuntimeLog(logPath))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "project-1"}
 	eval := asymptoteobserve.LearningEvaluationV1{
 		ID:            "eval-1",

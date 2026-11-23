@@ -246,6 +246,7 @@ func TestVerifyHarness(t *testing.T) {
 	tree := verifyTree()
 	for _, n := range verifySizes() {
 		store := Open(filepath.Join(t.TempDir(), "memory.db"))
+		t.Cleanup(func() { _ = store.Close() })
 		seedStart := time.Now()
 		verifySeed(t, store, verifyDataset(n))
 		seedMS := time.Since(seedStart).Milliseconds()
@@ -296,6 +297,7 @@ func TestVerifyWAL(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "memory.db")
 	store := Open(path)
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	const writes = 5000
 	writeStart := time.Now()

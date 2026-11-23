@@ -11,6 +11,7 @@ func TestStoreOpensLiteralURICharacters(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), name, "memory.db")
 			store := Open(path)
+			t.Cleanup(func() { _ = store.Close() })
 			got, err := store.Status()
 			if err != nil {
 				t.Fatal(err)

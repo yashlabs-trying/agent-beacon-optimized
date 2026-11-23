@@ -88,6 +88,7 @@ func TestCandidateFromTraceValidates(t *testing.T) {
 
 func TestAuthoredCandidateApprovesLikeAnyOther(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	candidate, err := CandidateFromTrace(asymptoteobserve.LearningProjectV1{ID: "p"}, authoredTestTrace(), ApprovalEdits{
 		Kind: "gotcha", Title: "Smoke needs a warm cache", Body: "Run smoke twice.",
 	})

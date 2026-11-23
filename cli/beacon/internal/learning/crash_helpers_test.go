@@ -11,6 +11,7 @@ import (
 func openRaw(t *testing.T, dbPath string) *sql.DB {
 	t.Helper()
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	db, err := store.db()
 	if err != nil {
 		t.Fatalf("reopen %s: %v", dbPath, err)

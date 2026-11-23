@@ -224,6 +224,7 @@ func TestSearchQuestionBudgetKeepsQualifiersWhole(t *testing.T) {
 func TestSearchQuestionBackfillsAndInvalidatesSemanticVectors(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "memory.db")
 	seed := Open(path)
+	t.Cleanup(func() { _ = seed.Close() })
 	service := questionMemory("service", "p", "Storage", "The archive service stores records in the atlas database.", "verified")
 	port := questionMemory("port", "p", "Port", "The atlas database listens on port 7234.", "verified")
 	for _, m := range []asymptoteobserve.LearningMemoryV1{service, port} {
@@ -251,6 +252,7 @@ func TestSearchQuestionBackfillsAndInvalidatesSemanticVectors(t *testing.T) {
 	}
 	search(port.Body) // both memories were written before the embedder was enabled
 	update := Open(path)
+	t.Cleanup(func() { _ = update.Close() })
 	port.Body = "The atlas database listens on port 7312."
 	if err := update.PutMemory(port); err != nil {
 		t.Fatal(err)

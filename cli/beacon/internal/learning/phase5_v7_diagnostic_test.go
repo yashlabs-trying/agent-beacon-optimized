@@ -44,6 +44,7 @@ func TestV7Phase5HistoricalDiagnostic(t *testing.T) {
 	var records []record
 	for _, task := range fx.Tasks {
 		store := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), NewHashedEmbedder())
+		t.Cleanup(func() { _ = store.Close() })
 		for _, m := range task.Memories {
 			if err := store.PutMemory(p5ToMem(task.p5Task, m)); err != nil {
 				t.Fatalf("%s: %v", task.ID, err)

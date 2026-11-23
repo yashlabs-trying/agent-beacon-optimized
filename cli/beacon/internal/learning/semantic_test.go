@@ -85,6 +85,7 @@ func buildSemanticStore(t *testing.T) (*Store, []semCase) {
 func buildSemanticStoreWith(t *testing.T, e Embedder) (*Store, []semCase) {
 	t.Helper()
 	store := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), e)
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	cases := semanticCases()
 	// Gold memories, one per case, with evidence so trust labels them verified.
@@ -219,6 +220,7 @@ func TestSemanticRetrievalQuality(t *testing.T) {
 // returns exactly the lexical ranking, so the default path is unchanged.
 func TestHybridNoModelFallback(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	for i := 0; i < 20; i++ {
 		if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
@@ -252,6 +254,7 @@ func TestHybridNoModelFallback(t *testing.T) {
 
 func TestSemanticIncrementalUpdate(t *testing.T) {
 	store := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	m := asymptoteobserve.LearningMemoryV1{
 		ID: "m1", CandidateID: "c1", Kind: asymptoteobserve.LearningMemoryKindConvention,

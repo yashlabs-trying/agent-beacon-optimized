@@ -111,6 +111,7 @@ func TestApprovalCrashHelper(t *testing.T) {
 		}
 	}
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	if _, _, err := ApproveCandidate(store, candidateID, "crash-helper"); err != nil {
 		os.Exit(3)
 	}

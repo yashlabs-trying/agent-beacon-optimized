@@ -13,6 +13,7 @@ import (
 // It cannot establish how a later coding agent would behave after reading it.
 func TestAdversarialMemoryRetrieval(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "project-a"}
 	payloads := []struct {
 		name, body string

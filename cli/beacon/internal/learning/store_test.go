@@ -102,6 +102,7 @@ func TestResolveProjectUsesGitRootAndOrigin(t *testing.T) {
 
 func TestStorePersistsLearningArtifacts(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "project-1", Path: "/repo"}
 	eval := asymptoteobserve.LearningEvaluationV1{
 		ID:            "eval-1",
@@ -178,6 +179,7 @@ func TestStorePersistsLearningArtifacts(t *testing.T) {
 
 func TestListMemoriesSearchesAllRows(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj"}
 	for i := 0; i < 10; i++ {
 		if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
@@ -214,6 +216,7 @@ func TestListMemoriesSearchesAllRows(t *testing.T) {
 
 func TestStoreScopesByProject(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	for _, projectID := range []string{"p1", "p2"} {
 		if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
 			ID:          "memory-" + projectID,
@@ -237,6 +240,7 @@ func TestStoreScopesByProject(t *testing.T) {
 
 func TestListMemoriesAppliesTextMatchBeforeLimit(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "project-1"}
 	if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
 		ID:          "memory-older-match",
@@ -285,6 +289,7 @@ func setMemoryUpdatedAt(t *testing.T, store *Store, id, updatedAt string) {
 
 func TestProjectIDForPathMatchesTheMostSpecificKnownProject(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	// Absolute on every platform, because stored project paths are: ProjectIDForPath makes the
 	// relayed path absolute before comparing, and on Windows "/work" gains a drive letter that a
 	// stored "/work" never has. Nothing here is created on disk; resolution must not touch it.
@@ -324,6 +329,7 @@ func TestProjectIDForPathMatchesTheMostSpecificKnownProject(t *testing.T) {
 
 func TestListMemoriesScopesARelayedProjectPathToOneProject(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	root := t.TempDir() // absolute on every platform; see TestProjectIDForPathMatchesTheMostSpecificKnownProject
 	for _, project := range []asymptoteobserve.LearningProjectV1{
 		{ID: "project-a", Path: filepath.Join(root, "work", "a")},
@@ -380,6 +386,7 @@ func TestRelayedProjectPathDoesNotReadGitMetadata(t *testing.T) {
 	project := asymptoteobserve.LearningProjectV1{ID: resolved.ID, RemoteURL: resolved.RemoteURL}
 
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
 		ID:          "memory-1",
 		CandidateID: "candidate-1",

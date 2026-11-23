@@ -18,6 +18,7 @@ func TestPutMemoryCrashHelper(t *testing.T) {
 		return
 	}
 	store := Open(os.Getenv("BEACON_CRASH_DB"))
+	t.Cleanup(func() { _ = store.Close() })
 	store.writeCheckpoint = func(phase string) {
 		if phase == os.Getenv("BEACON_CRASH_PHASE") {
 			os.Exit(77)
@@ -42,6 +43,7 @@ func TestPutMemoryProcessCrashRecovery(t *testing.T) {
 		t.Run(phase, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "memory.db")
 			store := Open(path)
+			t.Cleanup(func() { _ = store.Close() })
 			if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
 				ID: "baseline", CandidateID: "baseline-candidate",
 				Kind:  asymptoteobserve.LearningMemoryKindConvention,

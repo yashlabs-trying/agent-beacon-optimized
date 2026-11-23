@@ -86,6 +86,7 @@ func TestPhase2ConcurrencyStress(t *testing.T) {
 
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := OpenSemantic(dbPath, NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-stress", Path: "/repos/stress"}
 
 	// Seed a base corpus so reads have data to scan.
@@ -229,6 +230,7 @@ func TestPhase2ConcurrencyStress(t *testing.T) {
 func TestPhase2CacheInvalidationUnderWrites(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := OpenSemantic(dbPath, NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-cache", Path: "/repos/cache"}
 
 	put := func(id string) {

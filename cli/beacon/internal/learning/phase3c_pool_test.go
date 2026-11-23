@@ -28,6 +28,7 @@ func p3cMemory(id, project string) asymptoteobserve.LearningMemoryV1 {
 // TestStoreReusesOnePool asserts every db() call returns the same pool.
 func TestStoreReusesOnePool(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	first, err := store.db()
 	if err != nil {
 		t.Fatal(err)
@@ -57,6 +58,7 @@ func TestStoreReusesOnePool(t *testing.T) {
 // that later operations fail with ErrStoreClosed.
 func TestStoreCloseIsIdempotentAndBlocksUse(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	if err := store.PutMemory(p3cMemory("m1", "p")); err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +83,9 @@ func TestStoreCloseIsIdempotentAndBlocksUse(t *testing.T) {
 // closing one leaves the other usable.
 func TestMultipleStoresIndependent(t *testing.T) {
 	a := Open(filepath.Join(t.TempDir(), "a.db"))
+	t.Cleanup(func() { _ = a.Close() })
 	b := Open(filepath.Join(t.TempDir(), "b.db"))
+	t.Cleanup(func() { _ = b.Close() })
 	if err := a.PutMemory(p3cMemory("a1", "proj-a")); err != nil {
 		t.Fatal(err)
 	}
@@ -115,6 +119,7 @@ func TestMultipleStoresIndependent(t *testing.T) {
 // every caller receives the same pool.
 func TestConcurrentStoreInitRaceFree(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	const n = 32
 	dbs := make([]*sql.DB, n)
 	errs := make([]error, n)
@@ -192,6 +197,7 @@ func TestFailedInitializationDoesNotLeakPool(t *testing.T) {
 	// A directory path cannot be opened as a SQLite database file.
 	dir := t.TempDir()
 	store := Open(dir)
+	t.Cleanup(func() { _ = store.Close() })
 	if _, err := store.db(); err == nil {
 		t.Fatal("expected initialization to fail on a directory path")
 	}
@@ -206,6 +212,7 @@ func TestFailedInitializationDoesNotLeakPool(t *testing.T) {
 	}
 	// The Store is still usable for a valid path after a failed init elsewhere.
 	ok := Open(filepath.Join(dir, "ok.db"))
+	t.Cleanup(func() { _ = ok.Close() })
 	if err := ok.PutMemory(p3cMemory("m1", "p")); err != nil {
 		t.Fatalf("valid store failed: %v", err)
 	}
@@ -218,6 +225,7 @@ func TestFailedInitializationDoesNotLeakPool(t *testing.T) {
 // Store, then closes it and verifies no error and no goroutine is left blocked.
 func TestConcurrentReadsWritesThenClose(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	for i := 0; i < 50; i++ {
 		if err := store.PutMemory(p3cMemory(fmt.Sprintf("seed-%02d", i), "p")); err != nil {
 			t.Fatal(err)

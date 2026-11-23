@@ -141,6 +141,7 @@ func oracleScan(t *testing.T, store *Store, query Query) []asymptoteobserve.Lear
 
 func TestSearchMatchesScanAcrossCases(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	seedMemories(t, store, diverseDataset(1200))
 
 	cases := []Query{
@@ -192,6 +193,7 @@ func ids(list []asymptoteobserve.LearningMemoryV1) []string {
 
 func TestSearchIndexFallsBackWhenIndexTableDropped(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	seedMemories(t, store, diverseDataset(300))
 
 	first, err := store.ListMemories(Query{ProjectID: "proj-a", Q: "unique-needle"})
@@ -219,6 +221,7 @@ func TestSearchIndexFallsBackWhenIndexTableDropped(t *testing.T) {
 
 func TestSearchCacheInvalidatedByWrite(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
 		ID: "memory-1", CandidateID: "candidate-1", Kind: asymptoteobserve.LearningMemoryKindConvention,
@@ -248,6 +251,7 @@ func TestSearchCacheInvalidatedByWrite(t *testing.T) {
 
 func TestSearchCacheInvalidatedBySupersede(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	original := asymptoteobserve.LearningMemoryV1{
 		ID: "memory-1", CandidateID: "candidate-1", Kind: asymptoteobserve.LearningMemoryKindConvention,
@@ -274,6 +278,7 @@ func TestSearchCacheInvalidatedBySupersede(t *testing.T) {
 
 func TestPlannerSelectivity(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	// Every memory contains the common word, so a query for it overflows the
 	// candidate cap and must be handed to the scan path. One memory also carries
 	// a rare token that the index can answer.
@@ -317,6 +322,7 @@ func TestPlannerSelectivity(t *testing.T) {
 
 func TestSearchIndexRebuildIsIdempotent(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	seedMemories(t, store, diverseDataset(200))
 	db, err := store.db()
 	if err != nil {
@@ -349,6 +355,7 @@ func TestSearchIndexRebuildIsIdempotent(t *testing.T) {
 
 func TestSearchHandlesQuotesInQuery(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
 		ID: "memory-1", CandidateID: "candidate-1", Kind: asymptoteobserve.LearningMemoryKindConvention,
@@ -374,6 +381,7 @@ func TestSearchHandlesQuotesInQuery(t *testing.T) {
 // that acknowledged writes are all visible afterwards.
 func TestSearchConcurrentReadersAndWriters(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	seedMemories(t, store, diverseDataset(500))
 
 	done := make(chan struct{})

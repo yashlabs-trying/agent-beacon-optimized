@@ -35,11 +35,12 @@ func supCandidate(id string) asymptoteobserve.LearningCandidateV1 {
 	}
 }
 
-func supClose(*Store) {}
+func supClose(s *Store) { _ = s.Close() }
 
 func supSeedApproved(t *testing.T, dbPath, candidateID string) (asymptoteobserve.LearningCandidateV1, asymptoteobserve.LearningMemoryV1) {
 	t.Helper()
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	defer supClose(store)
 	if err := store.PutCandidate(supCandidate(candidateID)); err != nil {
 		t.Fatal(err)
@@ -54,6 +55,7 @@ func supSeedApproved(t *testing.T, dbPath, candidateID string) (asymptoteobserve
 func supReplacement(t *testing.T, dbPath, id string) asymptoteobserve.LearningMemoryV1 {
 	t.Helper()
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	defer supClose(store)
 	repl := asymptoteobserve.LearningMemoryV1{ID: id, CandidateID: "c-" + id,
 		Kind: asymptoteobserve.LearningMemoryKindConvention, Title: "repl", Body: "b",
@@ -71,6 +73,7 @@ func TestSupersedeApprovedCandidateWritesTombstone(t *testing.T) {
 	_, m := supSeedApproved(t, dbPath, "c1")
 	repl := supReplacement(t, dbPath, "repl")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	defer supClose(store)
 
 	c, err := SupersedeCandidate(store, "c1", repl.ID, "replaced")
@@ -93,6 +96,7 @@ func TestSupersedeApprovedCandidateWritesTombstone(t *testing.T) {
 func TestSupersedeCandidateOnlyStillWorks(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	defer supClose(store)
 	if err := store.PutCandidate(supCandidate("c-only")); err != nil {
 		t.Fatal(err)
@@ -109,6 +113,7 @@ func TestSupersedeDuplicateFails(t *testing.T) {
 	supSeedApproved(t, dbPath, "c1")
 	repl := supReplacement(t, dbPath, "repl")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	defer supClose(store)
 	if _, err := SupersedeCandidate(store, "c1", repl.ID, "first"); err != nil {
 		t.Fatalf("first supersede: %v", err)
@@ -128,6 +133,7 @@ func TestSupersedeDuplicateFails(t *testing.T) {
 func TestSupersedeAfterRejectionFails(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	defer supClose(store)
 	_ = store.PutCandidate(supCandidate("c1"))
 	if _, err := RejectCandidate(store, "c1", "no"); err != nil {
@@ -144,6 +150,7 @@ func TestConcurrentSupersessionSingleWinner(t *testing.T) {
 	supSeedApproved(t, dbPath, "c1")
 	repl := supReplacement(t, dbPath, "repl")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	defer supClose(store)
 
 	var success int32
@@ -169,6 +176,7 @@ func TestConcurrentSupersessionSingleWinner(t *testing.T) {
 func TestConcurrentApprovalAndSupersessionConsistent(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	defer supClose(store)
 	_ = store.PutCandidate(supCandidate("c1"))
 	repl := supReplacement(t, dbPath, "repl")
@@ -234,6 +242,7 @@ func TestSupersessionCrashAtomicity(t *testing.T) {
 	}
 
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	defer supClose(store)
 	c, ok, err := store.GetCandidate("c1")
 	if err != nil || !ok {
@@ -260,6 +269,7 @@ func TestSupersessionCrashHelper(t *testing.T) {
 		}
 	}
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	_, _ = SupersedeCandidate(store, "c1", os.Getenv("BENCH_SUP_REPL"), "crash")
 	os.Exit(0)
 }
@@ -271,12 +281,14 @@ func TestSupersessionRecoveryPersists(t *testing.T) {
 	_, m := supSeedApproved(t, dbPath, "c1")
 	repl := supReplacement(t, dbPath, "repl")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	if _, err := SupersedeCandidate(store, "c1", repl.ID, "x"); err != nil {
 		t.Fatal(err)
 	}
 	supClose(store)
 
 	reopened := Open(dbPath)
+	t.Cleanup(func() { _ = reopened.Close() })
 	defer supClose(reopened)
 	got, ok, err := reopened.GetMemory(m.ID)
 	if err != nil || !ok || got.SupersededBy != repl.ID {

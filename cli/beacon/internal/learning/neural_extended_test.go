@@ -68,6 +68,7 @@ func TestNeuralExtendedQuality(t *testing.T) {
 	makeStore := func(name string, e Embedder) *Store {
 		t.Helper()
 		store := OpenSemantic(filepath.Join(t.TempDir(), name+".db"), e)
+		t.Cleanup(func() { _ = store.Close() })
 		for i, c := range extendedNeuralCases {
 			m := asymptoteobserve.LearningMemoryV1{
 				ID: fmt.Sprintf("extended-%02d", i), CandidateID: fmt.Sprintf("candidate-%02d", i),

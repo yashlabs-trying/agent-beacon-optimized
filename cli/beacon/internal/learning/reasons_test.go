@@ -103,6 +103,7 @@ func TestCandidateBodyIncludesCompatibilityReasons(t *testing.T) {
 	}
 	// The rationale reaches an installed skill through approval.
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	if err := store.PutCandidate(candidate); err != nil {
 		t.Fatal(err)
 	}

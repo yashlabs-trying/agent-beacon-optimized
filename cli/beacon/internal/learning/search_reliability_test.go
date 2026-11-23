@@ -15,7 +15,9 @@ import (
 func TestSearchCrossStoreVisibility(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "memory.db")
 	a := Open(path)
+	t.Cleanup(func() { _ = a.Close() })
 	b := Open(path)
+	t.Cleanup(func() { _ = b.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 
 	if err := a.PutMemory(asymptoteobserve.LearningMemoryV1{
@@ -51,6 +53,7 @@ func TestSearchCrossStoreVisibility(t *testing.T) {
 // rebuilt and marked ready again.
 func TestSearchRecoversAfterIndexDrop(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	seedMemories(t, store, diverseDataset(300))
 	query := Query{ProjectID: "proj-a", Q: "unique-needle", Limit: 50}
@@ -123,6 +126,7 @@ func TestSearchRecoversAfterIndexDrop(t *testing.T) {
 // stop being returned and no read observes a torn state.
 func TestSearchConcurrentSupersedeAndRead(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	const count = 200
 	for i := 0; i < count; i++ {

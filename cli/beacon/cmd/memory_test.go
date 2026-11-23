@@ -594,6 +594,7 @@ func TestMemoryListQuestionAwareUsesFullQuestion(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := learning.Open(learning.PathForRuntimeLog(logPath))
+	t.Cleanup(func() { _ = store.Close() })
 	for _, m := range []asymptoteobserve.LearningMemoryV1{
 		{
 			ID: "convention", CandidateID: "candidate-convention", Project: project,

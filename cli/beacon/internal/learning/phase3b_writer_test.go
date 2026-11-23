@@ -49,6 +49,7 @@ func TestPhase3BWriterLatency(t *testing.T) {
 	for rep := 1; rep <= reps; rep++ {
 		dbPath := filepath.Join(t.TempDir(), "memory.db")
 		store := OpenSemantic(dbPath, NewHashedEmbedder())
+		t.Cleanup(func() { _ = store.Close() })
 		project := asymptoteobserve.LearningProjectV1{ID: "proj-w", Path: "/repos/w"}
 		for i := 0; i < 300; i++ {
 			if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
@@ -164,6 +165,7 @@ func TestPhase3BConnectionCost(t *testing.T) {
 	}
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := OpenSemantic(dbPath, NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	store.PutMemory(asymptoteobserve.LearningMemoryV1{
 		ID: "m1", CandidateID: "c1", Kind: asymptoteobserve.LearningMemoryKindConvention,
 		Title: "t", Body: "b", Project: asymptoteobserve.LearningProjectV1{ID: "p"},
@@ -191,6 +193,7 @@ func TestPhase3BConnectionMaterialised(t *testing.T) {
 	seconds := envInt("BEACON_PHASE3_W_SECONDS", 5)
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := OpenSemantic(dbPath, NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-c"}
 	for i := 0; i < 300; i++ {
 		store.PutMemory(asymptoteobserve.LearningMemoryV1{

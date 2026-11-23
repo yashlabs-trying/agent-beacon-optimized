@@ -44,6 +44,7 @@ func p4bWriteChild(t *testing.T, dbPath string, procs, perProc int) {
 func p4bVerifyRows(t *testing.T, dbPath string, want int) {
 	t.Helper()
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	db, err := s.db()
 	if err != nil {
@@ -85,6 +86,7 @@ func TestP4bWriterChild(t *testing.T) {
 	proc, _ := strconv.Atoi(os.Getenv("P4B_PROC"))
 	count, _ := strconv.Atoi(os.Getenv("P4B_COUNT"))
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	for i := 0; i < count; i++ {
 		id := fmt.Sprintf("p%d-m%d", proc, i)
 		if err := s.PutMemory(asymptoteobserve.LearningMemoryV1{
@@ -105,6 +107,7 @@ func TestP4bCrashChild(t *testing.T) {
 	}
 	dbPath := os.Getenv("BENCH_CRASH_DB")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	// preseed commits before the hook is armed
 	if err := s.PutMemory(asymptoteobserve.LearningMemoryV1{
 		ID: "preseed", CandidateID: "c-preseed", Kind: asymptoteobserve.LearningMemoryKindConvention,
@@ -130,6 +133,7 @@ func TestP4bCrashDuringWritePreCommit(t *testing.T) {
 		t.Fatal("child did not crash")
 	}
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	db, _ := s.db()
 	var integrity string
@@ -151,6 +155,7 @@ func TestP4bCrashAfterCommitDurable(t *testing.T) {
 	cmd.Env = append(os.Environ(), "BENCH_CRASH_STAGE=post_commit", "BENCH_CRASH_DB="+dbPath)
 	_ = cmd.Run() // exits 2 after commit
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	if _, ok, _ := s.GetMemory("target"); !ok {
 		t.Fatal("post-commit crash lost an acknowledged write")
@@ -160,6 +165,7 @@ func TestP4bCrashAfterCommitDurable(t *testing.T) {
 func TestP4bCrashApprovalLeavesNoFalseAudit(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	seed := Open(dbPath)
+	t.Cleanup(func() { _ = seed.Close() })
 	_ = seed.PutCandidate(supCandidate("c-crash"))
 	supClose(seed)
 	cmd := exec.Command(os.Args[0], "-test.run=^TestP4bCrashApprovalChild$")
@@ -168,6 +174,7 @@ func TestP4bCrashApprovalLeavesNoFalseAudit(t *testing.T) {
 		t.Fatal("approval child did not crash")
 	}
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	got, ok, _ := s.GetCandidate("c-crash")
 	if !ok || got.State != asymptoteobserve.LearningCandidateStateCandidate {
@@ -187,6 +194,7 @@ func TestP4bCrashApprovalChild(t *testing.T) {
 		t.Skip("child only")
 	}
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	faultHook = func(x string) {
 		if x == "pre_commit" {
 			os.Exit(2)

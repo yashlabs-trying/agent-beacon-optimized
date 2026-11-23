@@ -31,6 +31,7 @@ func TestP5ValidSignedApproval(t *testing.T) {
 	a, reg := p5Authority(t)
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	s.SetSigningAuthority(a)
 	s.SetTrustRegistry(reg)
 	defer supClose(s)
@@ -45,6 +46,7 @@ func TestP5ValidSignedApproval(t *testing.T) {
 	}
 	// The attestation tag is persisted.
 	r := Open(dbPath)
+	t.Cleanup(func() { _ = r.Close() })
 	r.SetTrustRegistry(reg)
 	reloaded, ok, _ := r.GetMemory(m.ID)
 	if !ok {
@@ -61,6 +63,7 @@ func TestP5ValidSignedApproval(t *testing.T) {
 func TestP5TamperInvalidates(t *testing.T) {
 	a, reg := p5Authority(t)
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	s.SetSigningAuthority(a)
 	s.SetTrustRegistry(reg)
 	defer supClose(s)
@@ -84,6 +87,7 @@ func TestP5WrongKeyInvalid(t *testing.T) {
 	other, otherReg := p5Authority(t)
 	_ = other
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	s.SetSigningAuthority(a)
 	s.SetTrustRegistry(otherReg) // registry trusts a different key
 	defer supClose(s)
@@ -97,6 +101,7 @@ func TestP5WrongKeyInvalid(t *testing.T) {
 func TestP5ReplayOnAnotherMemoryInvalid(t *testing.T) {
 	a, reg := p5Authority(t)
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	s.SetSigningAuthority(a)
 	s.SetTrustRegistry(reg)
 	defer supClose(s)
@@ -113,6 +118,7 @@ func TestP5ReplayOnAnotherMemoryInvalid(t *testing.T) {
 func TestP5LegacyUnsignedUnverified(t *testing.T) {
 	_, reg := p5Authority(t)
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	s.SetTrustRegistry(reg)
 	defer supClose(s)
 	_ = s.PutMemory(asymptoteobserve.LearningMemoryV1{
@@ -148,10 +154,12 @@ func TestP5UnauthorizedCallerCannotGetSignedApproval(t *testing.T) {
 	a, reg := p5Authority(t)
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	seed := Open(dbPath)
+	t.Cleanup(func() { _ = seed.Close() })
 	_ = seed.PutCandidate(p3Candidate("c-b", "project-B"))
 	supClose(seed)
 
 	s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+	t.Cleanup(func() { _ = s.Close() })
 	s.SetSigningAuthority(a)
 	s.SetTrustRegistry(reg)
 	defer supClose(s)
@@ -171,6 +179,7 @@ func TestP5ConcurrentSignedApprovals(t *testing.T) {
 	a, reg := p5Authority(t)
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	s.SetSigningAuthority(a)
 	s.SetTrustRegistry(reg)
 	defer supClose(s)

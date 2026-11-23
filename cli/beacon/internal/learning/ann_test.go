@@ -133,6 +133,7 @@ func TestANNRecallSynthetic(t *testing.T) {
 // flat for recall-vs-exact to be meaningful. It is informational, not a gate.
 func TestANNRecallFlatSpace(t *testing.T) {
 	store := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	seedMemories(t, store, diverseDataset(5000))
 	if err := store.RebuildEmbeddings(); err != nil {
 		t.Fatal(err)
@@ -165,6 +166,7 @@ func TestANNRecallFlatSpace(t *testing.T) {
 
 func TestHybridANNPath(t *testing.T) {
 	store := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	seedMemories(t, store, diverseDataset(2000))
 	if err := store.RebuildEmbeddings(); err != nil {
 		t.Fatal(err)

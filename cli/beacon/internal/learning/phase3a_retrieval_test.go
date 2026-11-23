@@ -91,6 +91,7 @@ func p3Memory(id, project, kind, title, body, traceID string) asymptoteobserve.L
 func p3SeedRetrieval(t *testing.T, fx p3RetrievalFixture) *Store {
 	t.Helper()
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	for _, topic := range fx.Topics {
 		mems := []asymptoteobserve.LearningMemoryV1{
 			p3Memory(topic.ID+"-primary", fx.ProjectID, "convention", topic.ID+" primary", topic.Primary, topic.ID+"-primary"),

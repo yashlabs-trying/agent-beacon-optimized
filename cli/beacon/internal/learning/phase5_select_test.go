@@ -96,6 +96,7 @@ func TestPhase5Select(t *testing.T) {
 	res := map[string]out{}
 	for _, tk := range fx.Tasks {
 		store := OpenSemantic(filepath.Join(t.TempDir(), "p5.db"), embed)
+		t.Cleanup(func() { _ = store.Close() })
 		for _, mm := range tk.Memories {
 			if err := store.PutMemory(p5ToMem(tk, mm)); err != nil {
 				t.Fatalf("put: %v", err)

@@ -12,6 +12,7 @@ import (
 func TestPutMemoryWaitsForBoundedWriteContention(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "memory.db")
 	store := Open(path)
+	t.Cleanup(func() { _ = store.Close() })
 	if err := store.PutMemory(asymptoteobserve.LearningMemoryV1{
 		ID: "first", CandidateID: "first-c", Kind: asymptoteobserve.LearningMemoryKindConvention,
 		Title: "first", Body: "initial write", Project: asymptoteobserve.LearningProjectV1{ID: "p"},

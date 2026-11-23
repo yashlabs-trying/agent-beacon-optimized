@@ -137,6 +137,7 @@ func TestPhase3CWritePhaseProfile(t *testing.T) {
 	iters := envInt("BEACON_PHASE3C_PROBE_ITERS", 200)
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := OpenSemantic(dbPath, NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-p"}
 	for i := 0; i < 300; i++ {
 		store.PutMemory(asymptoteobserve.LearningMemoryV1{

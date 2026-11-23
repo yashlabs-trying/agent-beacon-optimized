@@ -95,6 +95,7 @@ func TestInstallSkillWritesAndRefusesOverwrite(t *testing.T) {
 
 func TestCandidateMemoryForSkillRequiresApprovedCandidate(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	candidate, memory := testApprovedSkillMemory()
 	candidate.State = asymptoteobserve.LearningCandidateStateCandidate
 	if err := store.PutCandidate(candidate); err != nil {

@@ -84,6 +84,7 @@ func TestPhase2CrashChild(t *testing.T) {
 	stage := os.Getenv(crashStageEnv)
 	mode := os.Getenv(crashModeEnv)
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 
 	switch mode {
 	case "migrate":
@@ -188,6 +189,7 @@ func TestPhase2CrashDuringIndexRebuild(t *testing.T) {
 
 	// Reopening and searching must rebuild the index and return the rows.
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	results, err := store.ListMemories(Query{ProjectID: crashProjectID, Q: "rebuild"})
 	if err != nil {
 		t.Fatalf("search after rebuild crash: %v", err)
@@ -205,6 +207,7 @@ func TestPhase2CrashDuringMigration(t *testing.T) {
 	runCrashChildMode(t, dbPath, "migrate")
 
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	if err := store.PutMemory(crashMemory(crashPreseedID, "after migration crash")); err != nil {
 		t.Fatalf("write after migration crash: %v", err)
 	}
@@ -265,6 +268,7 @@ func TestPhase2CrashDurability(t *testing.T) {
 
 			// The derived index must be repairable and consistent after recovery.
 			store := Open(dbPath)
+			t.Cleanup(func() { _ = store.Close() })
 			results, err := store.ListMemories(Query{ProjectID: crashProjectID, Q: "crash"})
 			if err != nil {
 				t.Fatalf("search after recovery: %v", err)
@@ -312,10 +316,12 @@ func TestPhase2RepeatedRecovery(t *testing.T) {
 
 	// An acknowledged write after repeated crashes must commit and persist.
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	if err := store.PutMemory(crashMemory(crashTargetID, "committed after recovery")); err != nil {
 		t.Fatalf("post-recovery write: %v", err)
 	}
 	store2 := Open(dbPath)
+	t.Cleanup(func() { _ = store2.Close() })
 	got, ok, err := store2.GetMemory(crashTargetID)
 	if err != nil || !ok {
 		t.Fatalf("committed write not readable after recovery: ok=%v err=%v", ok, err)
@@ -330,6 +336,7 @@ func TestPhase2RepeatedRecovery(t *testing.T) {
 func TestPhase2CrashDuringSupersession(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	if err := store.PutMemory(crashMemory(crashPreseedID, "original")); err != nil {
 		t.Fatal(err)
 	}

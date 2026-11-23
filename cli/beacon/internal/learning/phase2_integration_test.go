@@ -31,6 +31,7 @@ func TestPhase2IdempotentInit(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	for round := 0; round < 3; round++ {
 		store := Open(dbPath)
+		t.Cleanup(func() { _ = store.Close() })
 		if round == 0 {
 			if err := store.PutMemory(integMemory("m1", "idempotent init marker")); err != nil {
 				t.Fatal(err)
@@ -76,6 +77,7 @@ func TestPhase2UpgradeFromOriginalStorage(t *testing.T) {
 	raw.Close()
 
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	got, err := store.ListMemories(Query{ProjectID: integProject, Q: "legacy upgrade", Limit: 100})
 	if err != nil {
 		t.Fatalf("search after upgrade: %v", err)
@@ -88,6 +90,7 @@ func TestPhase2UpgradeFromOriginalStorage(t *testing.T) {
 func TestPhase2IndexRebuildAfterDeletion(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	for i := 0; i < 10; i++ {
 		if err := store.PutMemory(integMemory(fmt.Sprintf("r-%02d", i), fmt.Sprintf("rebuild marker %d", i))); err != nil {
 			t.Fatal(err)
@@ -122,6 +125,7 @@ func TestPhase2IndexRebuildAfterDeletion(t *testing.T) {
 func TestPhase2ReopenAfterInterruptedStartup(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	if err := store.PutMemory(integMemory("m1", "interrupted startup marker")); err != nil {
 		t.Fatal(err)
 	}
@@ -139,6 +143,7 @@ func TestPhase2ReopenAfterInterruptedStartup(t *testing.T) {
 	indexReadyCache.Delete(dbPath)
 
 	reopened := Open(dbPath)
+	t.Cleanup(func() { _ = reopened.Close() })
 	got, err := reopened.ListMemories(Query{ProjectID: integProject, Q: "interrupted startup"})
 	if err != nil {
 		t.Fatalf("reopen search: %v", err)
@@ -154,6 +159,7 @@ func TestPhase2ReopenAfterInterruptedStartup(t *testing.T) {
 func TestPhase2ANNLifecycleAcrossGenerations(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := OpenSemantic(dbPath, NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: integProject, Path: "/repos/i"}
 	for i := 0; i < 30; i++ {
 		m := integMemory(fmt.Sprintf("ann-%02d", i), fmt.Sprintf("ann lifecycle needle %d", i))
@@ -205,6 +211,7 @@ func (a altEmbedder) Model() string { return "hashed-subword-v2-test" }
 func TestPhase2EmbeddingModelVersionIsolation(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	storeV1 := OpenSemantic(dbPath, NewHashedEmbedder())
+	t.Cleanup(func() { _ = storeV1.Close() })
 	if err := storeV1.PutMemory(integMemory("m1", "model version marker")); err != nil {
 		t.Fatal(err)
 	}
@@ -223,6 +230,7 @@ func TestPhase2EmbeddingModelVersionIsolation(t *testing.T) {
 	// Open with a different model id: the old vector must not be used, and a
 	// rebuild must re-embed under the new id.
 	storeV2 := OpenSemantic(dbPath, altEmbedder{NewHashedEmbedder()})
+	t.Cleanup(func() { _ = storeV2.Close() })
 	if err := storeV2.RebuildEmbeddings(); err != nil {
 		t.Fatal(err)
 	}
@@ -238,6 +246,7 @@ func TestPhase2EmbeddingModelVersionIsolation(t *testing.T) {
 func TestPhase2LargeMemory(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	big := strings.Repeat("large-memory-token ", 60000) // ~1MB
 	if err := store.PutMemory(integMemory("big", big)); err != nil {
 		t.Fatal(err)
@@ -263,6 +272,7 @@ func TestPhase2LargeMemory(t *testing.T) {
 func TestPhase2CorruptRowSurfacedNotSilent(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	store := Open(dbPath)
+	t.Cleanup(func() { _ = store.Close() })
 	if err := store.PutMemory(integMemory("ok", "valid corrupt-probe row")); err != nil {
 		t.Fatal(err)
 	}

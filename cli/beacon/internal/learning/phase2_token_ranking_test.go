@@ -40,6 +40,7 @@ type dQuery struct {
 func buildRankingDataset(t *testing.T) (*Store, []dQuery) {
 	t.Helper()
 	store := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), NewHashedEmbedder())
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-d", Path: "/repos/d"}
 	put := func(id, body, trace string, verified bool) {
 		m := asymptoteobserve.LearningMemoryV1{

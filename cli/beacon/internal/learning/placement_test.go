@@ -50,6 +50,7 @@ func TestCheckPlacementAllowsLocalDir(t *testing.T) {
 func TestMigrateDatabaseRoundTrip(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "src.db")
 	store := Open(src)
+	t.Cleanup(func() { _ = store.Close() })
 	for i := 0; i < 25; i++ {
 		if err := store.PutMemory(placementMemory(
 			"m"+string(rune('a'+i%26))+string(rune('0'+i/26)), "p",
@@ -81,6 +82,7 @@ func TestMigrateDatabaseRoundTrip(t *testing.T) {
 func TestMigrateRefusesExistingDestination(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "src.db")
 	store := Open(src)
+	t.Cleanup(func() { _ = store.Close() })
 	if err := store.PutMemory(placementMemory("m1", "p", "body")); err != nil {
 		t.Fatal(err)
 	}

@@ -62,6 +62,7 @@ func TestSearchDifferentialRandomized(t *testing.T) {
 	}
 
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	seedMemories(t, store, memories)
 
 	randomTerm := func() string {
@@ -128,6 +129,7 @@ func TestSearchDifferentialRandomized(t *testing.T) {
 // TestSearchDifferentialEdgeCases pins the specific tricky inputs.
 func TestSearchDifferentialEdgeCases(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	project := asymptoteobserve.LearningProjectV1{ID: "proj-a"}
 	bodies := []string{
 		`quote "inside" text`,

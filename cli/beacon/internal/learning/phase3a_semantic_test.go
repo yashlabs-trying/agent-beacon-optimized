@@ -17,6 +17,7 @@ import (
 func p3SeedSemantic(t *testing.T, fx p3RetrievalFixture, e Embedder) *Store {
 	t.Helper()
 	store := OpenSemantic(filepath.Join(t.TempDir(), "memory.db"), e)
+	t.Cleanup(func() { _ = store.Close() })
 	for _, topic := range fx.Topics {
 		mems := []asymptoteobserve.LearningMemoryV1{
 			p3Memory(topic.ID+"-primary", fx.ProjectID, "convention", topic.ID+" primary", topic.Primary, topic.ID+"-primary"),

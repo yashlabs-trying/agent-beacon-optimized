@@ -29,10 +29,12 @@ func p3Mem(id, project string) asymptoteobserve.LearningMemoryV1 {
 func TestP3ForeignApprovalDenied(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	seed := Open(dbPath)
+	t.Cleanup(func() { _ = seed.Close() })
 	_ = seed.PutCandidate(p3Candidate("c-b", "project-B"))
 	supClose(seed)
 
 	s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	_, _, err := ApproveCandidate(s, "c-b", "x")
 	if !errors.Is(err, ErrProjectNotAuthorized) {
@@ -47,10 +49,12 @@ func TestP3ForeignApprovalDenied(t *testing.T) {
 func TestP3ForeignRejectionDenied(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	seed := Open(dbPath)
+	t.Cleanup(func() { _ = seed.Close() })
 	_ = seed.PutCandidate(p3Candidate("c-b", "project-B"))
 	supClose(seed)
 
 	s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	if _, err := RejectCandidate(s, "c-b", "x"); !errors.Is(err, ErrProjectNotAuthorized) {
 		t.Fatalf("foreign rejection err = %v, want ErrProjectNotAuthorized", err)
@@ -60,6 +64,7 @@ func TestP3ForeignRejectionDenied(t *testing.T) {
 func TestP3ForeignSupersessionDenied(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	seed := Open(dbPath)
+	t.Cleanup(func() { _ = seed.Close() })
 	_ = seed.PutCandidate(p3Candidate("c-b", "project-B"))
 	_, m, err := ApproveCandidate(seed, "c-b", "seed")
 	if err != nil {
@@ -69,6 +74,7 @@ func TestP3ForeignSupersessionDenied(t *testing.T) {
 	supClose(seed)
 
 	s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	if _, err := SupersedeCandidate(s, "c-b", "repl", "x"); !errors.Is(err, ErrProjectNotAuthorized) {
 		t.Fatalf("foreign supersession err = %v, want ErrProjectNotAuthorized", err)
@@ -83,6 +89,7 @@ func TestP3ForeignSupersessionDenied(t *testing.T) {
 func TestP3ForeignDirectWriteDenied(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	if err := s.PutMemory(p3Mem("m-b", "project-B")); !errors.Is(err, ErrProjectNotAuthorized) {
 		t.Fatalf("foreign PutMemory err = %v, want ErrProjectNotAuthorized", err)
@@ -92,6 +99,7 @@ func TestP3ForeignDirectWriteDenied(t *testing.T) {
 func TestP3SameProjectOperationsSucceed(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 
 	// direct write in scope
@@ -124,6 +132,7 @@ func TestP3SameProjectOperationsSucceed(t *testing.T) {
 func TestP3RepeatedAuthorizedTransition(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	_ = s.PutCandidate(p3Candidate("c-a", "project-A"))
 	if _, _, err := ApproveCandidate(s, "c-a", "ok"); err != nil {
@@ -139,11 +148,13 @@ func TestP3RepeatedAuthorizedTransition(t *testing.T) {
 func TestP3UnauthorizedAfterRestart(t *testing.T) {
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	seed := Open(dbPath)
+	t.Cleanup(func() { _ = seed.Close() })
 	_ = seed.PutCandidate(p3Candidate("c-b", "project-B"))
 	supClose(seed)
 
 	for i := 0; i < 2; i++ {
 		s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+		t.Cleanup(func() { _ = s.Close() })
 		if _, _, err := ApproveCandidate(s, "c-b", "x"); !errors.Is(err, ErrProjectNotAuthorized) {
 			t.Fatalf("restart %d: err = %v, want ErrProjectNotAuthorized", i, err)
 		}
@@ -160,12 +171,14 @@ func TestP3S4Matrix(t *testing.T) {
 		dbPath := filepath.Join(supTempDir(t), "memory.db")
 		cid := fmt.Sprintf("c-b-%d", i)
 		seed := Open(dbPath)
+		t.Cleanup(func() { _ = seed.Close() })
 		_ = seed.PutCandidate(p3Candidate(cid, "project-B"))
 		_, _, _ = ApproveCandidate(seed, cid, "seed")
 		_ = seed.PutMemory(p3Mem(fmt.Sprintf("repl-%d", i), "project-B"))
 		supClose(seed)
 
 		s := OpenAuthorized(dbPath, NewProjectAllowlist("project-A"))
+		t.Cleanup(func() { _ = s.Close() })
 		if _, err := SupersedeCandidate(s, cid, fmt.Sprintf("repl-%d", i), "x"); errors.Is(err, ErrProjectNotAuthorized) {
 			denied++
 		}
@@ -182,6 +195,7 @@ func TestP3TrustedEmbeddingAllows(t *testing.T) {
 	// embedding (the CLI). It allows any project.
 	dbPath := filepath.Join(supTempDir(t), "memory.db")
 	s := Open(dbPath)
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	if err := s.PutMemory(p3Mem("m-any", "any-project")); err != nil {
 		t.Fatalf("trusted embedding write: %v", err)

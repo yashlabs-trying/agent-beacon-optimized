@@ -34,6 +34,7 @@ func p7Seed(t *testing.T, s *Store, project string, n int) {
 
 func TestP7CanceledBeforeQuery(t *testing.T) {
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	p7Seed(t, s, "p", 100)
 
@@ -49,6 +50,7 @@ func TestP7CanceledBeforeQuery(t *testing.T) {
 
 func TestP7ExpiredDeadline(t *testing.T) {
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	p7Seed(t, s, "p", 100)
 
@@ -61,6 +63,7 @@ func TestP7ExpiredDeadline(t *testing.T) {
 
 func TestP7LargeScanCanceled(t *testing.T) {
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	p7Seed(t, s, "p", 5000)
 
@@ -81,6 +84,7 @@ func TestP7LargeScanCanceled(t *testing.T) {
 
 func TestP7ValidDeadlineSucceeds(t *testing.T) {
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	p7Seed(t, s, "p", 500)
 
@@ -97,6 +101,7 @@ func TestP7ValidDeadlineSucceeds(t *testing.T) {
 
 func TestP7CanceledBatchWrite(t *testing.T) {
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -114,6 +119,7 @@ func TestP7CanceledBatchWrite(t *testing.T) {
 
 func TestP7NoGoroutineLeak(t *testing.T) {
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	p7Seed(t, s, "p", 500)
 
@@ -133,6 +139,7 @@ func TestP7NoGoroutineLeak(t *testing.T) {
 
 func TestP7ConcurrentCanceledRequests(t *testing.T) {
 	s := Open(filepath.Join(supTempDir(t), "memory.db"))
+	t.Cleanup(func() { _ = s.Close() })
 	defer supClose(s)
 	p7Seed(t, s, "p", 200)
 	var wg sync.WaitGroup

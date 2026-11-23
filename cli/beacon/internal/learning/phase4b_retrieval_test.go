@@ -115,6 +115,7 @@ func TestPhase4BRetrieval(t *testing.T) {
 	for _, c := range fx.Cases {
 		var r result
 		lex := Open(filepath.Join(t.TempDir(), "lex.db"))
+		t.Cleanup(func() { _ = lex.Close() })
 		p4bSeed(lex, c)
 		got, err := lex.ListMemories(Query{ProjectID: c.Project, Q: c.Query, Limit: k})
 		if err != nil {
@@ -126,6 +127,7 @@ func TestPhase4BRetrieval(t *testing.T) {
 		_ = lex.Close()
 
 		hashed := OpenSemantic(filepath.Join(t.TempDir(), "hashed.db"), NewHashedEmbedder())
+		t.Cleanup(func() { _ = hashed.Close() })
 		p4bSeed(hashed, c)
 		res, err := hashed.SearchHybrid(Query{ProjectID: c.Project, Q: c.Query},
 			HybridOptions{Limit: k, CandidateK: 50, LexicalWeight: 0, SemanticWeight: 1})
@@ -143,6 +145,7 @@ func TestPhase4BRetrieval(t *testing.T) {
 
 		if embed != nil {
 			neural := OpenSemantic(filepath.Join(t.TempDir(), "neural.db"), embed)
+			t.Cleanup(func() { _ = neural.Close() })
 			p4bSeed(neural, c)
 			res, err := neural.SearchHybrid(Query{ProjectID: c.Project, Q: c.Query},
 				HybridOptions{Limit: k, CandidateK: 50, LexicalWeight: 0, SemanticWeight: 1})

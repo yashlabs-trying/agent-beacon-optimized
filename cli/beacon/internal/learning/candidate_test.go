@@ -28,6 +28,7 @@ func TestCandidateFromEvaluationRequiresHighSignal(t *testing.T) {
 
 func TestApproveRejectAndSupersedeCandidate(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	candidate, ok := CandidateFromEvaluation(testLearningEvaluation())
 	if !ok {
 		t.Fatal("candidate not created")
@@ -106,6 +107,7 @@ func testLearningEvaluationWithID(evalID, traceID string) asymptoteobserve.Learn
 // reviewer's text into the memory while leaving the candidate as it was scored.
 func TestApproveCandidateWithEditsUsesReviewerText(t *testing.T) {
 	store := Open(filepath.Join(t.TempDir(), "memory.db"))
+	t.Cleanup(func() { _ = store.Close() })
 	candidate, ok := CandidateFromEvaluation(testLearningEvaluation())
 	if !ok {
 		t.Fatal("candidate not created")
