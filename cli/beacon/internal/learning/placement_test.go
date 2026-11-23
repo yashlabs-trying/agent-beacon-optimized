@@ -25,7 +25,7 @@ func TestDatabasePathHonorsMemoryDirEnv(t *testing.T) {
 		t.Fatalf("DatabasePath = %q, want %q", got, filepath.Join(dir, storeFile))
 	}
 	t.Setenv(MemoryDirEnv, "")
-	if got := DatabasePath("/data/beacon/endpoint/logs/runtime.jsonl"); got != "/data/beacon/endpoint/"+storeFile {
+	if got := DatabasePath("/data/beacon/endpoint/logs/runtime.jsonl"); got != filepath.Join("/data/beacon/endpoint", storeFile) {
 		t.Fatalf("default DatabasePath = %q", got)
 	}
 }

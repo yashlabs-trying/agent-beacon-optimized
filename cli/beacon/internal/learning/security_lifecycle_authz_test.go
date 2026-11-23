@@ -40,7 +40,7 @@ func TestP3ForeignApprovalDenied(t *testing.T) {
 	if !errors.Is(err, ErrProjectNotAuthorized) {
 		t.Fatalf("foreign approval err = %v, want ErrProjectNotAuthorized", err)
 	}
-	got, _, _ := Open(dbPath).GetCandidate("c-b")
+	got, _, _ := openForTest(t, dbPath).GetCandidate("c-b")
 	if got.State != asymptoteobserve.LearningCandidateStateCandidate {
 		t.Fatalf("candidate state changed to %q despite denial", got.State)
 	}
@@ -80,7 +80,7 @@ func TestP3ForeignSupersessionDenied(t *testing.T) {
 		t.Fatalf("foreign supersession err = %v, want ErrProjectNotAuthorized", err)
 	}
 	// memory must remain active
-	got, _, _ := Open(dbPath).GetMemory(m.ID)
+	got, _, _ := openForTest(t, dbPath).GetMemory(m.ID)
 	if got.SupersededBy != "" {
 		t.Fatalf("foreign supersession tombstoned the memory")
 	}

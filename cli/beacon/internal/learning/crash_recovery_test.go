@@ -91,7 +91,7 @@ func TestPutMemoryProcessCrashRecovery(t *testing.T) {
 			if generation != before+int64(want) {
 				t.Fatalf("after %s: generation=%d, want %d", phase, generation, before+int64(want))
 			}
-			found, err := Open(path).ListMemories(Query{ProjectID: "phase1-project", Q: "faulttoken", Limit: 5})
+			found, err := openForTest(t, path).ListMemories(Query{ProjectID: "phase1-project", Q: "faulttoken", Limit: 5})
 			if err != nil || len(found) != want {
 				t.Fatalf("search after %s: count=%d, want %d, error=%v", phase, len(found), want, err)
 			}

@@ -110,7 +110,7 @@ func TestMemoryEvaluationsRunPersistsMockedJevResult(t *testing.T) {
 	}
 
 	memoryOpts.query = "session:cursor:s1"
-	list, err := memoryStore().ListEvaluations(learning.Query{ProjectID: result.Project.ID, Q: "cursor"})
+	list, err := testMemoryStore(t).ListEvaluations(learning.Query{ProjectID: result.Project.ID, Q: "cursor"})
 	if err != nil {
 		t.Fatalf("ListEvaluations: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestMemoryEvaluationsRunDoesNotPromoteFailedTask(t *testing.T) {
 						t.Fatalf("promoted evaluation reported as not promoted:\n%s", text)
 					}
 				}
-				stored, err := memoryStore().ListCandidates(learning.Query{ProjectPath: project})
+				stored, err := testMemoryStore(t).ListCandidates(learning.Query{ProjectPath: project})
 				if err != nil {
 					t.Fatalf("ListCandidates: %v", err)
 				}
@@ -213,7 +213,7 @@ func TestMemoryCandidatesApproveCommand(t *testing.T) {
 	memoryOpts.logPath = logPath
 	memoryOpts.projectPath = project
 	candidate := testCommandCandidate(t)
-	if err := memoryStore().PutCandidate(candidate); err != nil {
+	if err := testMemoryStore(t).PutCandidate(candidate); err != nil {
 		t.Fatal(err)
 	}
 	memoryOpts.reason = "reviewed"
@@ -241,7 +241,7 @@ func TestMemoryApproveWithEditsThenListAndShow(t *testing.T) {
 		t.Fatal(err)
 	}
 	candidate.Project = resolved
-	if err := memoryStore().PutCandidate(candidate); err != nil {
+	if err := testMemoryStore(t).PutCandidate(candidate); err != nil {
 		t.Fatal(err)
 	}
 	bodyFile := filepath.Join(t.TempDir(), "lesson.md")
@@ -314,7 +314,7 @@ func TestMemorySkillsPreviewAndInstallCommands(t *testing.T) {
 	memoryOpts.logPath = logPath
 	memoryOpts.projectPath = project
 	candidate, memory := testApprovedCommandMemory()
-	store := memoryStore()
+	store := testMemoryStore(t)
 	if err := store.PutCandidate(candidate); err != nil {
 		t.Fatal(err)
 	}
@@ -501,7 +501,7 @@ func TestMemoryCandidatesCreateScopesToTraceRepository(t *testing.T) {
 		t.Fatalf("tags = %#v", candidate.Tags)
 	}
 
-	stored, err := memoryStore().ListCandidates(learning.Query{ProjectID: want.ID})
+	stored, err := testMemoryStore(t).ListCandidates(learning.Query{ProjectID: want.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -711,7 +711,7 @@ func TestMemoryEvaluationsShowHidesPlaceholderReason(t *testing.T) {
 			{ID: "reusable_correction", Probability: 0.78, Reason: "Retry isolates the flaky step."},
 		},
 	}
-	if err := memoryStore().PutEvaluation(eval); err != nil {
+	if err := testMemoryStore(t).PutEvaluation(eval); err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
@@ -968,4 +968,13 @@ func TestMemoryEvaluationsCostPerTraceFlags(t *testing.T) {
 			}
 		})
 	}
+}
+
+// testMemoryStore opens the command's memory store and closes it when the test
+// ends, before t.TempDir cleanup runs (Windows cannot delete an open database).
+func testMemoryStore(t *testing.T) *learning.Store {
+	t.Helper()
+	s := memoryStore()
+	t.Cleanup(func() { _ = s.Close() })
+	return s
 }

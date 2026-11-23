@@ -23,7 +23,7 @@ func TestStoreOpensLiteralURICharacters(t *testing.T) {
 			if err != nil || info.Size() == 0 {
 				t.Fatalf("literal database not populated: stat%v info%v", err, info)
 			}
-			if _, err = Open(path).Status(); err != nil {
+			if _, err = openForTest(t, path).Status(); err != nil {
 				t.Fatal(err)
 			}
 		})
