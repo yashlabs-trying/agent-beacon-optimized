@@ -1,5 +1,9 @@
 # Agent Beacon — memory-engine performance fork
 
+[![CI](https://github.com/yashlabs-trying/agent-beacon-optimized/actions/workflows/ci.yml/badge.svg)](https://github.com/yashlabs-trying/agent-beacon-optimized/actions/workflows/ci.yml)
+![p99](https://img.shields.io/badge/p99%20write%20%4016%20clients-634%20ms%20%E2%86%92%20~50%20ms-brightgreen)
+![Go](https://img.shields.io/badge/Go-SQLite-00ADD8)
+
 This is a fork of [Agent Beacon](https://github.com/Asymptote-Labs/agent-beacon)
 by Asymptote Labs (MIT), a Go CLI that records coding-agent sessions and turns
 them into reusable memory. I profiled its SQLite-backed memory engine under
